@@ -1,75 +1,48 @@
-# Nuxt Minimal Starter
+# 说明
+本项目是一个nuxt全栈项目, 技术栈包含nuxt/nuxt ui/drizzleorm等, 目的是通过soybean-admin项目进行参考, 创建一个类似的nuxt项目.
+- **前端代码**： Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
+- **后端代码**：使用 Nitro + tRPC 实现 API 服务（server/*），集成 nuxt-auth-utils 认证中间件、RBAC 权限校验、端到端类型安全
+- **数据库**： 优先适配MySQL 数据库（用户、角色、部门、菜单、字典、日志等），使用 Drizzle ORM 进行类型安全的数据库访问
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+## 目标
+首要目标是快速迭代出一个可运行/可部署的全栈管理系统, 后续进行进一步的优化和扩展.
+**Goals:**
+- 构建基于 Nuxt 4 的全栈管理系统（前端 + 后端 API 统一在 Nuxt 项目中）
+- 实现完整的 RBAC 权限体系（用户、角色、部门、菜单、字典、日志）
+- 使用 tRPC 实现端到端类型安全的 API 调用
+- 提供参考 soybean-admin 的清新优雅 UI 设计
+- 支持国际化（中英文）和主题切换（亮色/暗色）
+- 实现可扩展的数据库架构（使用 Drizzle ORM）
+- 提供完整的日志管理和仪表盘统计
 
-## Setup
+**Non-Goals:**
+- 不实现复杂的权限继承规则（仅使用基于角色的直接授权）
+- 不实现多租户支持（单系统单租户）
+- 不实现第三方登录集成（仅用户名密码登录）
+- 不实现工作流引擎（仅基础的 CRUD 操作）
+- 不实现报表生成器（仅基础导出功能）
 
-Make sure to install dependencies:
+## 目录说明
+```pgsql
+/soybean-admin: 开源项目的代码, 用来参考样式实现. 让ai能访问
+/server/db: 数据库链接导出
+/server/trpc: 初始化trpc, 收集router
+/server/sys-router: 系统相关的路由
+/pages/system: 后台管理相关的界面
 
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
+## 开发规范
+### 命名
+* 组件文件名采用大驼峰命名,如 UserProfile.vue
+* vue文件, api路由, 目录名采用kebab-case, 如 pages/user-profile.vue, api/user-controller.ts
+### 开发规则
+shared中的工具类, 类型定义都要显式导入, 避免后续找不到代码.
+系统相关的东西用system或sys标明:
 
-Start the development server on `http://localhost:3000`:
 
-```bash
-# npm
-npm run dev
+## 常用命令
+~~ 或 @@,项目根目录,包含 nuxt.config.ts、package.json 的最外层目录。
+~ 或 @,app/ 目录,Nuxt 4 的核心逻辑目录。
+#server 根目录下的server目录
 
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
