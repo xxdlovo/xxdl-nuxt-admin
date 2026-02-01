@@ -55,8 +55,8 @@ sys-router: 系统相关的路由, 按功能模块划分
 * shared中的实体命名采用大驼峰, 按照实体名+动词+Dto, 比如SysUserUpdatePwdDTO,SysUserAddDto
 * 每个实体类下有个common.ts, 放通用的属性, 注意:
   通过该实体的drizzle orm的schema生成, 非空情况和schema一致. 比如
-  id在schema中定义为notNull, 在common中也不能加nullable()
-  其余不确定的, 要在common中加nullable()
+  id在schema中定义为notNull, 在common中也不能加nullish()
+  其余不确定的, 要在common中加nullish()
 ### 开发规则
 shared中的工具类, 类型定义都要显式导入, 避免后续找不到代码.
 系统相关的东西用system或sys标明

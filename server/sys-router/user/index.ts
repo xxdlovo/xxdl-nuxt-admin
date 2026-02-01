@@ -6,7 +6,7 @@ import {SysUserAddSchema, SysUserPageQuerySchema, SysUserQuerySchema} from '#sha
 export const sysUserRouter = router({
     test: publicProcedure.mutation(async ({ctx}:{ctx: Context})=>{
         const get = await sysUserService(ctx).getById('1')
-        console.log(get)
+        // console.log(get)
         return 'hello word'
     }),
     create: protectedProcedure.input(SysUserAddSchema)

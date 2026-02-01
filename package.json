@@ -10,7 +10,8 @@
     "postinstall": "nuxt prepare",
     "post": "nuxt prepare",
     "db:push": "drizzle-kit push  --config=./server/drizzle/drizzle.config.ts",
-    "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts"
+    "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
+    "test": "vitest"
   },
   "dependencies": {
     "@nuxt/ui": "4.4.0",
@@ -29,8 +30,13 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@nuxt/test-utils": "^3.23.0",
     "@types/node": "^25.1.0",
+    "@vue/test-utils": "^2.4.6",
     "drizzle-kit": "^0.31.8",
-    "tsx": "^4.21.0"
+    "happy-dom": "^20.4.0",
+    "playwright-core": "^1.58.1",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.18"
   }
 }

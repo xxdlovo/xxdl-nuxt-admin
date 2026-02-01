@@ -15,24 +15,24 @@ export const SysUserBaseSchema = z.object({
             query: 'like'
         }
     ),
-    nickname: z.string().max(50, '昵称最多50个字符').nullable().meta(
+    nickname: z.string().max(50, '昵称最多50个字符').nullish().meta(
         {
             query: 'like'
         }
     ),
     password: z.string().min(6, '密码至少6个字符').max(255, '密码最多255个字符'),
-    avatar: z.string().url('头像必须是有效的URL').nullable().or(z.literal('')),
-    phone: z.string().max(20, '手机号最多20个字符').nullable(),
-    gender: z.number().nullable(),
-    deptId: z.string().nullable(),
-    isAdmin: z.number().nullable(),
-    status: z.number().nullable(),
-    remark: z.string().max(255, '备注最多255个字符').nullable().meta(
+    avatar: z.string().url('头像必须是有效的URL').or(z.literal('')).nullish(),
+    phone: z.string().max(20, '手机号最多20个字符').nullish(),
+    gender: z.number().nullish(),
+    deptId: z.string().nullish(),
+    isAdmin: z.number().nullish(),
+    status: z.number().nullish(),
+    remark: z.string().max(255, '备注最多255个字符').nullish().meta(
         {
             query: 'like'
         }
     ),
-    createdAt: z.string().nullable(),
-    updatedAt: z.string().nullable(),
+    createdAt: z.string().nullish(),
+    updatedAt: z.string().nullish(),
 })
 export type SysUserDto = z.infer<typeof SysUserBaseSchema>

@@ -1,5 +1,3 @@
-import { t } from "../init"
-
 /**
  * 全局日志中间件
  *
@@ -8,23 +6,16 @@ import { t } from "../init"
  * - 用户信息
  * - 执行耗时
  */
-export const loggerMiddleware = t.middleware(async ({ path, ctx, next }) => {
+export const loggerMiddleware = async (opts: any) => {
+    const { path, next } = opts
+
     const start = Date.now()
 
-    // TODO: 替换为你的日志系统（pino/winston/数据库）
-    console.log("[tRPC Request]", {
-        path,
-    })
+    console.log("[tRPC Request]", path)
 
     const result = await next()
 
-    const duration = Date.now() - start
-
-    console.log("[tRPC Response]", {
-        path,
-        duration: `${duration}ms`,
-        success: result.ok,
-    })
+    console.log("[tRPC Response]", path, Date.now() - start,'毫秒')
 
     return result
-})
+}

@@ -13,14 +13,8 @@ export const useDb = () => {
         console.log('useDb 命中缓存')
         return _db;
     }
-
     // 3. 只有第一次执行时才会运行以下逻辑
     const config = useRuntimeConfig();
-
-    // 校验关键配置是否存在，防止静默失败
-    if (!config.db?.host) {
-        throw createError({message: '数据库配置缺失，请检查 RuntimeConfig'});
-    }
 
     // 4. 创建物理连接池
     const poolConnection = mysql.createPool({
