@@ -22,10 +22,22 @@
 - 不实现工作流引擎（仅基础的 CRUD 操作）
 - 不实现报表生成器（仅基础导出功能）
 
+## 后端流程
+目录说明:
+```pgsql
+drizzle: 放通用查询,构建参数, 初始化db, pull,push schema
+drizzle\schema: 放导出后的 schema
+drizzle\db.ts: 数据库连接
+drizzle\drizzle.config.ts: drizzle orm的pull/push配置
+sys-router: 系统相关的路由, 按功能模块划分
+    user: 用户管理
+    role: 角色管理
+    ...
+
+```
 ## 目录说明
 ```pgsql
 /soybean-admin: 开源项目的代码, 用来参考样式实现. 让ai能访问
-/server/db: 数据库链接导出
 /server/trpc: 初始化trpc, 收集router
 /server/sys-router: 系统相关的路由
 /pages/system: 后台管理相关的界面
@@ -35,10 +47,23 @@
 ## 开发规范
 ### 命名
 * 组件文件名采用大驼峰命名,如 UserProfile.vue
+* schema, dto采用大驼峰命名, 如 SysUserBaseSchema
 * vue文件, api路由, 目录名采用kebab-case, 如 pages/user-profile.vue, api/user-controller.ts
+* server中的数据库实体采用小驼峰命名, 如 sysUser, sysLog. 
+* server中采用三层架构, 默认为index,service, repo. 命名时添加前缀, 如 SysUserService, SysUserRepo
+* shared中按照功能模块创建目录, 如 shared/system/user目录放系统用户相关的类
+* shared中的实体命名采用大驼峰, 按照实体名+动词+Dto, 比如SysUserUpdatePwdDTO,SysUserAddDto
+* 每个实体类下有个common.ts, 放通用的属性, 注意:
+  通过该实体的drizzle orm的schema生成, 非空情况和schema一致. 比如
+  id在schema中定义为notNull, 在common中也不能加nullable()
+  其余不确定的, 要在common中加nullable()
 ### 开发规则
 shared中的工具类, 类型定义都要显式导入, 避免后续找不到代码.
-系统相关的东西用system或sys标明:
+系统相关的东西用system或sys标明
+后端逻辑:
+后端repo/dao层返回drizzleorm的类型, 由orm自动生成, 存放在server/drizzle/schema下面
+后端server层返回Dto类, 存放在shared/功能模块,目录下
+后端router(controller)层只做调用, 不处理数据
 
 
 ## 常用命令

@@ -9,7 +9,10 @@ let _db: MySql2Database<typeof schema> | null = null;
 
 export const useDb = () => {
     // 2. 如果已经存在实例，直接返回（命中缓存）
-    if (_db) return _db;
+    if (_db){
+        console.log('useDb 命中缓存')
+        return _db;
+    }
 
     // 3. 只有第一次执行时才会运行以下逻辑
     const config = useRuntimeConfig();
@@ -36,6 +39,6 @@ export const useDb = () => {
         mode: "default",
         logger: false
     });
-
+    console.log('useDb 初始化数据库连接')
     return _db;
 };
