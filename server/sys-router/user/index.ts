@@ -1,4 +1,4 @@
-import { publicProcedure, router } from '~~/server/trpc/init'
+import { publicProcedure, router,protectedProcedure } from '~~/server/trpc/init'
 import type { Context } from '~~/server/trpc/context'
 import {sysUserService} from './SysUserService'
 import z from 'zod'
@@ -9,27 +9,27 @@ export const sysUserRouter = router({
         console.log(get)
         return 'hello word'
     }),
-    create: publicProcedure.input(SysUserAddSchema)
+    create: protectedProcedure.input(SysUserAddSchema)
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).create(input)
         }),
-    remove: publicProcedure.input(z.string())
+    remove: protectedProcedure.input(z.string())
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).remove(input)
         }),
-    update: publicProcedure.input(SysUserAddSchema)
+    update: protectedProcedure.input(SysUserAddSchema)
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).updateById(input.id, input)
         }),
-    getOne: publicProcedure.input(SysUserQuerySchema)
+    getOne: protectedProcedure.input(SysUserQuerySchema)
         .query(async ({ctx, input})=>{
             return sysUserService(ctx).getOne(input)
         }),
-    getById: publicProcedure.input(z.string())
+    getById: protectedProcedure.input(z.string())
         .query(async ({ctx, input})=>{
             return sysUserService(ctx).getById(input)
         }),
-    page: publicProcedure.input(SysUserPageQuerySchema)
+    page: protectedProcedure.input(SysUserPageQuerySchema)
         .query(async ({ctx, input})=>{
             return sysUserService(ctx).page(input)
         })
