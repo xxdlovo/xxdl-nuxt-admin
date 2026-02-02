@@ -22,5 +22,5 @@ export type SysUserRespDTO = z.infer<typeof SysUserRespSchema>;
 
 // ---------------------- 7. 用户列表分页返回结果 DTO（SysUserPageRespDTO）----------------------
 // （分页查询返回结果，包含分页信息+用户列表）
-export const SysUserPageRespSchema = createApiResponseSchema(SysUserRespSchema);
-export type SysUserPageRespDTO = z.infer<typeof SysUserPageRespSchema>;
+// export const SysUserPageRespSchema = createApiResponseSchema(SysUserRespSchema);
+// export type SysUserPageRespDTO = z.infer<typeof SysUserPageRespSchema>;

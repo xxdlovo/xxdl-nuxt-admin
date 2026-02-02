@@ -36,3 +36,25 @@ export const useDb = () => {
     console.log('useDb 初始化数据库连接')
     return _db;
 };
+
+/**
+ * 测试专用数据库初始化函数
+ * 直接使用环境变量，不依赖 Nuxt 运行时
+ */
+export const createTestDb = () => {
+    const poolConnection = mysql.createPool({
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_DATABASE || 'nuxt_admin',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+    });
+
+    return drizzle(poolConnection, {
+        schema,
+        mode: "default",
+        logger: false
+    });
+};

@@ -11,7 +11,8 @@
     "post": "nuxt prepare",
     "db:push": "drizzle-kit push  --config=./server/drizzle/drizzle.config.ts",
     "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "test:type": "tsx scripts/typecheck-tests.ts"
   },
   "dependencies": {
     "@nuxt/ui": "4.4.0",

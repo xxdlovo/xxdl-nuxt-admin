@@ -8,7 +8,8 @@ export const t = initTRPC.context<Context>().create({
         errorFormatter
     });
 
-
+// 导出这个工厂函数
+export const createCallerFactory = t.createCallerFactory;
 export const router = t.router;
 export const publicProcedure = t.procedure;
 export const protectedProcedure  = publicProcedure.use(loggerMiddleware).use(authMiddleware)

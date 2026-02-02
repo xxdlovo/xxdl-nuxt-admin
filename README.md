@@ -1,11 +1,15 @@
 # 说明
-本项目是一个nuxt全栈项目, 技术栈包含nuxt/nuxt ui/drizzleorm等, 目的是通过soybean-admin项目进行参考, 创建一个类似的nuxt项目.
-- **前端代码**： Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
+
+本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 soybean-admin 项目进行开发。
+
+- **前端代码**：Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
 - **后端代码**：使用 Nitro + tRPC 实现 API 服务（server/*），集成 nuxt-auth-utils 认证中间件、RBAC 权限校验、端到端类型安全
-- **数据库**： 优先适配MySQL 数据库（用户、角色、部门、菜单、字典、日志等），使用 Drizzle ORM 进行类型安全的数据库访问
+- **数据库**：适配 MySQL 数据库（用户、角色、部门、菜单、字典、日志等），使用 Drizzle ORM 进行类型安全的数据库访问
 
 ## 目标
-首要目标是快速迭代出一个可运行/可部署的全栈管理系统, 后续进行进一步的优化和扩展.
+
+首要目标是快速迭代出一个可运行/可部署的全栈管理系统，后续进行进一步的优化和扩展。
+
 **Goals:**
 - 构建基于 Nuxt 4 的全栈管理系统（前端 + 后端 API 统一在 Nuxt 项目中）
 - 实现完整的 RBAC 权限体系（用户、角色、部门、菜单、字典、日志）
@@ -22,52 +26,155 @@
 - 不实现工作流引擎（仅基础的 CRUD 操作）
 - 不实现报表生成器（仅基础导出功能）
 
-## 后端流程
-目录说明:
-```pgsql
-drizzle: 放通用查询,构建参数, 初始化db, pull,push schema
-drizzle\schema: 放导出后的 schema
-drizzle\db.ts: 数据库连接
-drizzle\drizzle.config.ts: drizzle orm的pull/push配置
-sys-router: 系统相关的路由, 按功能模块划分
-    user: 用户管理
-    role: 角色管理
-    ...
+## 目录结构
 
 ```
-## 目录说明
-```pgsql
-/soybean-admin: 开源项目的代码, 用来参考样式实现. 让ai能访问
-/server/trpc: 初始化trpc, 收集router
-/server/sys-router: 系统相关的路由
-/pages/system: 后台管理相关的界面
-
+xxdl-nuxt-admin/
+├── soybean-admin/              # 参考项目代码（UI 样式参考）
+│
+├── server/                     # 后端代码（Nitro + tRPC）
+│   ├── api/
+│   │   └── trpc/[trpc].ts  # tRPC API 端点
+│   ├── drizzle/               # 数据库配置
+│   │   ├── db.ts            # Drizzle DB 实例（连接池）
+│   │   ├── schema/         # Drizzle Schema 定义
+│   │   └── drizzle.config.ts # Drizzle 配置（push/pull）
+│   │   └── CommonRepo.ts    # 通用repo, 放基础的crud
+│   ├── trpc/                # tRPC 核心配置
+│   │   ├── init.ts          # tRPC 初始化、Procedure 定义
+│   │   ├── context.ts       # 请求上下文
+│   │   ├── routers.ts       # 路由聚合、AppRouter 类型导出
+│   │   ├── errorFormatter.ts     # 统一的错误处理
+│   │   └── middlewares/    # tRPC 中间件
+│   └── sys-router/          # 系统业务路由（按模块划分）
+│       ├── user/            # 用户管理
+│       │   ├── index.ts     # 路由定义,controller层
+│       │   ├── SysUserRepo.ts     # dao层, 放sql
+│       │   └── SysUserService.ts # server层放业务逻辑
+│       └── role/            # 角色管理
+│
+├── shared/                     # 前后端共享代码
+│   ├── system/              # 系统相关模块
+│   │   └── user/          # 用户相关
+│   │       ├── common.ts    # 用户基础 Schema（通用属性）
+│   │       ├── input.ts     # 输入 DTO（新增、更新、查询等）
+│   │       └── output.ts    # 输出 DTO
+│   ├── types/               # 共享类型定义
+│   └── utils/               # 共享工具函数
+│
+├── pages/                     # 页面（Nuxt 4 自动路由）
+│   └── system/              # 后台管理页面
+│
+├── app/                       # Nuxt 4 核心目录
+│   ├── app.vue
+│   ├── plugins/
+│   ├── composables/
+│   └── assets/
+│
+├── doc/                       # 项目文档
+│   └── mysql_init.sql       # MySQL 初始化脚本
+│
+├── tests/                     # 测试文件
+│   ├── sysUser.spec.ts
+│
+├── .env                      # 环境变量配置
+├── nuxt.config.ts            # Nuxt 配置
+├── package.json
+└── README.md
 ```
 
 ## 开发规范
-### 命名
-* 组件文件名采用大驼峰命名,如 UserProfile.vue
-* schema, dto采用大驼峰命名, 如 SysUserBaseSchema
-* vue文件, api路由, 目录名采用kebab-case, 如 pages/user-profile.vue, api/user-controller.ts
-* server中的数据库实体采用小驼峰命名, 如 sysUser, sysLog. 
-* server中采用三层架构, 默认为index,service, repo. 命名时添加前缀, 如 SysUserService, SysUserRepo
-* shared中按照功能模块创建目录, 如 shared/system/user目录放系统用户相关的类
-* shared中的实体命名采用大驼峰, 按照实体名+动词+Dto, 比如SysUserUpdatePwdDTO,SysUserAddDto
-* 每个实体类下有个common.ts, 放通用的属性, 注意:
-  通过该实体的drizzle orm的schema生成, 非空情况和schema一致. 比如
-  id在schema中定义为notNull, 在common中也不能加nullish()
-  其余不确定的, 要在common中加nullish()
-### 开发规则
-shared中的工具类, 类型定义都要显式导入, 避免后续找不到代码.
-系统相关的东西用system或sys标明
-后端逻辑:
-后端repo/dao层返回drizzleorm的类型, 由orm自动生成, 存放在server/drizzle/schema下面
-后端server层返回Dto类, 存放在shared/功能模块,目录下
-后端router(controller)层只做调用, 不处理数据
 
+### 命名约定
+
+| 类型 | 命名规则 | 示例 |
+|------|----------|------|
+| Vue 组件文件 | 大驼峰 | `UserProfile.vue`, `UserTable.vue` |
+| Schema、DTO | 大驼峰 | `SysUserBaseSchema`, `SysUserAddDTO` |
+| Vue 文件、路由、目录 | kebab-case | `pages/user-profile.vue`, `api/user-controller.ts` |
+| 数据库实体 | 小驼峰 | `sysUser`, `sysRole`, `sysLog` |
+| Service 层 | 实体名 + Service | `SysUserService`, `SysRoleService` |
+| Repository 层 | 实体名 + Repo | `SysUserRepo`, `SysRoleRepo` |
+| DTO 类型 | 实体名 + 动作 + DTO | `SysUserAddDTO`, `SysUserUpdateDTO`, `SysUserUpdatePwdDTO` |
+
+### 代码分层规则
+
+**后端三层架构**：
+
+```
+Router (Controller) 层
+    ↓ 只做调用，不处理数据
+Service 层
+    ↓ 处理业务逻辑,返回 DTO
+Repository (DAO) 层
+    ↓ 返回 Drizzle ORM 类型
+数据库
+```
+
+- **Router 层**：位于 `server/sys-router/*/index.ts`，只调用 Service，不处理业务逻辑
+- **Service 层**：处理业务逻辑，返回 DTO 类型（存放在 `shared/功能模块/`）
+- **Repository 层**：返回 Drizzle ORM 类型（由 ORM 自动生成，存放在 `server/drizzle/schema`）
+
+### Schema/DTO 定义规则
+
+每个实体模块下有 `common.ts`，存放通用属性：
+
+```ts
+// shared/system/user/common.ts
+export const SysUserBaseSchema = z.object({
+  id: z.string().nonoptional(),           // 非空字段，不加 nullish()
+  username: z.string().min(3).max(50),
+  email: z.string().email().nullish(),      // 可空字段，必须加 nullish()
+  nickname: z.string().nullish(),          // 可空字段
+  // ...
+})
+```
+
+**规则**：
+- 根据 Drizzle Schema 的非空定义保持一致
+- Schema 中定义为 `notNull()` 的字段，`common.ts` 中不加 `nullish()`
+- Schema 中可空的字段，`common.ts` 中必须加 `nullish()`
+
+### 导入规范
+
+- `shared/` 目录中的工具类、类型定义必须**显式导入**
+- 避免自动导入，方便代码追踪和调试
+
+```ts
+// ✅ 正确
+import { randomUuid } from '~/shared/utils/uuid'
+import { SysUserAddDTO } from '~/shared/system/user'
+
+// ❌ 错误（自动导入，难以追踪）
+const uuid = randomUuid()  // IDE 自动导入，来源不明确
+```
+
+### 系统相关命名
+
+系统模块统一使用 `sys` 前缀：
+- 表名：`sysUser`, `sysRole`
+- trpc路径：`server/sys-router/user`
 
 ## 常用命令
-~~ 或 @@,项目根目录,包含 nuxt.config.ts、package.json 的最外层目录。
-~ 或 @,app/ 目录,Nuxt 4 的核心逻辑目录。
-#server 根目录下的server目录
 
+### 路径别名
+- `~~` 或 `@@` → 项目根目录
+- `~` 或 `@` → `app/` (Nuxt 4 的核心逻辑目录)
+- `#server` → `server/` (根目录下的 server 目录)
+
+### 开发命令
+```bash
+# 开发
+pnpm dev          # 启动开发服务器
+
+# 构建
+pnpm build        # 构建生产版本
+pnpm generate     # 生成静态站点
+pnpm preview      # 预览生产构建
+
+# 数据库迁移
+pnpm db:pull      # 从数据库拉取最新数据
+
+# 测试
+pnpm test              # 运行测试
+```

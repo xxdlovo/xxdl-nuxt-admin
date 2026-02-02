@@ -1,3 +1,4 @@
+//#server/sys-router/user
 import { publicProcedure, router,protectedProcedure } from '~~/server/trpc/init'
 import type { Context } from '~~/server/trpc/context'
 import {sysUserService} from './SysUserService'

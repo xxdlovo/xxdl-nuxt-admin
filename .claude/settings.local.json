@@ -6,7 +6,9 @@
       "mcp__zread__get_repo_structure",
       "Bash(tree:*)",
       "Bash(dir:*)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:type:*)"
     ]
   }
 }
