@@ -1,26 +1,40 @@
-<template>
-  <div>
-    <NuxtRouteAnnouncer />
-    <NuxtWelcome />
-    <button @click="click">click</button>
-  </div>
-</template>
 <script setup lang="ts">
-const { $trpc } = useNuxtApp()
-const click = async () =>{
-  const res = await $trpc.sysUser.test.mutate()
-  console.log( res)
-  const getById = await $trpc.sysUser.getById.query('1')
-  console.log( getById)
-  console.log(getById.nickname)
-  await $trpc.sysUser.create.mutate({
-    id:'333',
-    username: 'testuser001',
-    password: 'password123',
-    email: 'test@example.com',
-    nickname: 'TestUser',
-    phone: '13800138000',
-    status: 1
-  })
-}
+import { withoutTrailingSlash } from 'ufo'
+import colors from 'tailwindcss/colors'
+
+const route = useRoute()
+const appConfig = useAppConfig()
+const colorMode = useColorMode()
+
+const color = computed(() => colorMode.value === 'dark' ? (colors as any)[appConfig.ui.colors.neutral][900] : 'white')
+const radius = computed(() => `:root { --ui-radius: ${appConfig.theme.radius}rem; }`)
+const blackAsPrimary = computed(() => appConfig.theme.blackAsPrimary ? `:root { --ui-primary: black; } .dark { --ui-primary: white; }` : ':root {}')
+
+useHead({
+  meta: [
+    { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+    { key: 'theme-color', name: 'theme-color', content: color }
+  ],
+  link: [
+    { rel: 'icon', type: 'image/svg+xml', href: '/icon.svg' },
+    { rel: 'canonical', href: `https://ui.nuxt.com${withoutTrailingSlash(route.path)}` }
+  ],
+  style: [
+    { innerHTML: radius, id: 'nuxt-ui-radius', tagPriority: -2 },
+    { innerHTML: blackAsPrimary, id: 'nuxt-ui-black-as-primary', tagPriority: -2 }
+  ],
+  htmlAttrs: {
+    lang: 'en'
+  }
+})
+
+</script>
+<template>
+  <UApp :toaster="{duration: appConfig.toaster.duration}">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </UApp>
+</template>
+<script lang="ts" setup>
 </script>

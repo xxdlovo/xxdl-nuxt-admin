@@ -2,7 +2,8 @@
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: {enabled: true},
-    modules: ['@nuxt/ui'],
+    ssr: false,
+    modules: ['@nuxt/ui', 'nuxt-echarts','nuxt-i18n-micro'],
     runtimeConfig:{
         db:{
             host: process.env.DB_HOST!,
@@ -19,4 +20,19 @@ export default defineNuxtConfig({
         // 关闭谷歌字体
         fonts: false
     },
+    css: ['~/assets/css/main.css'],
+    i18n: {
+        strategy: 'no_prefix',
+        locales: [
+            { code: 'en', iso: 'en-US', dir: 'ltr', name: 'English' },
+            { code: 'zh', iso: 'zh-CN', dir: 'ltr', name: '中文' }
+        ],
+        defaultLocale: 'en',
+        translationDir: 'app/locales',
+        meta: true,
+    },
+    echarts: {
+        charts: ['BarChart', 'LineChart', 'PieChart'],
+        components: ['DatasetComponent', 'GridComponent','TooltipComponent', 'LegendComponent'],
+    }
 })
