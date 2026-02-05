@@ -118,22 +118,25 @@ Repository (DAO) 层
 ### Schema/DTO 定义规则
 
 每个实体模块下有 `common.ts`，存放通用属性：
+BaseSchema作为通用属性, 各属性必须加.nullish()
+这里不定义错误信息, 只定义字段+meta
 
 ```ts
 // shared/system/user/common.ts
 export const SysUserBaseSchema = z.object({
-  id: z.string().nonoptional(),           // 非空字段，不加 nullish()
-  username: z.string().min(3).max(50),
-  email: z.string().email().nullish(),      // 可空字段，必须加 nullish()
-  nickname: z.string().nullish(),          // 可空字段
+  id: z.string().nullish().meta({foo:'bar'}),         
+  username: z.string().min(3).max(50).nullish(),
+  email: z.string().email().nullish(),      
+  nickname: z.string().nullish(),         
   // ...
 })
 ```
 
-**规则**：
-- 根据 Drizzle Schema 的非空定义保持一致
-- Schema 中定义为 `notNull()` 的字段，`common.ts` 中不加 `nullish()`
-- Schema 中可空的字段，`common.ts` 中必须加 `nullish()`
+**业务类型规则**：
+- 相关业务类型定义到input.ts/output.ts中
+- 不建议继承BaseSchema的规则(SysUserBaseSchema.shape.id)
+- 用工厂函数自定义错误信息
+- 宁多勿少
 
 ### 导入规范
 

@@ -45,7 +45,7 @@ CREATE TABLE `sys_user` (
                             `is_admin` tinyint DEFAULT 0 COMMENT '是否管理员: 0-否, 1-是',
                             `last_login_time` timestamp NULL DEFAULT NULL COMMENT '最后登录时间',
                             `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
-                            `status` tinyint DEFAULT 1 COMMENT '帐号状态: 0-禁用, 1-正常, 2-锁定',
+                            `status` tinyint DEFAULT 1 COMMENT '帐号状态: 1-启用, 2-禁用',
                             `remark` varchar(255) DEFAULT NULL COMMENT '备注',
                             `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
                             `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

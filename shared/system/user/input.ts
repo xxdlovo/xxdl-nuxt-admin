@@ -4,19 +4,22 @@ import {ApiQueryRequestSchema, ApiRequestSchema} from "#shared/types/common";
 
 // ---------------------- 1. 新增用户 DTO（SysUserAddDTO）----------------------
 //创建用户时传入的参数
-export const SysUserAddSchema = z.object({
-    id: SysUserBaseSchema.shape.id.nonoptional(),
-    username: SysUserBaseSchema.shape.username,
-    password: SysUserBaseSchema.shape.password.nonoptional(),
-    email: SysUserBaseSchema.shape.email.nonoptional(),
-    nickname: SysUserBaseSchema.shape.nickname,
-    avatar: SysUserBaseSchema.shape.avatar,
-    phone: SysUserBaseSchema.shape.phone,
-    gender: SysUserBaseSchema.shape.gender,
-    deptId: SysUserBaseSchema.shape.deptId,
-    status: SysUserBaseSchema.shape.status,
-    remark: SysUserBaseSchema.shape.remark,
-});
+export const SysUserAddSchema =
+    (t:(key: string) => string) =>{
+    return z.object({
+        id: SysUserBaseSchema.shape.id.nonoptional(),
+        username: z.string(t('form.userName.required')).min(3, t('form.userName.required')).max(50, t('form.userName.required')),
+        password: SysUserBaseSchema.shape.password.nonoptional(),
+        email: SysUserBaseSchema.shape.email.nonoptional(),
+        nickname: SysUserBaseSchema.shape.nickname,
+        avatar: SysUserBaseSchema.shape.avatar,
+        phone: SysUserBaseSchema.shape.phone,
+        gender: SysUserBaseSchema.shape.gender,
+        deptId: SysUserBaseSchema.shape.deptId,
+        status: SysUserBaseSchema.shape.status,
+        remark: SysUserBaseSchema.shape.remark,
+    })
+    }
 // 导出对应的 TS 类型
 export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>;
 
@@ -50,16 +53,19 @@ export const SysUserUpdatePwdSchema = z.object({
 // 导出对应的 TS 类型
 export type SysUserUpdatePwdDTO = z.infer<typeof SysUserUpdatePwdSchema>;
 
-
+const emptyToUndefined = (v: unknown) =>
+    v === "" ? undefined : v;
 // ---------------------- 4. 单个用户查询 DTO（SysUserQueryDTO）----------------------
 // （根据ID/用户名等查询单个用户）
 export const SysUserQuerySchema = z.object({
     // 多条件查询（二选一即可，可扩展更多查询条件）
     id: SysUserBaseSchema.shape.id.optional(),
     username: SysUserBaseSchema.shape.username.optional(),
+    gender: z.number().optional(),
+    nickname: SysUserBaseSchema.shape.nickname.optional(),
+    phone: SysUserBaseSchema.shape.phone.optional(),
+    status: z.number().optional(),
     email: SysUserBaseSchema.shape.email.optional(),
-}).refine((data) => data.id || data.username || data.email, {
-    message: "请传入ID、用户名或邮箱中的至少一个查询条件",
 });
 // 导出对应的 TS 类型
 export type SysUserQueryDTO = z.infer<typeof SysUserQuerySchema>;
@@ -68,12 +74,13 @@ export type SysUserQueryDTO = z.infer<typeof SysUserQuerySchema>;
 // （分页+多条件筛选，继承分页查询参数）
 export const SysUserPageQuerySchema = ApiRequestSchema.extend({
     // 扩展具体的筛选字段
-    username: z.string().max(50, "用户名长度不能超过50位").optional(),
-    nickname: z.string().max(50, "昵称长度不能超过50位").optional(),
-    email: z.string().email("邮箱格式不正确").optional(),
-    phone: z.string().max(20, "手机号长度不能超过20位").optional(),
-    deptId: z.string().max(36, "部门ID长度不能超过36位").optional(),
-    status: z.number().int().min(0).max(255, "状态值超出范围").optional(),
+    id: SysUserBaseSchema.shape.id.optional(),
+    username: SysUserBaseSchema.shape.username.optional(),
+    gender: z.number().optional(),
+    nickname: SysUserBaseSchema.shape.nickname.optional(),
+    phone: SysUserBaseSchema.shape.phone.optional(),
+    status: z.number().optional(),
+    email: SysUserBaseSchema.shape.email.optional(),
 });
 // 导出对应的 TS 类型
 export type SysUserPageQueryDTO = z.infer<typeof SysUserPageQuerySchema>;

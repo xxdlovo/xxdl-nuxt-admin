@@ -8,7 +8,8 @@
       "Bash(dir:*)",
       "Bash(pnpm add:*)",
       "Bash(npm install:*)",
-      "Bash(npm run test:type:*)"
+      "Bash(npm run test:type:*)",
+      "mcp__web-reader__webReader"
     ]
   }
 }
