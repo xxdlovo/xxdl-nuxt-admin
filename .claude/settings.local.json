@@ -9,7 +9,13 @@
       "Bash(pnpm add:*)",
       "Bash(npm install:*)",
       "Bash(npm run test:type:*)",
-      "mcp__web-reader__webReader"
+      "mcp__web-reader__webReader",
+      "Bash(npx nuxi typecheck:*)",
+      "Bash(node:*)",
+      "Bash(timeout 30 npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm view:*)",
+      "Bash(npm ls:*)"
     ]
   }
 }

@@ -1,4 +1,5 @@
 soybean-admin
+app/locales/pages
 # Nuxt dev/build outputs
 .output
 .data
