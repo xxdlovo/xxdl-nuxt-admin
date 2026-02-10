@@ -39,8 +39,8 @@ importers:
         specifier: 1.0.1
         version: 1.0.1(echarts@6.0.0)(magicast@0.5.1)(vue-echarts@8.0.1(echarts@6.0.0)(vue@3.5.27(typescript@5.9.3)))
       nuxt-i18n-micro:
-        specifier: ^2.20.1
-        version: 2.20.1(magicast@0.5.1)(vite@7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vue-router@4.6.4(vue@3.5.27(typescript@5.9.3)))
+        specifier: ^3.4.1
+        version: 3.4.1(magicast@0.5.1)(vite@7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vue-router@4.6.4(vue@3.5.27(typescript@5.9.3)))
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -725,14 +725,27 @@ packages:
   '@floating-ui/vue@1.1.10':
     resolution: {integrity: sha512-vdf8f6rHnFPPLRsmL4p12wYl+Ux4mOJOkjzKEMYVnwdf7UFdvBtHlLvQyx8iKG5vhPRbDRgZxdtpmyigDPjzYg==}
 
-  '@i18n-micro/core@1.0.28':
-    resolution: {integrity: sha512-kYNg/0QJxMHBO5oM23q0LuERkZZPNaSaz/H6qGZeBV2/0IYSKxSRFOTDESy96C3CpvSZqXvZ9sE1gWwS3+fcMA==}
+  '@i18n-micro/core@1.1.2':
+    resolution: {integrity: sha512-ZsvHZvwkyHms8p3GoXc3hAKmMN71k5urd/E13F3NkzoxJPFMysrtXQcnjxvT9VX8N9n5aYCg9Fcs711T/ZRYDA==}
 
-  '@i18n-micro/test-utils@1.0.8':
-    resolution: {integrity: sha512-TGcaxATEXmC9nsSPooNcch+KRVq7M+zbTNIsz4wLO4W+5B9LPvcKYSMzR9SDJ5qm3lnAnBWjKLwjIjnJ1LnzRA==}
+  '@i18n-micro/core@1.1.3':
+    resolution: {integrity: sha512-tWmKfkYwNBukn1cLnWGFBJj2JOaJ2OTAYqmxIEGghkx/aK4LDDpgMfGbiTMBx3q0vH0myo9Ux77EYZaQkF/CSg==}
 
-  '@i18n-micro/types@1.0.16':
-    resolution: {integrity: sha512-QpZGZhTm26glpWDxtlCrelaPcPXdwOcHPi0hKZ9wwPZ939TU5MXWyboCTEo9NlUg9xcbz26vyYhgdkwvnU/L1Q==}
+  '@i18n-micro/path-strategy@1.1.3':
+    resolution: {integrity: sha512-oVDwwCe1OPffreG3rKlEpRd3vyM9xppKWIDJ+jx5s46ZrWJKR80fbLqsHmJxGJmKNE0OpPcLFFsxyOc0qOduhQ==}
+
+  '@i18n-micro/route-strategy@1.1.3':
+    resolution: {integrity: sha512-AsJRSmE7f3u8w6glexJhXZ2Flv1Ed9qLAYDM5wKeFpQbrl2pr9LWVAQBzaN8oNREsqyaJiQ4DCb7qZOJNb2b/A==}
+    engines: {node: '>=18'}
+
+  '@i18n-micro/test-utils@1.1.1':
+    resolution: {integrity: sha512-iGwtK02bHmYssqestfgSSELQpUlS2cQm1l1tf/58WuLFKYnj5AQwhSv2ZQMRzADS7OGJGZoNatuN47V59GO0VQ==}
+
+  '@i18n-micro/types@1.1.1':
+    resolution: {integrity: sha512-iSCwwtPFhkwfPITuisvNTwZAC2mP+euNIQDBUhcqQfcTcYY7D76H7Uj72lGg/myZk8eEs793aHeKiiQtcPirCA==}
+
+  '@i18n-micro/types@1.1.3':
+    resolution: {integrity: sha512-7hgTlrRCaLSPHil78YAilFQkoGntKxj94P6SAAstC3yS5PSWDM89j+t/H3JVZ+dFrWbsEtJBLPfE7bZEucoJuw==}
 
   '@iconify/collections@1.0.643':
     resolution: {integrity: sha512-mtXKNYlunC/HaEB+IwnJOw+dZ6Z7QwrUr4484qm/MiIk+7f8TyqDM9qYeJENEEDCWznyqR7ML/FNJ3F02nXF0g==}
@@ -3182,9 +3195,10 @@ packages:
   h3@1.15.5:
     resolution: {integrity: sha512-xEyq3rSl+dhGX2Lm0+eFQIAzlDN6Fs0EcC4f7BNUmzaRX/PTzeuM+Tr2lHB8FoXggsQIeXLj8EDVgs5ywxyxmg==}
 
-  h3@2.0.1-rc.11:
-    resolution: {integrity: sha512-2myzjCqy32c1As9TjZW9fNZXtLqNedjFSrdFy2AjFBQQ3LzrnGoDdFDYfC0tV2e4vcyfJ2Sfo/F6NQhO2Ly/Mw==}
+  h3@2.0.1-rc.14:
+    resolution: {integrity: sha512-163qbGmTr/9rqQRNuqMqtgXnOUAkE4KTdauiC9y0E5iG1I65kte9NyfWvZw5RTDMt6eY+DtyoNzrQ9wA2BfvGQ==}
     engines: {node: '>=20.11.1'}
+    hasBin: true
     peerDependencies:
       crossws: ^0.4.1
     peerDependenciesMeta:
@@ -3826,8 +3840,8 @@ packages:
       echarts: ^6.0.0
       vue-echarts: ^8.0.0
 
-  nuxt-i18n-micro@2.20.1:
-    resolution: {integrity: sha512-8grL7qipfB1zGdijq1Z751AdWYZAJntHvYcb6CSI1HpivXm3fMJWT7A/r6seG49M6Sr+kGc805/cwLPjzF1nNg==}
+  nuxt-i18n-micro@3.4.1:
+    resolution: {integrity: sha512-L0j79T23SlyukUcjtG4cOsGIkZP06cgRRamIEtwM/V7v6OTHnr01zmogW1qM9kXQvbJT5PPB3KR+YmRYz+YD6A==}
     peerDependencies:
       vue-router: '>=4.4.0'
 
@@ -4456,6 +4470,11 @@ packages:
 
   srvx@0.10.1:
     resolution: {integrity: sha512-A//xtfak4eESMWWydSRFUVvCTQbSwivnGCEf8YGPe2eHU0+Z6znfUTCPF0a7oV3sObSOcrXHlL6Bs9vVctfXdg==}
+    engines: {node: '>=20.16.0'}
+    hasBin: true
+
+  srvx@0.11.2:
+    resolution: {integrity: sha512-u6NbjE84IJwm1XUnJ53WqylLTQ3BdWRw03lcjBNNeMBD+EFjkl0Cnw1RVaGSqRAo38pOHOPXJH30M6cuTINUxw==}
     engines: {node: '>=20.16.0'}
     hasBin: true
 
@@ -5597,15 +5616,32 @@ snapshots:
       - '@vue/composition-api'
       - vue
 
-  '@i18n-micro/core@1.0.28':
+  '@i18n-micro/core@1.1.2':
     dependencies:
-      '@i18n-micro/types': 1.0.16
+      '@i18n-micro/types': 1.1.1
 
-  '@i18n-micro/test-utils@1.0.8':
+  '@i18n-micro/core@1.1.3':
     dependencies:
-      '@i18n-micro/core': 1.0.28
+      '@i18n-micro/types': 1.1.3
 
-  '@i18n-micro/types@1.0.16': {}
+  '@i18n-micro/path-strategy@1.1.3':
+    dependencies:
+      '@i18n-micro/types': 1.1.3
+      ufo: 1.6.3
+
+  '@i18n-micro/route-strategy@1.1.3':
+    dependencies:
+      '@i18n-micro/core': 1.1.3
+      '@i18n-micro/types': 1.1.3
+      '@nuxt/schema': 4.3.0
+
+  '@i18n-micro/test-utils@1.1.1':
+    dependencies:
+      '@i18n-micro/core': 1.1.2
+
+  '@i18n-micro/types@1.1.1': {}
+
+  '@i18n-micro/types@1.1.3': {}
 
   '@iconify/collections@1.0.643':
     dependencies:
@@ -6043,7 +6079,7 @@ snapshots:
       fake-indexeddb: 6.2.5
       get-port-please: 3.2.0
       h3: 1.15.5
-      h3-next: h3@2.0.1-rc.11
+      h3-next: h3@2.0.1-rc.14
       local-pkg: 1.1.2
       magic-string: 0.30.21
       node-fetch-native: 1.6.7
@@ -8203,10 +8239,10 @@ snapshots:
       ufo: 1.6.3
       uncrypto: 0.1.3
 
-  h3@2.0.1-rc.11:
+  h3@2.0.1-rc.14:
     dependencies:
       rou3: 0.7.12
-      srvx: 0.10.1
+      srvx: 0.11.2
 
   happy-dom@20.4.0:
     dependencies:
@@ -8858,11 +8894,13 @@ snapshots:
     transitivePeerDependencies:
       - magicast
 
-  nuxt-i18n-micro@2.20.1(magicast@0.5.1)(vite@7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vue-router@4.6.4(vue@3.5.27(typescript@5.9.3))):
+  nuxt-i18n-micro@3.4.1(magicast@0.5.1)(vite@7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vue-router@4.6.4(vue@3.5.27(typescript@5.9.3))):
     dependencies:
-      '@i18n-micro/core': 1.0.28
-      '@i18n-micro/test-utils': 1.0.8
-      '@i18n-micro/types': 1.0.16
+      '@i18n-micro/core': 1.1.3
+      '@i18n-micro/path-strategy': 1.1.3
+      '@i18n-micro/route-strategy': 1.1.3
+      '@i18n-micro/test-utils': 1.1.1
+      '@i18n-micro/types': 1.1.3
       '@nuxt/devtools-kit': 2.7.0(magicast@0.5.1)(vite@7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       '@nuxt/kit': 4.3.0(magicast@0.5.1)
       chokidar: 3.6.0
@@ -9702,6 +9740,8 @@ snapshots:
   sqlstring@2.3.3: {}
 
   srvx@0.10.1: {}
+
+  srvx@0.11.2: {}
 
   stackback@0.0.2: {}
 
