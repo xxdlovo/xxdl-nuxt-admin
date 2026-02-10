@@ -133,9 +133,22 @@ export const SysUserBaseSchema = z.object({
 ```
 
 **业务类型规则**：
-- 相关业务类型定义到input.ts/output.ts中
-- 不建议继承BaseSchema的规则(SysUserBaseSchema.shape.id)
-- 用工厂函数自定义错误信息
+- 相关业务类型定义到shared/模块名/业务名/input.ts或output.ts中
+- common.ts中放基础的类型, 和drizzleorm保持一致, 所有属性必须加.nullish(), 通过meta.query定义查询方式
+```
+// 不需要写错误信息和min/max限制
+export const SysUserBaseSchema = z.object({
+id: z.string().nullish(),
+username: z.string().nullish().meta(
+{
+query: 'like'
+}
+)
+})
+export type SysUserDto = z.infer<typeof SysUserBaseSchema>
+  ```
+- input.ts/output.ts不建议继承BaseSchema的规则(SysUserBaseSchema.shape.id)
+- 用工厂函数自定义错误信息, 方便i18n翻译
 - 宁多勿少
 
 ### 导入规范
