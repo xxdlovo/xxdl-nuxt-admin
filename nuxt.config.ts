@@ -22,6 +22,8 @@ export default defineNuxtConfig({
     },
     css: ['~/assets/css/main.css'],
     i18n: {
+        // 路由跳转时没有/zh,/en的路径
+        strategy: 'no_prefix',
         locales: [
             { code: 'en', iso: 'en-US', dir: 'ltr', name: 'English' },
             { code: 'zh', iso: 'zh-CN', dir: 'ltr', name: '中文' }

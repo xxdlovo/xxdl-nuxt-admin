@@ -4,11 +4,9 @@ import {ApiQueryRequestSchema, ApiRequestSchema} from "#shared/types/common";
 
 // ---------------------- 1. 新增用户 DTO（SysUserAddDTO）----------------------
 //创建用户时传入的参数
-export const SysUserAddSchema =
-    (t:(key: string) => string) =>{
-    return z.object({
+export const SysUserAddSchema = z.object({
         id: SysUserBaseSchema.shape.id.nonoptional(),
-        username: z.string(t('form.userName.required')).min(3, t('form.userName.required')).max(50, t('form.userName.required')),
+        username: z.string('form.userName.required').min(3, 'form.userName.required').max(50, 'form.userName.required'),
         password: SysUserBaseSchema.shape.password.nonoptional(),
         email: SysUserBaseSchema.shape.email.nonoptional(),
         nickname: SysUserBaseSchema.shape.nickname,
@@ -19,7 +17,6 @@ export const SysUserAddSchema =
         status: SysUserBaseSchema.shape.status,
         remark: SysUserBaseSchema.shape.remark,
     })
-    }
 // 导出对应的 TS 类型
 export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>;
 

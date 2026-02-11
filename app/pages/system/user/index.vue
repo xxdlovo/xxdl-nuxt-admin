@@ -1,4 +1,5 @@
 <template>
+  <UButton @click="test">新增</UButton>
   <SysUserSearch @reset="reset" @search="search"/>
   <UCard class="flex flex-col h-[calc(100vh-200px)]" :ui="{ body: 'flex flex-col h-full p-0' }">
     <TableHeaderOperation
@@ -54,10 +55,10 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-
+const { $trpc } = useNuxtApp()
 const table = useTemplateRef('table')
 import SysUserSearch from './components/sys-user-search.vue'
-import type {SysUserPageQueryDTO, SysUserQueryDTO} from "#shared/system/user"
+import type {SysUserAddDTO, SysUserPageQueryDTO, SysUserQueryDTO} from "#shared/system/user"
 import type {SysUserDto} from "#shared/system/user/common"
 import {generateMockUsers} from './generateMockUsers'
 import SysUserOperate from "./components/sys-user-operate.vue";
@@ -84,7 +85,15 @@ const pageInfo = ref({
   pageSize: 20,
   total: 100
 })
-
+const test = async () =>{
+  const body:SysUserAddDTO = {
+    id:null,
+    password: '123456',
+    email: '123456',
+  username: '1'
+  }
+  await $trpc.sysUser.create.mutate(body)
+}
 const columns: TableColumn<SysUserDto>[] = [
   {
     accessorKey: 'id',

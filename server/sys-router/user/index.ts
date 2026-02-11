@@ -12,7 +12,8 @@ export const sysUserRouter = router({
     }),
     create: protectedProcedure.input(SysUserAddSchema)
         .mutation(async ({ctx, input})=>{
-            return sysUserService(ctx).create(input)
+            return true
+            // return sysUserService(ctx).create(input)
         }),
     remove: protectedProcedure.input(z.string())
         .mutation(async ({ctx, input})=>{
