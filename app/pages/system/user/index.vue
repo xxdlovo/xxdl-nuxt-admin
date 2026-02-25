@@ -144,11 +144,14 @@ const reset = () => {
 }
 
 const batchDelete = () => {}
+const closeOperate = ()=>{
+  modal.close()
+}
 const add = () => {
-  modal.open({operateType:'add'})
+  modal.open({operateType:'add', close:()=> modal.close(), refresh: search})
 }
 const edit = ()=>{
-  modal.open({operateType:'edit'})
+  modal.open({operateType:'edit', close:()=> modal.close()})
 }
 </script>
 

@@ -263,6 +263,7 @@
       },
       "user": {
         "title": "User List",
+        "password": "password",
         "userName": "User Name",
         "userGender": "Gender",
         "nickName": "Nick Name",

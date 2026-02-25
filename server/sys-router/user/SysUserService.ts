@@ -7,6 +7,7 @@ import type { Context } from '#server/trpc/context';
 import type {OrmPageResp} from '#server/utils/ApiResp'
 import {useDb} from '#server/drizzle/db'
 import type {SysUserAddDTO, SysUserPageQueryDTO, SysUserQueryDTO, SysUserUpdateDTO} from "#shared/system/user";
+import {randomUuid} from "#shared/utils/uuid";
 // export const getById = async () =>{
 //     const db = useDb()
 //     console.log('getById调用了')
@@ -23,7 +24,9 @@ export function sysUserService(ctx: Context) {
 
     return {
         async create(data: SysUserAddDTO): Promise<boolean> {
-            await repo.create(data)
+            const uuid = randomUuid()
+            const pojo = {...data, id: uuid}
+            await repo.create(pojo)
             return true
         },
         async remove(id:string): Promise<boolean>{

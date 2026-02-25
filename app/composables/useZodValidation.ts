@@ -65,6 +65,7 @@ export function useZodValidation<T>(options: UseZodValidationOptions<T>) {
      */
     const translateError = (message: string): string => {
         if (!translate) return message
+        if(!message.includes('.')) return message
         return $ts(message)
     }
 

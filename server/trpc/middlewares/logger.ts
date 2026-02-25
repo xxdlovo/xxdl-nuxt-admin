@@ -11,11 +11,11 @@ export const loggerMiddleware = async (opts: any) => {
 
     const start = Date.now()
 
-    console.log("[tRPC Request]", path)
+    console.log("[tRPC Request Start]", path)
 
     const result = await next()
 
-    console.log("[tRPC Response]", path, Date.now() - start,'毫秒')
+    console.log("[tRPC Response End]", path, Date.now() - start,'毫秒')
 
     return result
 }

@@ -6,9 +6,9 @@ import {ApiQueryRequestSchema, ApiRequestSchema} from "#shared/types/common";
 //创建用户时传入的参数
 export const SysUserAddSchema = z.object({
         id: SysUserBaseSchema.shape.id.nonoptional(),
-        username: z.string('form.userName.required').min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
-        password: SysUserBaseSchema.shape.password.nonoptional(),
-        email: z.string('form.userName.required'),
+        username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
+        password: z.string().min(3,'密码最小3个').max(10,'密码不能超过10位'),
+        email: z.string().min(3,'最小3个'),
         nickname: SysUserBaseSchema.shape.nickname,
         avatar: SysUserBaseSchema.shape.avatar,
         phone: SysUserBaseSchema.shape.phone,
@@ -22,17 +22,9 @@ export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>;
 
 // ---------------------- 2. 更新用户 DTO（SysUserUpdateDTO）----------------------
 // （更新用户时传入的参数，ID必传，排除不可更新字段（如password可单独做修改接口））
-export const SysUserUpdateSchema = z.object({
-    id: SysUserBaseSchema.shape.id.nonoptional('id不能为空'), // 更新必传用户ID
-    email: SysUserBaseSchema.shape.email,
-    nickname: SysUserBaseSchema.shape.nickname,
-    avatar: SysUserBaseSchema.shape.avatar,
-    phone: SysUserBaseSchema.shape.phone,
-    gender: SysUserBaseSchema.shape.gender,
-    deptId: SysUserBaseSchema.shape.deptId,
-    status: SysUserBaseSchema.shape.status,
-    remark: SysUserBaseSchema.shape.remark,
-});
+export const SysUserUpdateSchema = SysUserAddSchema.extend({
+    id: z.string('主键不能为空'),
+})
 // 导出对应的 TS 类型
 export type SysUserUpdateDTO = z.infer<typeof SysUserUpdateSchema>;
 
