@@ -121,6 +121,7 @@ interface TRPCErrorDetail {
 export const getErrorDescription = (err: unknown): string => {
   // 检查是否为TRPCClientError
   if (err instanceof TRPCClientError) {
+      const {$ts} = useI18n()
     try {
       // 尝试从stack中提取错误数组字符串
       // stack的格式类似: "TRPCError: [ { ... }, { ... } ]\n    at ..."
@@ -137,7 +138,8 @@ export const getErrorDescription = (err: unknown): string => {
         
         // 拼接所有错误信息
         if (errors.length > 0) {
-          return errors.map(e => e.message).join('；');
+            // 对错误码进行翻译
+          return errors.map(e => $ts(e.message)).join('；');
         }
       }
     } catch (parseError) {
@@ -146,6 +148,7 @@ export const getErrorDescription = (err: unknown): string => {
     
     // 如果解析失败，使用错误对象本身的message
     if (err.message) {
+        console.log('88888')
       return err.message;
     }
   }

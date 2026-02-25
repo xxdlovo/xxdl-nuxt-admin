@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import {SysUserAddSchema, type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
+import {type SysUserAddDTO, SysUserAddSchema, type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
 import {SysUserBaseSchema, type SysUserDto} from "#shared/system/user/common";
 import * as z from 'zod'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 import {useTransformRecordToOption} from "~/composables/useTransformRecordToOption";
 import {enableStatusOptions, enableStatusRecord, userGenderOptions, userGenderRecord} from "#shared/constants/business";
 const { $ts } = useI18n()
@@ -16,22 +17,16 @@ const statusValue = computed({
   get: () => String(state.value.status || 0),
   set: (val) => state.value.status = Number(val)
 });
-const state = ref<SysUserDto>({
+const state = ref<SysUserAddDTO>({
   id: '',
   username: '',
   password: '',
   nickname: '',
   email: '',
 })
-const schema = computed(() =>{
-  let  schema = SysUserAddSchema($ts)
-  if(props.operateType === 'edit'){
 
-  }
-  if(props.operateType === 'add'){
-    // schema.shape.id.nullish()
-  }
-  return schema
+const { schema, validate } = useZodValidation({
+  schema: () => props.operateType === 'add' ? SysUserAddSchema : SysUserAddSchema
 })
 const form = useTemplateRef('form')
 const genderItems = useTransformRecordToOption(userGenderRecord)
@@ -57,7 +52,7 @@ const title = computed(() => {
 
 
     <template #body class="w-[50%]">
-      <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
+      <UForm ref="form" :validateOn="['input']" :validate="validate"    :state="state" class="p-2">
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
           <UFormField name="username" required :label="$ts('module.system.user.userName')" orientation="horizontal">
             <UInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" />

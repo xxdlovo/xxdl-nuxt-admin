@@ -6,9 +6,9 @@ import {ApiQueryRequestSchema, ApiRequestSchema} from "#shared/types/common";
 //创建用户时传入的参数
 export const SysUserAddSchema = z.object({
         id: SysUserBaseSchema.shape.id.nonoptional(),
-        username: z.string('form.userName.required').min(3, 'form.userName.required').max(50, 'form.userName.required'),
+        username: z.string('form.userName.required').min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
         password: SysUserBaseSchema.shape.password.nonoptional(),
-        email: SysUserBaseSchema.shape.email.nonoptional(),
+        email: z.string('form.userName.required'),
         nickname: SysUserBaseSchema.shape.nickname,
         avatar: SysUserBaseSchema.shape.avatar,
         phone: SysUserBaseSchema.shape.phone,

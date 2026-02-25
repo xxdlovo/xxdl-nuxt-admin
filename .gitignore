@@ -1,4 +1,6 @@
 soybean-admin
+# i18n 翻译文件
+server/assets/_locales
 app/locales/pages
 # Nuxt dev/build outputs
 .output
