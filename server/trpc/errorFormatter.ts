@@ -40,12 +40,20 @@ export const errorFormatter = ({ shape, error }: ErrorFormatterOpts) => {
             customMessage = '提交的数据格式不正确';
         }
     }
+    /**
+     * ==============================
+     * 2️⃣ Drizzle / 数据库错误
+     * ==============================
+     */
+    else if (isDatabaseError(error.cause)) {
+        console.log('捕获到数据库错误:', error.cause);
+        errorType = 'database';
 
-    // return{
-    //     code: 200,
-    //     data: '222'
-    // }
+        const dbError = (error.cause as any).cause ;
+        customMessage = dbError.message
 
+    }
+    shape.message = customMessage;
     // ✅ 返回类型：data 符合 TRPCFormattedError 类型
     return {
         ...shape,
@@ -59,3 +67,17 @@ export const errorFormatter = ({ shape, error }: ErrorFormatterOpts) => {
         } as TRPCFormattedError,
     };
 };
+/**
+ * 判断是否是数据库错误
+ */
+function isDatabaseError(cause: unknown): boolean {
+    if (!cause || typeof cause !== 'object') return false;
+
+    const err = cause as any;
+
+    return (
+        typeof err.cause.code === 'string' ||     // pg/mysql error
+        typeof err.cause.sql === 'string' ||      // drizzle query error
+        typeof err.cause.constraint === 'string'  // pg constraint
+    );
+}
