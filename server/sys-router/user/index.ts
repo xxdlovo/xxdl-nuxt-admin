@@ -20,6 +20,10 @@ export const sysUserRouter = router({
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).remove(input)
         }),
+    batchDelete: protectedProcedure.input(z.array(z.string()))
+        .mutation(async ({ctx, input})=>{
+            return sysUserService(ctx).batchRemove(input)
+        }),
     update: protectedProcedure.input(SysUserUpdateSchema)
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).updateById(input.id, input)

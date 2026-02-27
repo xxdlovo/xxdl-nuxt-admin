@@ -1,7 +1,7 @@
 import { mergeWhere } from "./queries/mergeWhere"
 import { buildScope } from "./queries/buildScope"
 import { buildWhereBySchema } from "./queries/buildWhereBySchema"
-import {Column, count, eq, type InferInsertModel} from "drizzle-orm"
+import {Column, count, eq, inArray, type InferInsertModel} from "drizzle-orm"
 
 import {ZodObject} from "zod";
 import type { Context } from '#server/trpc/context';
@@ -129,6 +129,19 @@ export function CommonRepo<
                     .update(table)
                     .set({ isDeleted: 1 } as any)
                     .where(eq(table.id, id))
+            },
+
+            /** ✅ 批量逻辑删除 */
+            async batchRemove( ids: any[]) {
+                if (ids.length === 0) {
+                    return 0
+                }
+
+                // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
+                return ctx.db
+                    .update(table)
+                    .set({ isDeleted: 1 } as any)
+                    .where(inArray(table.id, ids))
             },
         }
     }

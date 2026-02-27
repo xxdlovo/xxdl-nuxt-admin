@@ -10,6 +10,7 @@ const baseSchema = z.object({
 // ---------------------- 第一步：创建分页 Schema----------------------
 /**
  * 分页响应结构（泛型，支持指定列表项类型）
+ * 用于 HTTP API 响应格式
  */
 export function createPaginationSchema<T extends z.ZodTypeAny>(itemSchema: T) {
     return baseSchema.extend({
@@ -17,6 +18,7 @@ export function createPaginationSchema<T extends z.ZodTypeAny>(itemSchema: T) {
         list: z.array(itemSchema)
     }).describe("分页格式响应")
 }
+
 export const ApiResp = () =>{
      return {
          successPage: (data: any) =>{
@@ -29,7 +31,23 @@ export const ApiResp = () =>{
     }
      }
 }
+
 export type ApiPageResp<T> = z.infer<typeof createPaginationSchema<z.ZodType<T>>>
+
+/**
+ * tRPC 分页响应类型
+ * tRPC 直接返回数据，不包含 code/success/msg 等包裹字段
+ */
+export const TrpcPageResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) => {
+    return z.object({
+        list: z.array(itemSchema),
+        total: z.number().int().nonnegative(),
+        page: z.number().int().min(1),
+        pageSize: z.number().int().min(1)
+    }).describe("tRPC 分页响应")
+}
+
+export type TrpcPageResp<T> = z.infer<ReturnType<typeof TrpcPageResponseSchema<z.ZodType<T>>>>
 // ---------------------- 第二步：创建纯数据 Schema（泛型，支持单个/列表数据）----------------------
 /**
  * 纯数据 Schema 工厂函数（泛型，支持指定数据类型）

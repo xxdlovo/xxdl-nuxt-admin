@@ -1,4 +1,6 @@
 soybean-admin
+# 模拟数据库插入文件
+doc/mock_sql/*.sql
 # i18n 翻译文件
 server/assets/_locales
 app/locales/pages

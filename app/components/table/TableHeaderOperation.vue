@@ -6,11 +6,13 @@ defineOptions({
 });
 
 
-defineProps<{
+const props = defineProps<{
   tableRef: any | null,
   itemAlign?: string;
   disabledDelete?: boolean;
   loading?: boolean;
+  batchDeleteLoading?: boolean;
+  selectedCount?: number;
 }>();
 
 
@@ -65,6 +67,7 @@ function refresh() {
             variant="outline"
             color="error"
             :disabled="disabledDelete"
+            :loading="batchDeleteLoading"
         >
           <template #leading>
             <UIcon name="i-ic-round-delete" class="w-4 h-4" />
@@ -75,7 +78,7 @@ function refresh() {
         <template #content>
           <div class="p-3 space-y-2">
             <p class="text-sm text-gray-600">
-              确认要删除选中的数据吗？
+              确认要删除选中的 <span class="font-semibold text-error">{{ selectedCount || 0 }}</span> 条数据吗？
             </p>
 
             <div class="flex justify-end gap-2">
@@ -88,6 +91,7 @@ function refresh() {
 
               <UButton
                   color="warning"
+                  :loading="batchDeleteLoading"
                   @click="batchDelete"
               >
                 确认删除

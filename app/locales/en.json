@@ -27,6 +27,7 @@
     "error": "Error",
     "index": "Index",
     "keywordSearch": "Please enter keyword",
+    "loading": "Loading...",
     "logout": "Logout",
     "logoutConfirm": "Are you sure you want to log out?",
     "lookForward": "Coming soon",

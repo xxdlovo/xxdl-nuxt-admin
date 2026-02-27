@@ -33,6 +33,10 @@ export function sysUserService(ctx: Context) {
             await repo.remove(id)
             return true
         },
+        async batchRemove(ids: string[]): Promise<number>{
+            const count = await repo.batchRemove(ids)
+            return count
+        },
         async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
             return true
