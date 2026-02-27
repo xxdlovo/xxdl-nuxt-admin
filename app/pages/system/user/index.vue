@@ -1,10 +1,12 @@
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="h-full flex flex-col p-3 gap-3">
     <!-- 搜索表单 -->
-    <SysUserSearch @reset="handleReset" @search="handleSearch"/>
+    <div class="flex-shrink-0">
+      <SysUserSearch @reset="handleReset" @search="handleSearch"/>
+    </div>
 
     <!-- 表格卡片 -->
-    <UCard class="flex flex-col h-[calc(100vh-200px)]" :ui="{ body: 'flex flex-col h-full p-0' }">
+    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0' }">
       <!-- 表头操作栏 -->
       <TableHeaderOperation
           v-if="table"
@@ -16,7 +18,7 @@
           :disabledDelete="selectedRows.length === 0 || loading || batchDeleteLoading"
           :batchDeleteLoading="batchDeleteLoading"
           :selectedCount="selectedRows.length"
-          class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
+          class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
       />
 
       <!-- 表格容器 -->
@@ -43,7 +45,7 @@
       </div>
 
       <!-- 分页 -->
-      <div class="flex-shrink-0 px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div class="flex-shrink-0 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div class="flex items-center justify-end gap-2">
           <!-- 总数 -->
           <div class="hidden sm:block text-sm text-gray-700 dark:text-gray-300">
