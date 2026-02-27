@@ -106,7 +106,6 @@ const batchDeleteLoading = ref(false)
 const {
   data,
   loading,
-  columns,
   pagination,
   pageSizeOptions,
   search,
@@ -115,17 +114,66 @@ const {
   changePageSize
 } = usePaginatedTable<SysUserDto>({
   query: (params) => $trpc.sysUser.page.query(params),
-  pageSizeOptions: [10, 20, 50, 100],
-  columns: () => [
+  pageSizeOptions: [10, 20, 50, 100]
+})
+
+// 定义列配置（包含选择列）
+const columns = computed(() => {
+  const UCheckbox = resolveComponent('UCheckbox')
+
+  return [
+    // 选择列
+    {
+      id: 'select',
+      header: () => {
+        const allSelected = data.value.length > 0 && selectedRows.value.length === data.value.length
+        const someSelected = selectedRows.value.length > 0 && selectedRows.value.length < data.value.length
+
+        return h('div', { class: 'flex items-center justify-center' },
+          h(UCheckbox, {
+            modelValue: allSelected,
+            indeterminate: someSelected,
+            'onUpdate:modelValue': (value: boolean) => {
+              if (value) {
+                selectedRows.value = [...data.value]
+              } else {
+                selectedRows.value = []
+              }
+            },
+            'aria-label': 'Select all'
+          })
+        )
+      },
+      cell: ({ row }) => {
+        const isSelected = selectedRows.value.some(r => r.id === row.original.id)
+
+        return h('div', { class: 'flex items-center justify-center' },
+          h(UCheckbox, {
+            modelValue: isSelected,
+            'onUpdate:modelValue': (value: boolean) => {
+              if (value) {
+                if (!selectedRows.value.some(r => r.id === row.original.id)) {
+                  selectedRows.value = [...selectedRows.value, row.original]
+                }
+              } else {
+                selectedRows.value = selectedRows.value.filter(r => r.id !== row.original.id)
+              }
+            },
+            'aria-label': 'Select row'
+          })
+        )
+      }
+    },
+    // 序号列
     {
       id: 'index',
       header: () => $ts('common.index'),
       cell: ({ row }) => {
-        // 计算序号：考虑分页
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
         return h('span', { class: 'text-gray-500 dark:text-gray-400' }, index)
       }
     },
+    // 数据列
     {
       accessorKey: 'username',
       header: () => $ts('module.system.user.userName')

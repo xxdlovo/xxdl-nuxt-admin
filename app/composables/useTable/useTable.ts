@@ -12,13 +12,16 @@ export function useTable<T>(options: UseTableOptions<T>) {
   const error = ref<Error | null>(null)
 
   // 列配置（使用函数支持国际化动态更新）
-  const columns = ref<TableColumn<T>[]>(options.columns())
+  const hasColumns = options.columns && typeof options.columns === 'function'
+  const columns = ref<TableColumn<T>[]>(hasColumns ? options.columns() : [])
 
   /**
    * 重新加载列配置（用于语言切换时更新）
    */
   const reloadColumns = () => {
-    columns.value = options.columns()
+    if (hasColumns) {
+      columns.value = options.columns()
+    }
   }
 
   /**

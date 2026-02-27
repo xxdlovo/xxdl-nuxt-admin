@@ -44,8 +44,9 @@ export interface UseTableOptions<T> {
 
   /**
    * 列配置函数（使用函数支持国际化动态更新）
+   * 可选参数，如果未提供则返回空数组
    */
-  columns: () => TableColumn<T>[]
+  columns?: () => TableColumn<T>[]
 
   /**
    * 数据获取完成后的回调

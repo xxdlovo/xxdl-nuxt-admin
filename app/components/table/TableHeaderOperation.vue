@@ -1,43 +1,65 @@
 <script setup lang="ts">
-
+import { nextTick, ref, watch } from 'vue'
 
 defineOptions({
   name: 'TableHeaderOperation'
-});
-
+})
 
 const props = defineProps<{
-  tableRef: any | null,
-  itemAlign?: string;
-  disabledDelete?: boolean;
-  loading?: boolean;
-  batchDeleteLoading?: boolean;
-  selectedCount?: number;
-}>();
-
-
+  tableRef: any | null
+  disabledDelete?: boolean
+  loading?: boolean
+  batchDeleteLoading?: boolean
+  selectedCount?: number
+}>()
 
 const emit = defineEmits<{
-  'add': [];
-  'delete': [];
-  'refresh': [];
-}>();
+  add: []
+  delete: []
+  refresh: []
+}>()
 
-const columns = defineModel<any[]>('columns', {
-  default: () => []
-});
+// 批量删除弹窗状态
+const showDeletePopover = ref(false)
+const isConfirming = ref(false)
 
 function add() {
-  emit('add');
+  emit('add')
 }
 
-function batchDelete() {
-  emit('delete');
+async function batchDelete() {
+  isConfirming.value = true
+  emit('delete')
+
+  // 如果没有 loading，立即关闭
+  if (!props.batchDeleteLoading) {
+    nextTick(() => {
+      showDeletePopover.value = false
+      isConfirming.value = false
+    })
+  }
 }
 
 function refresh() {
-  emit('refresh');
+  emit('refresh')
 }
+
+// 处理取消
+function handleCancelDelete() {
+  showDeletePopover.value = false
+  isConfirming.value = false
+}
+
+// 监听 batchDeleteLoading 变化，当 loading 完成后关闭对话框
+watch(() => props.batchDeleteLoading, (newLoading) => {
+  // 当从 loading 变为非 loading，且之前点击了确认时，关闭对话框
+  if (!newLoading && isConfirming.value) {
+    nextTick(() => {
+      showDeletePopover.value = false
+      isConfirming.value = false
+    })
+  }
+})
 </script>
 
 <template>
@@ -62,7 +84,7 @@ function refresh() {
       </UButton>
 
       <!-- 批量删除 -->
-      <UPopover>
+      <UPopover v-model:open="showDeletePopover">
         <UButton
             variant="outline"
             color="error"
@@ -76,21 +98,22 @@ function refresh() {
         </UButton>
 
         <template #content>
-          <div class="p-3 space-y-2">
-            <p class="text-sm text-gray-600">
+          <div class="p-3">
+            <p class="text-sm text-gray-600 mb-3">
               确认要删除选中的 <span class="font-semibold text-error">{{ selectedCount || 0 }}</span> 条数据吗？
             </p>
 
             <div class="flex justify-end gap-2">
               <UButton
                   variant="ghost"
-                  color="warning"
+                  color="neutral"
+                  @click="handleCancelDelete"
               >
                 取消
               </UButton>
 
               <UButton
-                  color="warning"
+                  color="error"
                   :loading="batchDeleteLoading"
                   @click="batchDelete"
               >
