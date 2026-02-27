@@ -63,7 +63,7 @@ function refresh() {
       <UPopover>
         <UButton
             variant="outline"
-            color="warning"
+            color="error"
             :disabled="disabledDelete"
         >
           <template #leading>

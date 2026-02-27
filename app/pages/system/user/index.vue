@@ -55,6 +55,7 @@
 
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
+import { h } from 'vue'
 const { $trpc } = useNuxtApp()
 const table = useTemplateRef('table')
 import SysUserSearch from './components/sys-user-search.vue'
@@ -71,6 +72,8 @@ import {
 } from "#shared/constants/business";
 import {useBadgeColumn} from "~/composables/useBadgeColumn";
 const UBadge = resolveComponent('UBadge')
+const UButton = resolveComponent('UButton')
+const Popconfirm = resolveComponent('Popconfirm')
 const { $ts } = useI18n()
 const state = ref<SysUserPageQueryDTO>()
 const overlay = useOverlay()
@@ -128,14 +131,47 @@ const columns: TableColumn<SysUserDto>[] = [
       USER_STATUS_CONFIG,
       1
   ),
+  {
+    accessorKey: 'actions',
+    header: '操作',
+    cell: ({ row }) => {
+      return h('div', { class: 'flex gap-2' }, [
+        h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          onClick: () => edit(row.original)
+        }, { default: () => $ts('common.edit') }),
+        h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error'
+          }, { default: () => $ts('common.delete') })
+        })
+      ])
+    }
+  }
 ]
 
 const data = ref<SysUserDto[]>([])
+const deleteLoading = ref(false)
 
-const search = (pojo: SysUserQueryDTO = {}) => {
-  console.log($ts('route.home'))
-  console.log('主页调用:', pojo)
-  data.value = generateMockUsers(1, 10)
+const search = async (pojo: SysUserQueryDTO = {}) => {
+  const clientStart = performance.now()
+  const params: SysUserPageQueryDTO = {
+    page: pageInfo.value.page,
+    pageSize: pageInfo.value.pageSize,
+    ...pojo
+  }
+  const resp = await $trpc.sysUser.page.query(params)
+  const clientEnd = performance.now()
+
+  // 记录前端感知的总耗时
+  console.log(`[前端] search总耗时: ${(clientEnd - clientStart).toFixed(2)}ms`)
+
+  data.value = resp.list
+  pageInfo.value.total = resp.total
 }
 
 const reset = () => {
@@ -144,14 +180,24 @@ const reset = () => {
 }
 
 const batchDelete = () => {}
-const closeOperate = ()=>{
-  modal.close()
+
+// 单行删除
+const handleDelete = async (row: SysUserDto) => {
+  deleteLoading.value = true
+  try {
+    await $trpc.sysUser.remove.mutate(row.id as string)
+    search()
+  } finally {
+    deleteLoading.value = false
+  }
 }
+
+const edit = (row: SysUserDto) => {
+  modal.open({ operateType: 'edit', data: row, close: () => modal.close(), refresh: search })
+}
+
 const add = () => {
-  modal.open({operateType:'add', close:()=> modal.close(), refresh: search})
-}
-const edit = ()=>{
-  modal.open({operateType:'edit', close:()=> modal.close()})
+  modal.open({ operateType: 'add', close: () => modal.close(), refresh: search })
 }
 </script>
 

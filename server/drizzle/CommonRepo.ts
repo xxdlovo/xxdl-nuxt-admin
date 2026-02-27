@@ -124,10 +124,10 @@ export function CommonRepo<
 
             /** ✅ 逻辑删除 */
             async remove( id: any) {
-                var column = table.isDeleted;
+                // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
                 return ctx.db
                     .update(table)
-                    .set({[column.name]: 1} as any)
+                    .set({ isDeleted: 1 } as any)
                     .where(eq(table.id, id))
             },
         }
