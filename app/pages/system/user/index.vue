@@ -193,6 +193,7 @@ const handleDelete = async (row: SysUserDto) => {
 }
 
 const edit = (row: SysUserDto) => {
+  console.log('edit 调用', row)
   modal.open({ operateType: 'edit', data: row, close: () => modal.close(), refresh: search })
 }
 

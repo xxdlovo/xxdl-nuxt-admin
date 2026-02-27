@@ -1,5 +1,11 @@
 <script setup lang="ts">
-import {type SysUserAddDTO, SysUserAddSchema, type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
+import {
+  type SysUserAddDTO,
+  SysUserAddSchema,
+  type SysUserQueryDTO,
+  SysUserQuerySchema,
+  type SysUserUpdateDTO
+} from "#shared/system/user";
 import {SysUserBaseSchema, type SysUserDto} from "#shared/system/user/common";
 import * as z from 'zod'
 import type {FormError, FormSubmitEvent} from '@nuxt/ui'
@@ -11,6 +17,7 @@ const {$ts} = useI18n()
 const form = useTemplateRef('form')
 const props = defineProps<{
   operateType: string;
+  data?: SysUserDto;
   close?: () => void;
   refresh?:() => void;
 }>();
@@ -22,12 +29,16 @@ const statusValue = computed({
   get: () => String(state.value.status || 0),
   set: (val) => state.value.status = Number(val)
 });
-const state = ref<SysUserAddDTO>({
+const state = ref<SysUserAddDTO | SysUserUpdateDTO>({
   id: '',
   username: '',
   password: '',
   nickname: '',
   email: '',
+  phone: '',
+  gender: 0,
+  status: 1,
+  remark: ''
 })
 
 const {schema, validate} = useZodValidation({
@@ -38,14 +49,62 @@ const statusItems = useTransformRecordToOption(enableStatusRecord)
 const closeDrawer = () => {
   props.close?.()
 }
+
+// 初始化表单数据
+const initFormData = () => {
+  console.log('initFormData 调用', { operateType: props.operateType, data: props.data })
+
+  if (props.operateType === 'edit' && props.data) {
+    // 编辑模式：填充表单数据
+    Object.assign(state.value, {
+      id: props.data.id,
+      username: props.data.username || '',
+      password: props.data.password || '',
+      nickname: props.data.nickname || '',
+      email: props.data.email || '',
+      phone: props.data.phone || '',
+      gender: props.data.gender ?? 0,
+      status: props.data.status ?? 1,
+      remark: props.data.remark || ''
+    })
+    console.log('编辑数据已填充', state.value)
+  } else if (props.operateType === 'add') {
+    // 新增模式：重置表单
+    Object.assign(state.value, {
+      id: '',
+      username: '',
+      password: '',
+      nickname: '',
+      email: '',
+      phone: '',
+      gender: 0,
+      status: 1,
+      remark: ''
+    })
+    console.log('新增表单已重置')
+  }
+}
+
+// 监听 data 和 operateType 变化
+watch([() => props.data, () => props.operateType], () => {
+  initFormData()
+}, { immediate: true })
+
 const handleSubmit = async (event: FormSubmitEvent<SysUserAddDTO>) => {
   console.log('提交', state.value)
   if(props.operateType === 'add') {
     await handleSave()
+  } else if (props.operateType === 'edit') {
+    await handleEdit()
   }
   closeDrawer()
   props.refresh?.()
+}
 
+// 编辑数据
+const handleEdit = async()=>{
+  await $trpc.sysUser.update.mutate(state.value as SysUserUpdateDTO)
+  useToastSuccess('编辑成功')
 }
 // 保存数据
 const handleSave = async()=>{

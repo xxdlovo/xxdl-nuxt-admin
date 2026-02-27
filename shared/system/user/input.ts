@@ -23,7 +23,7 @@ export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>;
 // ---------------------- 2. 更新用户 DTO（SysUserUpdateDTO）----------------------
 // （更新用户时传入的参数，ID必传，排除不可更新字段（如password可单独做修改接口））
 export const SysUserUpdateSchema = SysUserAddSchema.extend({
-    id: z.string('主键不能为空'),
+    id: z.string().nonempty('主键不能为空'),
 })
 // 导出对应的 TS 类型
 export type SysUserUpdateDTO = z.infer<typeof SysUserUpdateSchema>;
