@@ -11,11 +11,13 @@ import type { BadgeConfig } from '#shared/types/nuxtui'
  * 类型守卫：检查是否为 BadgeConfig
  */
 function isBadgeConfig(config: unknown): config is BadgeConfig {
+  if (typeof config !== 'object' || config === null) {
+    return false
+  }
+  const obj = config as Record<string, unknown>
   return (
-    typeof config === 'object' &&
-    config !== null &&
-    'i18nKey' in config &&
-    'color' in config
+    typeof obj.i18nKey === 'string' &&
+    typeof obj.color === 'string'
   )
 }
 
@@ -25,6 +27,7 @@ function isBadgeConfig(config: unknown): config is BadgeConfig {
 const colorClasses: Record<string, string> = {
   neutral: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700',
   primary: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800',
+  secondary: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700',
   warning: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800',
   error: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800',
   info: 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800',
@@ -44,12 +47,12 @@ const colorClasses: Record<string, string> = {
  * )
  * ```
  */
-export function useBadgeColumn<T extends Record<string, BadgeConfig> = any>(
+export function useBadgeColumn<TData = any>(
   accessorKey: string,
   headerI18nKey: string,
-  configMap: T,
+  configMap: Record<string, BadgeConfig>,
   defaultValue: number = 0
-): TableColumn<T> {
+): TableColumn<TData> {
   const { $ts } = useI18n()
 
   return {
@@ -57,7 +60,8 @@ export function useBadgeColumn<T extends Record<string, BadgeConfig> = any>(
     header: () => $ts(headerI18nKey),
     cell: ({ row }: any) => {
       const value = (row.getValue(accessorKey) as number) ?? defaultValue
-      const rawConfig = configMap[String(value)] ?? configMap[String(defaultValue)]
+      const key = String(value)
+      const rawConfig: unknown = configMap[key] ?? configMap[String(defaultValue)]
 
       if (!isBadgeConfig(rawConfig)) {
         return ''
@@ -66,15 +70,17 @@ export function useBadgeColumn<T extends Record<string, BadgeConfig> = any>(
       const label = $ts(rawConfig.i18nKey)
       const colorClass = colorClasses[rawConfig.color] || colorClasses.neutral
 
-      return h('div', {
-        class: `inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${colorClass}`
-      }, [
-        rawConfig.icon && h('i', {
+      const children: (ReturnType<typeof h> | string)[] = [label]
+      if (rawConfig.icon) {
+        children.unshift(h('i', {
           class: rawConfig.icon,
           style: { marginRight: '4px' }
-        }),
-        label
-      ])
+        }))
+      }
+
+      return h('div', {
+        class: `inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${colorClass}`
+      }, children)
     }
   }
 }
@@ -117,7 +123,7 @@ export function useActionsColumn<T>(
               variant: 'outline',
               color: 'primary',
               size: 'xs',
-              onClick: () => action.onClick(row.original)
+              onClick: () => action.onClick?.(row.original)
             }, { default: () => $ts('common.edit') })
           }
 

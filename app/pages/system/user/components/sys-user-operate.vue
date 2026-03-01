@@ -16,11 +16,21 @@ const { $trpc } = useNuxtApp()
 const {$ts} = useI18n()
 const form = useTemplateRef('form')
 const props = defineProps<{
+  visible: boolean;
   operateType: string;
   data?: SysUserDto;
   close?: () => void;
   refresh?:() => void;
 }>();
+
+const emit = defineEmits<{
+  'update:visible': [value: boolean]
+}>();
+
+const visible = computed({
+  get: () => props.visible,
+  set: (value) => emit('update:visible', value)
+});
 const genderValue = computed({
   get: () => String(state.value.gender || 0),
   set: (val) => state.value.gender = Number(val)
@@ -122,6 +132,7 @@ const title = computed(() => {
 </script>
 <template>
   <UModal
+      v-model:open="visible"
       :title="title"
       :dismissible="false"
       :ui="{
@@ -134,23 +145,23 @@ const title = computed(() => {
       <UForm ref="form" :validate="validate" :state="state" class="p-2" @submit="handleSubmit">
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
           <UFormField name="username" required :label="$ts('module.system.user.userName')" orientation="horizontal">
-            <UInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')"/>
+            <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear"/>
           </UFormField>
           <UFormField name="password" required :label="$ts('module.system.user.password')" orientation="horizontal">
-            <UInput v-model="state.password" :placeholder="$ts('module.system.user.form.password')"/>
+            <UBaseInput v-model="state.password" :placeholder="$ts('module.system.user.form.password')" trailing="password"/>
           </UFormField>
           <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal">
             <URadioGroup orientation="horizontal" v-model="genderValue"
                          :placeholder="$ts('module.system.user.form.userGender')" :items="genderItems"></URadioGroup>
           </UFormField>
           <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal">
-            <UInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')"/>
+            <UBaseInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')" trailing="clear"/>
           </UFormField>
           <UFormField name="phone" :label="$ts('module.system.user.userPhone')" orientation="horizontal">
-            <UInput v-model="state.phone" :placeholder="$ts('module.system.user.form.userPhone')"/>
+            <UBaseInput v-model="state.phone" :placeholder="$ts('module.system.user.form.userPhone')" trailing="clear"/>
           </UFormField>
           <UFormField name="email" required :label="$ts('module.system.user.userEmail')" orientation="horizontal">
-            <UInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')"/>
+            <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear"/>
           </UFormField>
           <UFormField name="gender" :label="$ts('module.system.user.userStatus')" orientation="horizontal">
             <URadioGroup orientation="horizontal" v-model="statusValue"

@@ -8,6 +8,8 @@
   },
   "common": {
     "action": "Action",
+    "selectRow": "Select Row",
+    "selectAll": "Select All",
     "add": "Add",
     "addSuccess": "Add Success",
     "backToHome": "Back to home",

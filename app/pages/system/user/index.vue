@@ -2,78 +2,42 @@
   <div class="h-full flex flex-col p-3 gap-3">
     <!-- 搜索表单 -->
     <div class="flex-shrink-0">
-      <SysUserSearch @reset="handleReset" @search="handleSearch"/>
+      <SysUserSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
     </div>
 
     <!-- 表格卡片 -->
     <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0' }">
-      <!-- 表头操作栏 -->
-      <TableHeaderOperation
-          v-if="table"
-          @add="openAdd"
-          @delete="handleBatchDelete"
-          @refresh="refresh"
-          :tableRef="table"
+      <TableWithPagination
+          ref="table"
+          :data="data"
+          :columns="columns"
           :loading="loading"
-          :disabledDelete="selectedRows.length === 0 || loading || batchDeleteLoading"
-          :batchDeleteLoading="batchDeleteLoading"
-          :selectedCount="selectedRows.length"
-          class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
-      />
-
-      <!-- 表格容器 -->
-      <div class="flex-1 overflow-auto px-4 min-h-0 relative">
-        <!-- Loading 遮罩 -->
-        <div
-            v-if="loading"
-            class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-10"
-        >
-            <div class="flex flex-col items-center gap-3">
-                <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-primary animate-spin" />
-                <span class="text-sm text-gray-600 dark:text-gray-400">{{ $ts('common.loading') }}</span>
-            </div>
-        </div>
-
-        <UTable
-            ref="table"
-            :data="data"
-            :columns="columns"
-            :loading="loading"
-            sticky
-            class="min-w-full h-full"
-        />
-      </div>
-
-      <!-- 分页 -->
-      <div class="flex-shrink-0 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div class="flex items-center justify-end gap-2">
-          <!-- 总数 -->
-          <div class="hidden sm:block text-sm text-gray-700 dark:text-gray-300">
-            共 {{ pagination.total }} 条
-          </div>
-
-          <!-- 每页条数选择 -->
-          <USelect
-              v-model="pagination.pageSize"
-              :items="pageSizeOptions"
-              :disabled="loading"
-              class="w-16 sm:w-20"
-              @change="() => changePageSize(pagination.pageSize)"
+          :pagination="pagination"
+          :page-size-options="pageSizeOptions"
+      >
+        <template #header>
+          <TableHeaderOperation
+              v-if="tableRef?.tableRef"
+              @add="handleAdd"
+              @delete="handleBatchDelete"
+              @refresh="refresh"
+              :tableRef="tableRef.tableRef"
+              :loading="loading"
+              :disabledDelete="checkedRowKeys.length === 0 || loading"
+              :selectedCount="checkedRowKeys.length"
+              class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           />
 
-          <!-- 分页器 -->
-          <UPagination
-              v-model:page="pagination.page"
-              :items-per-page="pagination.pageSize"
-              :total="pagination.total"
-              :max="5"
-              :disabled="loading"
-              show-first
-              show-last
-              @click="() => changePage(pagination.page)"
+          <!-- 用户操作弹窗 -->
+          <SysUserOperate
+              v-model:visible="drawerVisible"
+              :operate-type="operateType"
+              :data="editingData ?? undefined"
+              :close="closeVisible"
+              :refresh="refresh"
           />
-        </div>
-      </div>
+        </template>
+      </TableWithPagination>
     </UCard>
   </div>
 </template>
@@ -86,23 +50,16 @@ import type { SysUserDto } from "#shared/system/user/common"
 import SysUserSearch from './components/sys-user-search.vue'
 import SysUserOperate from "./components/sys-user-operate.vue"
 import { USER_GENDER_CONFIG, USER_STATUS_CONFIG } from "#shared/constants/business"
-import { usePaginatedTable, useTableOperate, useBadgeColumn } from '~/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { useToastSuccess } from '~/utils/toast'
+import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
-const table = useTemplateRef('table')
-const overlay = useOverlay()
-const modal = overlay.create(SysUserOperate)
+const tableRef = useTemplateRef('table')
 
 // 搜索参数
 const searchParams = ref<SysUserQueryDTO>({})
-
-// 选中的行（多选）
-const selectedRows = ref<SysUserDto[]>([])
-
-// 批量删除loading
-const batchDeleteLoading = ref(false)
 
 // 表格 hook
 const {
@@ -112,60 +69,32 @@ const {
   pageSizeOptions,
   search,
   refresh,
-  changePage,
-  changePageSize
+  getDataByPage
 } = usePaginatedTable<SysUserDto>({
   query: (params) => $trpc.sysUser.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
 })
 
-// 定义列配置（包含选择列）
-const columns = computed(() => {
-  const UCheckbox = resolveComponent('UCheckbox')
+// 表格操作 hook
+const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysUserDto>({
+  data,
+  idKey: 'id',
+  refresh
+})
 
+// 选择列
+const UCheckbox = resolveComponent('UCheckbox')
+const { selectionColumn } = useSelectionColumn<SysUserDto>({
+  data,
+  checkedRowKeys,
+  checkboxComponent: UCheckbox as Component
+})
+
+// 定义列配置（包含选择列）
+const columns = computed<TableColumn<SysUserDto>[]>(() => {
   return [
     // 选择列
-    {
-      id: 'select',
-      header: () => {
-        const allSelected = data.value.length > 0 && selectedRows.value.length === data.value.length
-        const someSelected = selectedRows.value.length > 0 && selectedRows.value.length < data.value.length
-
-        return h('div', { class: 'flex items-center justify-center' },
-          h(UCheckbox, {
-            modelValue: allSelected,
-            indeterminate: someSelected,
-            'onUpdate:modelValue': (value: boolean) => {
-              if (value) {
-                selectedRows.value = [...data.value]
-              } else {
-                selectedRows.value = []
-              }
-            },
-            'aria-label': 'Select all'
-          })
-        )
-      },
-      cell: ({ row }) => {
-        const isSelected = selectedRows.value.some(r => r.id === row.original.id)
-
-        return h('div', { class: 'flex items-center justify-center' },
-          h(UCheckbox, {
-            modelValue: isSelected,
-            'onUpdate:modelValue': (value: boolean) => {
-              if (value) {
-                if (!selectedRows.value.some(r => r.id === row.original.id)) {
-                  selectedRows.value = [...selectedRows.value, row.original]
-                }
-              } else {
-                selectedRows.value = selectedRows.value.filter(r => r.id !== row.original.id)
-              }
-            },
-            'aria-label': 'Select row'
-          })
-        )
-      }
-    },
+    selectionColumn,
     // 序号列
     {
       id: 'index',
@@ -184,7 +113,7 @@ const columns = computed(() => {
       accessorKey: 'phone',
       header: () => $ts('module.system.user.userPhone')
     },
-    useBadgeColumn(
+    useBadgeColumn<SysUserDto>(
       'gender',
       'module.system.user.userGender',
       USER_GENDER_CONFIG,
@@ -194,14 +123,14 @@ const columns = computed(() => {
       accessorKey: 'email',
       header: () => $ts('module.system.user.userEmail')
     },
-    useBadgeColumn(
+    useBadgeColumn<SysUserDto>(
       'status',
       'module.system.user.userStatus',
       USER_STATUS_CONFIG,
       1
     ),
     {
-      accessorKey: 'actions',
+      id: 'actions',
       header: () => $ts('common.operate'),
       cell: ({ row }) => {
         const UButton = resolveComponent('UButton')
@@ -212,7 +141,7 @@ const columns = computed(() => {
             variant: 'outline',
             color: 'primary',
             size: 'xs',
-            onClick: () => openEdit(row.original.id as string)
+            onClick: () => handleEdit(row.original.id as string)
           }, { default: () => $ts('common.edit') }),
 
           h(Popconfirm, {
@@ -230,38 +159,7 @@ const columns = computed(() => {
   ]
 })
 
-// 表格操作 hook
-const tableOperate = useTableOperate<SysUserDto>({
-  data,
-  idKey: 'id',
-  refresh
-})
 
-/**
- * 打开新增弹窗
- */
-const openAdd = () => {
-  const { operateType, editingData } = tableOperate.handleAdd()
-  modal.open({
-    operateType: operateType,
-    data: editingData,
-    close: () => modal.close(),
-    refresh
-  })
-}
-
-/**
- * 打开编辑弹窗
- */
-const openEdit = (id: string) => {
-  const { operateType, editingData } = tableOperate.handleEdit(id)
-  modal.open({
-    operateType: operateType,
-    data: editingData,
-    close: () => modal.close(),
-    refresh
-  })
-}
 
 /**
  * 处理删除
@@ -269,11 +167,8 @@ const openEdit = (id: string) => {
 const handleDelete = async (id: string) => {
   // 防止重复操作
   if (loading.value) return
-
-  await tableOperate.handleDelete(id, async (id) => {
-    // 删除操作会自动显示 loading 状态
-    await $trpc.sysUser.remove.mutate(id)
-  })
+  await $trpc.sysUser.remove.mutate(id)
+  await onDeleted()
 }
 
 /**
@@ -281,54 +176,18 @@ const handleDelete = async (id: string) => {
  */
 const handleBatchDelete = async () => {
   // 如果正在加载或没有选中项，忽略操作
-  if (loading.value || batchDeleteLoading.value || selectedRows.value.length === 0) {
+  if (loading.value || checkedRowKeys.value.length === 0) {
     return
   }
 
-  batchDeleteLoading.value = true
-  try {
-    // 提取所有选中的 ID
-    const ids = selectedRows.value.map(row => row.id as string)
+  // 调用批量删除接口
+  await $trpc.sysUser.batchDelete.mutate(checkedRowKeys.value)
 
-    // 调用批量删除接口
-    await $trpc.sysUser.batchDelete.mutate(ids)
-
-    // 清空选中项
-    selectedRows.value = []
-
-    // 显示成功提示
-    useToastSuccess($ts('common.deleteSuccess'))
-
-    // 刷新列表
-    await refresh()
-  } finally {
-    batchDeleteLoading.value = false
-  }
+  // 调用批量删除后的回调
+  await onBatchDeleted()
 }
 
-/**
- * 处理搜索
- */
-const handleSearch = async (params: SysUserQueryDTO) => {
-  // 如果正在加载，忽略请求
-  if (loading.value) return
 
-  searchParams.value = { ...searchParams.value, ...params }
-  pagination.page = 1
-  await search(searchParams.value)
-}
-
-/**
- * 处理重置
- */
-const handleReset = async () => {
-  // 如果正在加载，忽略请求
-  if (loading.value) return
-
-  searchParams.value = {}
-  pagination.page = 1
-  await search(searchParams.value)
-}
 
 // 初始化加载
 onMounted(async () => {

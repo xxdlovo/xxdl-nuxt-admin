@@ -9,6 +9,8 @@
   "common": {
     "action": "操作",
     "add": "新增",
+    "selectRow": "选择行",
+    "selectAll": "选择所有",
     "addSuccess": "添加成功",
     "backToHome": "返回首页",
     "batchDelete": "批量删除",

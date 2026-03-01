@@ -132,6 +132,7 @@ const { columns, columnChecks, data, getData, getDataByPage, loading, mobilePagi
   ]
 });
 
+// ./table.ts
 const {
   drawerVisible,
   operateType,

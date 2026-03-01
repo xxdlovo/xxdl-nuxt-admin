@@ -11,22 +11,22 @@
         <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
           <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4   gap-x-6 gap-y-6">
             <UFormField name="username" label="用户名" orientation="horizontal">
-              <UInput ref="username" v-model="state.username" placeholder="请输入用户名" />
+              <UBaseInput v-model="state.username" placeholder="请输入用户名" trailing="clear" />
             </UFormField>
             <UFormField name="gender" label="性别" orientation="horizontal">
-              <USelect v-model="state.gender" placeholder="请选择性别" class="w-48" :items="genderItems"></USelect>
+              <USelect v-model="state.gender" placeholder="请选择性别" class="w-48" :items="genderItems" clearable />
             </UFormField>
             <UFormField name="nickname" label="昵称" orientation="horizontal">
-              <UInput v-model="state.nickname" placeholder="请输入昵称" />
+              <UBaseInput v-model="state.nickname" placeholder="请输入昵称" trailing="clear" />
             </UFormField>
             <UFormField name="phone" label="手机号" orientation="horizontal">
-              <UInput v-model="state.phone" placeholder="请输入手机号" />
+              <UBaseInput v-model="state.phone" placeholder="请输入手机号" trailing="clear" />
             </UFormField>
             <UFormField name="email" label="邮箱" orientation="horizontal">
-              <UInput v-model="state.email" placeholder="请输入邮箱" />
+              <UBaseInput v-model="state.email" placeholder="请输入邮箱" trailing="clear" />
             </UFormField>
-            <UFormField name="gender" label="用户状态" orientation="horizontal" >
-              <USelect v-model="state.status" placeholder="请选择状态" class="w-48" :items="statusItems"></USelect>
+            <UFormField name="status" label="用户状态" orientation="horizontal" >
+              <USelect v-model="state.status" placeholder="请选择状态" class="w-48" :items="statusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -52,7 +52,6 @@ import {type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
 
 const emit = defineEmits<{
   search: [data: SysUserQueryDTO]
-  reset: []
 }>()
 const genderItems = [
     {
@@ -84,7 +83,7 @@ const schema = SysUserQuerySchema
 const form = useTemplateRef('form')
 // const Schema = z.output<typeof SysUserQuerySchema>
 const active = ref(undefined)
-const state = ref<SysUserQueryDTO>({})
+const state = defineModel<SysUserQueryDTO>('model', { required: true });
 const items = computed(() => [
   {
     label: '搜索',
@@ -101,7 +100,6 @@ const submit = async () => {
 const reset =()=> {
   form.value?.clear()
   state.value = {}
-  emit('reset')
 
 }
 

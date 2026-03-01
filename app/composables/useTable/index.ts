@@ -22,6 +22,7 @@ export type {
 export { useTable } from './useTable'
 export { usePaginatedTable } from './usePaginatedTable'
 export { useTableOperate } from './useTableOperate'
+export { useSelectionColumn } from './useSelectionColumn'
 
 // 辅助函数导出
 export {

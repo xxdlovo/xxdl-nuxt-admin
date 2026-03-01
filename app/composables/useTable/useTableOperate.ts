@@ -5,11 +5,32 @@
 
 import type { Ref } from 'vue'
 import { useToastSuccess } from '~/utils/toast'
-import type { OperateType, TableOperateReturn, UseTableOperateOptions } from './types'
+import type { OperateType, UseTableOperateOptions } from './types'
+
+export interface UseTableOperateReturn<T> {
+  /** 操作类型 */
+  operateType: Ref<OperateType>
+  /** 正在编辑的数据 */
+  editingData: Ref<T | null>
+  /** 弹窗/抽屉是否可见 */
+  drawerVisible: Ref<boolean>
+  /** 选中的行 keys */
+  checkedRowKeys: Ref<string[]>
+  /** 打开新增弹窗 */
+  handleAdd: () => void
+  /** 打开编辑弹窗 */
+  handleEdit: (id: T[keyof T]) => void
+  /** 关闭弹窗 */
+  closeVisible: () => void
+  /** 删除之后 */
+  onDeleted: () => Promise<void>
+  /** 批量删除之后 */
+  onBatchDeleted: () => Promise<void>
+}
 
 export function useTableOperate<T>(
   options: UseTableOperateOptions<T>
-): TableOperateReturn<T> {
+): UseTableOperateReturn<T> {
   const { $ts } = useI18n()
 
   // 操作类型
@@ -18,17 +39,19 @@ export function useTableOperate<T>(
   // 编辑中的数据
   const editingData = ref<T | null>(null) as Ref<T | null>
 
+  // 弹窗可见性
+  const drawerVisible = ref(false)
+
+  // 选中的行 keys
+  const checkedRowKeys = ref<string[]>([])
+
   /**
    * 处理新增
    */
   const handleAdd = () => {
     operateType.value = 'add'
     editingData.value = null
-
-    return {
-      operateType: operateType.value,
-      editingData: null
-    }
+    drawerVisible.value = true
   }
 
   /**
@@ -43,42 +66,43 @@ export function useTableOperate<T>(
     // 深拷贝数据，避免直接修改原数据
     editingData.value = item ? JSON.parse(JSON.stringify(item)) : null
 
-    return {
-      operateType: operateType.value,
-      editingData: editingData.value
-    }
+    drawerVisible.value = true
   }
 
   /**
-   * 处理删除
+   * 关闭弹窗
    */
-  const handleDelete = async (
-    id: T[keyof T],
-    deleteApi: (id: string) => Promise<void>
-  ): Promise<void> => {
-    await deleteApi(id as string)
+  const closeVisible = () => {
+    drawerVisible.value = false
+    editingData.value = null
+  }
+
+  /**
+   * 删除之后
+   */
+  const onDeleted = async (): Promise<void> => {
     useToastSuccess($ts('common.deleteSuccess'))
     await options.refresh()
   }
 
   /**
-   * 处理批量删除
+   * 批量删除之后
    */
-  const handleBatchDelete = async (
-    ids: T[keyof T][],
-    deleteApi: (ids: string[]) => Promise<void>
-  ): Promise<void> => {
-    await deleteApi(ids as string[])
+  const onBatchDeleted = async (): Promise<void> => {
     useToastSuccess($ts('common.deleteSuccess'))
+    checkedRowKeys.value = []
     await options.refresh()
   }
 
   return {
     operateType,
     editingData,
+    drawerVisible,
+    checkedRowKeys,
     handleAdd,
     handleEdit,
-    handleDelete,
-    handleBatchDelete
+    closeVisible,
+    onDeleted,
+    onBatchDeleted
   }
 }

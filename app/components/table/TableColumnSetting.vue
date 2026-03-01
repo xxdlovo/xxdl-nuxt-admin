@@ -11,11 +11,10 @@
 
 <script setup lang="ts">
 import type {SysUserDto} from "#shared/system/user/common";
-
 defineOptions({
   name: 'TableColumnSetting'
 });
-import type {Column, Table} from '@tanstack/table-core'
+import type {Column, Table} from '@tanstack/vue-table'
 const { $ts} = useI18n()
 import {computed} from 'vue'
 
@@ -47,15 +46,22 @@ function getHeaderLabel(col: Column<any, any>) {
 // 列文本
 const label = computed(() => $ts('common.columnSetting'))
 
+// 列可见性状态（用于触发重新计算）
+const visibilityRevision = ref(0)
+
 // 生成 DropdownMenu 菜单项
 const menuItems = computed(() => {
+  // 依赖 visibilityRevision 以确保列可见性变化时重新计算
+  visibilityRevision.value
+
   if (!props.tableRef) return []
   const tApi = props.tableRef?.tableApi
   if (!tApi) return []
+
   return tApi
       .getAllColumns()
-      .filter((col) => col.getCanHide())
-      .map((col) => {
+      .filter((col: Column<any, unknown>) => col.getCanHide())
+      .map((col: Column<any, unknown>) => {
         const headerText = getHeaderLabel(col)
         return {
           label: headerText,
@@ -63,6 +69,8 @@ const menuItems = computed(() => {
           checked: col.getIsVisible(),
           onUpdateChecked(checked: boolean) {
             tApi?.getColumn(col.id)?.toggleVisibility(!!checked)
+            // 触发重新计算以更新回显
+            visibilityRevision.value++
           },
           onSelect(e: Event) {
             e.preventDefault()

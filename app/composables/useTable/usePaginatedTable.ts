@@ -7,7 +7,20 @@ import type { Ref } from 'vue'
 import { useTable } from './useTable'
 import type { PaginatedData, PaginationParams, UsePaginatedTableOptions } from './types'
 
-export function usePaginatedTable<T>(options: UsePaginatedTableOptions<T>) {
+export interface UsePaginatedTableReturn<T> {
+  data: Ref<T[]>
+  loading: Ref<boolean>
+  error: Ref<Error | null>
+  columns: Ref<any[]>
+  pagination: { page: number; pageSize: number; total: number }
+  pageSizeOptions: number[]
+  search: (params?: Record<string, any>) => Promise<void>
+  refresh: () => Promise<void>
+  getDataByPage: (page?: number,params?: Record<string, any>) => Promise<void>
+  reloadColumns: () => void
+}
+
+export function usePaginatedTable<T>(options: UsePaginatedTableOptions<T>): UsePaginatedTableReturn<T> {
   // 分页信息
   const pagination = reactive({
     page: options.initialPage ?? 1,
@@ -52,24 +65,39 @@ export function usePaginatedTable<T>(options: UsePaginatedTableOptions<T>) {
     await search()
   }
 
-  /**
-   * 切换页码
-   * @param page - 目标页码
-   */
-  const changePage = async (page: number): Promise<void> => {
-    pagination.page = page
-    await search()
-  }
+  // 当前搜索参数缓存
+  const currentSearchParams = ref<Record<string, any>>({})
 
   /**
-   * 切换每页条数
-   * @param pageSize - 新的每页条数
+   * 按页码获取数据
+   * 如果页码与当前页不同，先切换页码，然后通过 watch 自动触发搜索
+   * @param page - 目标页码，默认为 1
+   * @param searchParams - 搜索参数
    */
-  const changePageSize = async (pageSize: number): Promise<void> => {
-    pagination.pageSize = pageSize
-    pagination.page = 1 // 重置到第一页
-    await search()
+  const getDataByPage = async (page: number = 1, searchParams?: Record<string, any>): Promise<void> => {
+    // 更新搜索参数缓存
+    if (searchParams) {
+      currentSearchParams.value = searchParams
+    }
+
+    if (page !== pagination.page) {
+      pagination.page = page
+      return
+    }
+    await search(currentSearchParams.value)
   }
+
+  // 监听分页参数变化，自动获取数据
+  watch(
+    () => ({ page: pagination.page, pageSize: pagination.pageSize }),
+    async (newVal, oldVal) => {
+      // 只有真正变化时才触发搜索
+      if (oldVal && (newVal.page !== oldVal.page || newVal.pageSize !== oldVal.pageSize)) {
+        await search()
+      }
+    },
+    { immediate: false }
+  )
 
   return {
     ...table,
@@ -77,7 +105,6 @@ export function usePaginatedTable<T>(options: UsePaginatedTableOptions<T>) {
     pageSizeOptions,
     search,
     refresh,
-    changePage,
-    changePageSize
+    getDataByPage
   }
 }
