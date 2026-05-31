@@ -1,15 +1,19 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
-    devtools: {enabled: true},
+    devtools: { enabled: true },
     ssr: false,
-    modules: ['@nuxt/ui', 'nuxt-echarts','nuxt-i18n-micro'],
-    runtimeConfig:{
-        db:{
+    modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro'],
+    devServer: {
+        host: '0.0.0.0',
+        port: 3001
+    },
+    runtimeConfig: {
+        db: {
             host: process.env.DB_HOST!,
-            user:  process.env.DB_USER!,
+            user: process.env.DB_USER!,
             password: process.env.DB_PASSWORD!,
-            database:  process.env.DB_DATABASE!,
+            database: process.env.DB_DATABASE!,
         },
         // 客户端可访问的环境变量
         public: {
@@ -34,6 +38,6 @@ export default defineNuxtConfig({
     },
     echarts: {
         charts: ['BarChart', 'LineChart', 'PieChart'],
-        components: ['DatasetComponent', 'GridComponent','TooltipComponent', 'LegendComponent'],
+        components: ['DatasetComponent', 'GridComponent', 'TooltipComponent', 'LegendComponent'],
     }
 })

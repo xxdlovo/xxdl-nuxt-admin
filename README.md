@@ -1,6 +1,6 @@
 # 说明
 
-本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 soybean-admin 项目进行开发。
+本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 [soybean-admin](https://docs.soybeanjs.cn/zh/guide/intro.html) 项目进行开发。
 
 - **前端代码**：Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
 - **后端代码**：使用 Nitro + tRPC 实现 API 服务（server/*），集成 nuxt-auth-utils 认证中间件、RBAC 权限校验、端到端类型安全
@@ -117,37 +117,28 @@ Repository (DAO) 层
 
 ### Schema/DTO 定义规则
 
-每个实体模块下有 `common.ts`，存放通用属性：
+每个实体模块(shared\system\user)下有 `common.ts`，存放通用属性：
 BaseSchema作为通用属性, 各属性必须加.nullish()
-这里不定义错误信息, 只定义字段+meta
+这里不定义错误信息, 只定义字段+meta. 目前的meta有query, 用来定义查询方式
 
 ```ts
 // shared/system/user/common.ts
 export const SysUserBaseSchema = z.object({
   id: z.string().nullish().meta({foo:'bar'}),         
   username: z.string().min(3).max(50).nullish(),
-  email: z.string().email().nullish(),      
+      email: z.string().nullish().meta(
+        {
+            query: 'like'
+        }
+    ),    
   nickname: z.string().nullish(),         
   // ...
 })
 ```
 
-**业务类型规则**：
+**业务类型定义规则**：
 - 相关业务类型定义到shared/模块名/业务名/input.ts或output.ts中
-- common.ts中放基础的类型, 和drizzleorm保持一致, 所有属性必须加.nullish(), 通过meta.query定义查询方式
-```
-// 不需要写错误信息和min/max限制
-export const SysUserBaseSchema = z.object({
-id: z.string().nullish(),
-username: z.string().nullish().meta(
-{
-query: 'like'
-}
-)
-})
-export type SysUserDto = z.infer<typeof SysUserBaseSchema>
-  ```
-- input.ts/output.ts不建议继承BaseSchema的规则(SysUserBaseSchema.shape.id)
+- input.ts/output.ts不建议直接继承BaseSchema的规则, 应该SysUserBaseSchema.shape.id这样用
 - 用工厂函数自定义错误信息, 方便i18n翻译
 - 宁多勿少
 
@@ -165,11 +156,11 @@ import { SysUserAddDTO } from '~/shared/system/user'
 const uuid = randomUuid()  // IDE 自动导入，来源不明确
 ```
 
-### 系统相关命名
+### 模块相关命名
 
 系统模块统一使用 `sys` 前缀：
 - 表名：`sysUser`, `sysRole`
-- trpc路径：`server/sys-router/user`
+- trpc路径：`server/sys-router/user` sys-router代表系统模块, 下面的user代表业务名
 
 ## 常用命令
 

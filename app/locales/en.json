@@ -276,6 +276,7 @@
         "userRole": "User Role",
         "form": {
           "userName": "Please enter user name",
+          "password": "Please enter password",
           "userGender": "Please select gender",
           "nickName": "Please enter nick name",
           "userPhone": "Please enter phone number",

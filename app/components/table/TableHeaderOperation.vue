@@ -63,12 +63,13 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center justify-end">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- prefix slot -->
+      <slot name="prefix" />
+    </div>
 
-
-    <!-- prefix slot -->
-    <slot name="prefix" />
-
+    <div class="flex flex-wrap items-center gap-2">
     <!-- default slot -->
     <slot>
       <!-- 新增 -->
@@ -141,6 +142,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
 <TableColumnSetting :tableRef="tableRef" />
     <!-- suffix slot -->
     <slot name="suffix" />
+    </div>
   </div>
 </template>
 

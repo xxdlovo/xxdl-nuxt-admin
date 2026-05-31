@@ -1,25 +1,31 @@
 import { mergeWhere } from "./queries/mergeWhere"
 import { buildScope } from "./queries/buildScope"
 import { buildWhereBySchema } from "./queries/buildWhereBySchema"
-import {Column, count, eq, inArray, type InferInsertModel} from "drizzle-orm"
+import { Column, count, eq, inArray, type InferInsertModel } from "drizzle-orm"
 
-import {ZodObject} from "zod";
+import { ZodObject } from "zod";
 import type { Context } from '#server/trpc/context';
-import {MySqlTable} from "drizzle-orm/mysql-core/table";
+import { MySqlTable } from "drizzle-orm/mysql-core/table";
 
 
-type TableWithId<T extends MySqlTable> = T & { id: Column<any>;isDeleted: Column<any>}
+type TableWithId<T extends MySqlTable> = T & { id: Column<any>; isDeleted: Column<any> }
 /**
  * 通用 Repo 工厂, 用来存放通用的增删改查逻辑
  */
 export function CommonRepo<
     TSchema extends ZodObject<any>,
     TTable extends MySqlTable
->(table:  TableWithId<TTable>, schema?: TSchema) {
-    return function (ctx:Context) {
+>(table: TableWithId<TTable>, schema?: TSchema) {
+    return function (ctx: Context) {
         type CreateInput = InferInsertModel<TTable>
         /** Update 类型（部分字段更新） */
-        type UpdateInput = Partial<CreateInput>
+        // type UpdateInput = Partial<CreateInput>
+        // 允许 null 值
+        type UpdateInput = Partial<
+            {
+                [K in keyof CreateInput]: CreateInput[K] | null;
+            }
+        >;
         return {
             /** ✅ 查询列表 */
             async list(dto: any = {}) {
@@ -39,7 +45,7 @@ export function CommonRepo<
             },
 
             /** ✅ 分页查询 */
-            async page(page:number, pageSize:number, dto:any) {
+            async page(page: number, pageSize: number, dto: any) {
 
                 const offset = (page - 1) * pageSize
 
@@ -70,11 +76,11 @@ export function CommonRepo<
                     total,
                     page,
                     pageSize,
-                    list:data,
+                    list: data,
                 }
             },
             /** ✅ 根据 参数 查询 */
-            async getOne(req:UpdateInput){
+            async getOne(req: UpdateInput) {
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, req)
                     : []
@@ -88,10 +94,10 @@ export function CommonRepo<
                     .from(table)
                     .where(where)
                     .limit(1)
-                return data? data[0] : null
+                return data ? data[0] : null
             },
             /** ✅ 根据 ID 查询 */
-            async getById( id: any) {
+            async getById(id: any) {
                 const result = await ctx.db
                     .select()
                     .from(table)
@@ -107,7 +113,7 @@ export function CommonRepo<
             },
 
             /** ✅ 新增 */
-            async create( data: CreateInput) {
+            async create(data: CreateInput) {
                 return ctx.db.insert(table).values({
                     ...data,
                     isDeleted: 0
@@ -123,7 +129,7 @@ export function CommonRepo<
             },
 
             /** ✅ 逻辑删除 */
-            async remove( id: any) {
+            async remove(id: any) {
                 // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
                 return ctx.db
                     .update(table)
@@ -132,11 +138,10 @@ export function CommonRepo<
             },
 
             /** ✅ 批量逻辑删除 */
-            async batchRemove( ids: any[]) {
+            async batchRemove(ids: any[]) {
                 if (ids.length === 0) {
                     return 0
                 }
-
                 // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
                 return ctx.db
                     .update(table)

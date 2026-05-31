@@ -20,7 +20,7 @@ export const SysUserBaseSchema = z.object({
             query: 'like'
         }
     ),
-    password: z.string().nullish(),
+    password: z.string().min(3, '密码最小xxx个').max(10, '密码不能超过xxx位').nullish(),
     avatar: z.string().nullish(),
     phone: z.string().nullish(),
     gender: z.number().nullish(),
@@ -32,7 +32,10 @@ export const SysUserBaseSchema = z.object({
             query: 'like'
         }
     ),
+    createdBy: z.string().nullish(),
     createdAt: z.string().nullish(),
+    updatedBy: z.string().nullish(),
     updatedAt: z.string().nullish(),
+    isDeleted: z.number().nullish(),
 })
 export type SysUserDto = z.infer<typeof SysUserBaseSchema>

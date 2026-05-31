@@ -18,6 +18,10 @@ import {randomUuid} from "#shared/utils/uuid";
 //     const resp = await db.select().from(sysUser).where((and(...where)))
 //     console.log(resp)
 // }
+// 定义一个工具类型，去除 null
+type NonNull<T> = {
+    [K in keyof T]: Exclude<T[K], null>
+}
 
 export function sysUserService(ctx: Context) {
     const repo = sysUserRepo(ctx)
@@ -34,8 +38,8 @@ export function sysUserService(ctx: Context) {
             return true
         },
         async batchRemove(ids: string[]): Promise<number>{
-            const count = await repo.batchRemove(ids)
-            return count
+            const result = await repo.batchRemove(ids)
+            return ids.length
         },
         async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)

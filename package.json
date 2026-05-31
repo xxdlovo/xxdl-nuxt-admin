@@ -12,7 +12,8 @@
     "db:push": "drizzle-kit push  --config=./server/drizzle/drizzle.config.ts",
     "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
     "test": "vitest",
-    "test:type": "tsx scripts/typecheck-tests.ts"
+    "test:type": "tsx scripts/typecheck-tests.ts",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@nuxt/ui": "4.4.0",
@@ -28,7 +29,6 @@
     "nuxt-i18n-micro": "^2.20.1",
     "tailwindcss": "^4.1.18",
     "trpc-nuxt": "^2.0.1",
-    "typescript": "^5.9.3",
     "vue": "^3.5.27",
     "vue-router": "^4.6.4",
     "zod": "^4.3.6"
@@ -43,6 +43,8 @@
     "happy-dom": "^20.4.0",
     "playwright-core": "^1.58.1",
     "tsx": "^4.21.0",
-    "vitest": "^4.0.18"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18",
+    "vue-tsc": "^3.2.7"
   }
 }

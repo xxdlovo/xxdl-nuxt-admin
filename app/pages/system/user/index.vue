@@ -26,7 +26,11 @@
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
-          />
+          >
+          <template #prefix>
+            <span>用户列表</span>
+          </template>
+        </TableHeaderOperation>
 
           <!-- 用户操作弹窗 -->
           <SysUserOperate
