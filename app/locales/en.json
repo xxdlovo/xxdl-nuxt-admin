@@ -23,7 +23,7 @@
     "confirm": "Confirm",
     "delete": "Delete",
     "deleteSuccess": "Delete Success",
-    "confirmDelete": "Are you sure you want to delete?",
+    "confirmDelete": "Are you sure you want to delete {count} items?",
     "edit": "Edit",
     "warning": "Warning",
     "error": "Error",

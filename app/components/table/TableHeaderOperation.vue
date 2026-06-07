@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue'
-
+const {$ts} = useI18n()
 defineOptions({
   name: 'TableHeaderOperation'
 })
@@ -81,7 +81,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
         <template #leading>
           <UIcon name="i-ic-round-plus" class="w-4 h-4" />
         </template>
-        新增
+       {{ $ts('common.add') }}
       </UButton>
 
       <!-- 批量删除 -->
@@ -95,13 +95,14 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
           <template #leading>
             <UIcon name="i-ic-round-delete" class="w-4 h-4" />
           </template>
-          批量删除
+          {{ $ts('common.batchDelete') }}
         </UButton>
 
         <template #content>
           <div class="p-3">
             <p class="text-sm text-gray-600 mb-3">
-              确认要删除选中的 <span class="font-semibold text-error">{{ selectedCount || 0 }}</span> 条数据吗？
+               {{ $ts('common.confirmDelete', { count: selectedCount || 0 }) }}
+              <!-- 确认要删除选中的 <span class="font-semibold text-error">{{ selectedCount || 0 }}</span> 条数据吗？ -->
             </p>
 
             <div class="flex justify-end gap-2">
@@ -110,7 +111,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
                   color="neutral"
                   @click="handleCancelDelete"
               >
-                取消
+                {{ $ts('common.cancel') }}
               </UButton>
 
               <UButton
@@ -118,7 +119,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
                   :loading="batchDeleteLoading"
                   @click="batchDelete"
               >
-                确认删除
+                 {{ $ts('common.confirm') }}
               </UButton>
             </div>
           </div>
@@ -135,7 +136,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
             :class="{ 'animate-spin': loading }"
         />
       </template>
-      刷新
+      {{ $ts('common.refresh') }}
     </UButton>
 
     <!-- 列设置 -->

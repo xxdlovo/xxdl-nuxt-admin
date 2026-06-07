@@ -1,6 +1,6 @@
 <template>
   <UInput
-    v-model="modelValue"
+    v-model.nullable="modelValue"
     v-bind="$attrs"
     :type="inputType"
     :ui="{ trailing: 'pr-0' }"
@@ -64,7 +64,7 @@ const props = withDefaults(defineProps<Props>(), {
   clearable: true
 })
 
-const modelValue = defineModel<string | number | null | undefined>()
+const modelValue = defineModel<string | null | undefined>()
 
 // 密码显示状态
 const showPassword = ref(false)
@@ -87,7 +87,7 @@ const showClear = computed(() => {
 
 // 清空输入
 const handleClear = () => {
-  modelValue.value = null
+  modelValue.value = ''
 }
 
 // 切换密码显示

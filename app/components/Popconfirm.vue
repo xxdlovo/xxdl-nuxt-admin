@@ -25,7 +25,7 @@ const show = ref(false)
 const isConfirming = ref(false)
 
 // 计算国际化文本
-const displayContent = computed(() => props.content || $ts('common.confirmDelete'))
+const displayContent = computed(() => props.content || $ts('common.confirmDelete',{count:1}))
 const displayPositiveText = computed(() => props.positiveText || $ts('common.delete'))
 const displayNegativeText = computed(() => props.negativeText || $ts('common.cancel'))
 

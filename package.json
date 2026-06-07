@@ -16,7 +16,7 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "@nuxt/ui": "4.4.0",
+    "@nuxt/ui": "4.8.1",
     "@trpc/client": "^11.9.0",
     "@trpc/server": "^11.9.0",
     "dotenv": "^17.2.3",

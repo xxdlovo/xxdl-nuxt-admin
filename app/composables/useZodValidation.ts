@@ -82,7 +82,6 @@ export function useZodValidation<T>(options: UseZodValidationOptions<T>) {
         if (result.success) {
             return []
         }
-
         return result.error.issues.map(issue => ({
             name: issue.path.join('.'),
             message: translateError(issue.message)

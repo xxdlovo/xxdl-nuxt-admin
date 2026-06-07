@@ -1,6 +1,6 @@
 # 说明
 
-本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 [soybean-admin](https://docs.soybeanjs.cn/zh/guide/intro.html) 项目进行开发。
+本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 [soybean-admin](https://docs.soybeanjs.cn/zh/guide/intro.html) 项目进行开发。[演示](https://naive.soybeanjs.cn/)
 
 - **前端代码**：Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
 - **后端代码**：使用 Nitro + tRPC 实现 API 服务（server/*），集成 nuxt-auth-utils 认证中间件、RBAC 权限校验、端到端类型安全

@@ -31,7 +31,7 @@
       <div class="flex items-center justify-end gap-2">
         <!-- 总数 -->
         <div class="hidden sm:block text-sm text-gray-700 dark:text-gray-300">
-          共 {{ pagination.total }} 条
+          {{ $ts('datatable.itemCount', { total: pagination.total }) }}
         </div>
 
         <!-- 每页条数选择 -->

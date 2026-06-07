@@ -23,6 +23,12 @@ const props = defineProps<{
   refresh?:() => void;
 }>();
 
+const formItemUi = {
+  root: 'flex items-center',
+  label: 'w-16 text-right pr-2 flex-shrink-0',
+  container: 'flex-1'
+}
+
 const emit = defineEmits<{
   'update:visible': [value: boolean]
 }>();
@@ -114,12 +120,12 @@ const handleSubmit = async (event: FormSubmitEvent<SysUserAddDTO>) => {
 // 编辑数据
 const handleEdit = async()=>{
   await $trpc.sysUser.update.mutate(state.value as SysUserUpdateDTO)
-  useToastSuccess('编辑成功')
+  useToastSuccess($ts('common.modifySuccess'))
 }
 // 保存数据
 const handleSave = async()=>{
   await $trpc.sysUser.create.mutate(state.value)
-  useToastSuccess('添加成功')
+  useToastSuccess($ts('common.addSuccess'))
 }
 // 翻译标题
 const title = computed(() => {
@@ -136,7 +142,7 @@ const title = computed(() => {
       :title="title"
       :dismissible="false"
       :ui="{
-    content:'max-w-[70%]',
+    content:'max-w-[30%]',
      footer: 'justify-end'
   }">
 
@@ -144,26 +150,26 @@ const title = computed(() => {
     <template #body class="w-[50%]">
       <UForm ref="form" :validate="validate" :state="state" class="p-2" @submit="handleSubmit">
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
-          <UFormField name="username" required :label="$ts('module.system.user.userName')" orientation="horizontal">
+          <UFormField name="username" required :label="$ts('module.system.user.userName')" orientation="horizontal" :ui="formItemUi">
             <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear"/>
           </UFormField>
-          <UFormField name="password" required :label="$ts('module.system.user.password')" orientation="horizontal">
+          <UFormField name="password" required :label="$ts('module.system.user.password')" orientation="horizontal" :ui="formItemUi">
             <UBaseInput v-model="state.password" :placeholder="$ts('module.system.user.form.password')" trailing="password"/>
           </UFormField>
-          <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal">
+          <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal" :ui="formItemUi">
             <URadioGroup orientation="horizontal" v-model="genderValue"
                          :placeholder="$ts('module.system.user.form.userGender')" :items="genderItems"></URadioGroup>
           </UFormField>
-          <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal">
+          <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal" :ui="formItemUi">
             <UBaseInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')" trailing="clear"/>
           </UFormField>
-          <UFormField name="phone" :label="$ts('module.system.user.userPhone')" orientation="horizontal">
+          <UFormField name="phone" :label="$ts('module.system.user.userPhone')" orientation="horizontal" :ui="formItemUi">
             <UBaseInput v-model="state.phone" :placeholder="$ts('module.system.user.form.userPhone')" trailing="clear"/>
           </UFormField>
-          <UFormField name="email" required :label="$ts('module.system.user.userEmail')" orientation="horizontal">
+          <UFormField name="email" required :label="$ts('module.system.user.userEmail')" orientation="horizontal" :ui="formItemUi">
             <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear"/>
           </UFormField>
-          <UFormField name="gender" :label="$ts('module.system.user.userStatus')" orientation="horizontal">
+          <UFormField name="gender" :label="$ts('module.system.user.userStatus')" orientation="horizontal" :ui="formItemUi">
             <URadioGroup orientation="horizontal" v-model="statusValue"
                          :placeholder="$ts('module.system.user.form.userStatus')" :items="statusItems"></URadioGroup>
           </UFormField>

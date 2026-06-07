@@ -15,8 +15,8 @@ SysUserBaseSchema.pick({
 }).extend({
         id: SysUserBaseSchema.shape.id.nonoptional(),
         username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
-        password: z.string().min(3,'密码最小3个').max(10,'密码不能超过10位'),
-        email: z.string().min(3,'最小3个'),
+        password: z.string().min(6,'form.userName.invalid').max(18,'form.userName.invalid'),
+        email: z.string().min(6,'form.email.invalid'),
         
     })
 export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>;
