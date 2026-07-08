@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  layout: 'system'
+})
+
 import HeaderBanner from './components/header-banner.vue'
 import CardData from './components/card-data.vue'
 import LineChart from './components/line-chart.vue'

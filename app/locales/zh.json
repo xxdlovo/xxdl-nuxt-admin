@@ -7,6 +7,7 @@
     "updateCancel": "稍后再说"
   },
   "common": {
+    "notExist": "查询数据不存在",
     "action": "操作",
     "add": "新增",
     "selectRow": "选择行",
@@ -246,6 +247,19 @@
     "plugin_tables_vtable": "VTable"
   },
   "module": {
+    "demo":{
+        "title": "Demo列表",
+        "demoStatus": "Demo状态",
+                  "field1": "字段1",
+          "field2": "字段2",
+        "form": {
+          "field1": "请输入字段1",
+          "field2": "请输入字段2",
+          "demoStatus": "请选择状态"
+        },
+        "addDemo": "新增Demo",
+        "editDemo": "编辑Demo"
+      },
     "system": {
       "role": {
         "title": "角色列表",
@@ -586,11 +600,14 @@
           "disable": "禁用"
         }
       }
-
     }
   },
   "form": {
     "required": "不能为空",
+    "id": {
+      "required": "ID不能为空",
+      "invalid": "ID格式不正确"
+    },
     "userName": {
       "required": "请输入用户名",
       "invalid": "用户名格式不正确"

@@ -61,9 +61,12 @@ const customLink: TRPCLink<AppRouter> = () => {
           // 报错前先清空
           toast.clear()
 
+          // 错误信息已在服务端翻译好，直接使用
+          const description = typedErr.message || '发生未知错误'
+
           toast.add({
             title: typedErr.data?.type + '错误',
-            description: getErrorDescription(typedErr),
+            description,
             color: 'error',
           })
             observer.error(err)
@@ -104,59 +107,3 @@ export default defineNuxtPlugin(() => {
   }
 })
 
-// 定义TRPC错误的结构类型
-interface TRPCErrorDetail {
-  origin: string;
-  code: string;
-  minimum?: number;
-  inclusive?: boolean;
-  path: string[];
-  message: string;
-}
-/**
- * 从TRPC错误中提取并拼接所有错误信息
- * @param err - 错误对象
- * @returns 拼接后的错误描述字符串
- */
-export const getErrorDescription = (err: unknown): string => {
-  // 检查是否为TRPCClientError
-  if (err instanceof TRPCClientError) {
-      const {$ts} = useI18n()
-    try {
-      // 尝试从stack中提取错误数组字符串
-      // stack的格式类似: "TRPCError: [ { ... }, { ... } ]\n    at ..."
-      const stack = err.stack || '';
-      const startIndex = stack.indexOf('[');
-      const endIndex = stack.lastIndexOf(']') + 1;
-      
-      if (startIndex !== -1 && endIndex !== 0) {
-        // 提取数组部分字符串
-        const errorArrayStr = stack.substring(startIndex, endIndex);
-        
-        // 解析为对象数组
-        const errors: TRPCErrorDetail[] = JSON.parse(errorArrayStr);
-        
-        // 拼接所有错误信息
-        if (errors.length > 0) {
-            // 对错误码进行翻译
-          return errors.map(e => $ts(e.message)).join('；');
-        }
-      }
-    } catch (parseError) {
-      console.error('解析TRPC错误信息失败:', parseError);
-    }
-    
-    // 如果解析失败，使用错误对象本身的message
-    if (err.message) {
-        console.log('88888')
-      return err.message;
-    }
-  }
-  
-  // 非TRPC错误的处理
-  if (err instanceof Error) {
-    return err.message || '发生未知错误';
-  }
-  
-  return '发生未知错误';
-};

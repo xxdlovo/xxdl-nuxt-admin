@@ -16,18 +16,19 @@ const links = [[{
   }
 }, 
 {
+  label: 'Demo',
+  icon: 'i-lucide-house',
+  to: '/demo',
+  onSelect: () => {
+    open.value = false
+  }
+}, 
+{
   label: '系统管理',
   icon: 'i-lucide-house',
   children: [{
     label: '用户管理',
     to: '/system/user',
-    exact: true,
-    onSelect: () => {
-      open.value = false
-    }
-  },{
-    label: '角色管理',
-    to: '/system/role',
     exact: true,
     onSelect: () => {
       open.value = false

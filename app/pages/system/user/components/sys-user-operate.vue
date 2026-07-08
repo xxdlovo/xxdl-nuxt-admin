@@ -101,11 +101,13 @@ const initFormData = () => {
   }
 }
 
-// 监听 data 和 operateType 变化
-watch([() => props.data, () => props.operateType], () => {
-  initFormData()
-}, { immediate: true })
 
+// 每次打开时重新初始化
+watch(visible, (newVal) => {
+  if (newVal) {
+    initFormData()
+  }
+})
 const handleSubmit = async (event: FormSubmitEvent<SysUserAddDTO>) => {
   console.log('提交', state.value)
   if(props.operateType === 'add') {

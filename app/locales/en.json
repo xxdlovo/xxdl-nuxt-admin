@@ -7,6 +7,7 @@
     "updateCancel": "Later"
   },
   "common": {
+    "notExist": "Query data does not exist",
     "action": "Action",
     "selectRow": "Select Row",
     "selectAll": "Select All",
@@ -246,6 +247,19 @@
     "plugin_tables_vtable": "VTable"
   },
   "module": {
+        "demo":{
+        "title": "Demo List",
+        "demoStatus": "demoStatus",
+                  "field1": "field1",
+          "field2": "field2",
+        "form": {
+          "field1": "Please enter field1",
+          "field2": "Please enter field2",
+          "demoStatus": "Please select demo status"
+        },
+        "addDemo": "add Demo",
+        "editDemo": "edit Demo"
+      },
     "system": {
       "role": {
         "title": "Role List",
@@ -593,6 +607,10 @@
     "userName": {
       "required": "Please enter user name",
       "invalid": "User name format is incorrect"
+    },
+    "id": {
+      "required": "ID cannot be empty",
+      "invalid": "ID format is incorrect"
     },
     "phone": {
       "required": "Please enter phone number",

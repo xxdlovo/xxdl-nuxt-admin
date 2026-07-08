@@ -1,4 +1,8 @@
 <script setup lang="tsx">
+definePageMeta({
+  layout: 'system'
+})
+
 import { reactive } from 'vue';
 import { NButton, NPopconfirm, NTag } from 'naive-ui';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';

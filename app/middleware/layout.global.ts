@@ -1,12 +1,7 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-    
-  if (to.path.startsWith('/system')) {
-      // 系统模块使用系统布局
-    to.meta.layout = 'system'
-  }else if (to.path === '/login' || to.path === '/register') {
-      // 登录/注册使用无布局
-    to.meta.layout = false
-  } else {
+  // 非系统页面不应用布局（直接渲染裸页面）
+  if (!to.path.startsWith('/system') && to.path !== '/demo') {
     to.meta.layout = false
   }
+  // 系统页面由页面自身的 definePageMeta({ layout: 'system' }) 声明
 });

@@ -2,7 +2,7 @@
   <div class="h-full flex flex-col p-3 gap-3">
     <!-- 搜索表单 -->
     <div class="flex-shrink-0">
-      <SysUserSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
+      <DemoSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
     </div>
 
     <!-- 表格卡片 -->
@@ -28,12 +28,12 @@
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
-            <span>{{ $ts('module.system.user.title') }}</span>
+            <span>{{ $ts('module.demo.title') }}</span>
           </template>
         </TableHeaderOperation>
 
-          <!-- 用户操作弹窗 -->
-          <SysUserOperate
+          <!-- 操作弹窗 -->
+          <DemoOperate
               v-model:visible="drawerVisible"
               :operate-type="operateType"
               :data="editingData ?? undefined"
@@ -55,11 +55,12 @@ import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysUserQueryDTO } from "#shared/system/user"
 import type { SysUserDto } from "#shared/system/user/common"
-import SysUserSearch from './components/sys-user-search.vue'
-import SysUserOperate from "./components/sys-user-operate.vue"
+import type {DemoDto,DemoQueryDTO} from "#shared/demo"
+import DemoSearch from './components/demo-search.vue'
+import DemoOperate from "./components/demo-operate.vue"
+
 import { USER_GENDER_CONFIG, USER_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
-import { useToastSuccess } from '~/utils/toast'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -67,7 +68,7 @@ const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 
 // 搜索参数
-const searchParams = ref<SysUserQueryDTO>({})
+const searchParams = ref<DemoQueryDTO>({})
 
 // 表格 hook
 const {
@@ -78,13 +79,13 @@ const {
   search,
   refresh,
   getDataByPage
-} = usePaginatedTable<SysUserDto>({
-  query: (params) => $trpc.sysUser.page.query(params),
+} = usePaginatedTable<DemoDto>({
+  query: (params) => $trpc.demo.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
 })
 
 // 表格操作 hook
-const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysUserDto>({
+const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<DemoDto>({
   data,
   idKey: 'id',
   refresh
@@ -92,14 +93,14 @@ const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, hand
 
 // 选择列
 const UCheckbox = resolveComponent('UCheckbox')
-const { selectionColumn } = useSelectionColumn<SysUserDto>({
+const { selectionColumn } = useSelectionColumn<DemoDto>({
   data,
   checkedRowKeys,
   checkboxComponent: UCheckbox as Component
 })
 
 // 定义列配置（包含选择列）
-const columns = computed<TableColumn<SysUserDto>[]>(() => {
+const columns = computed<TableColumn<DemoDto>[]>(() => {
   return [
     // 选择列
     selectionColumn,
@@ -114,26 +115,16 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
     },
     // 数据列
     {
-      accessorKey: 'username',
-      header: () => $ts('module.system.user.userName')
+      accessorKey: 'field1',
+      header: () => $ts('module.demo.field1')
     },
     {
-      accessorKey: 'phone',
-      header: () => $ts('module.system.user.userPhone')
+      accessorKey: 'field2',
+      header: () => $ts('module.demo.field2')
     },
-    useBadgeColumn<SysUserDto>(
-      'gender',
-      'module.system.user.userGender',
-      USER_GENDER_CONFIG,
-      0
-    ),
-    {
-      accessorKey: 'email',
-      header: () => $ts('module.system.user.userEmail')
-    },
-    useBadgeColumn<SysUserDto>(
+    useBadgeColumn<DemoDto>(
       'status',
-      'module.system.user.userStatus',
+      'module.demo.demoStatus',
       USER_STATUS_CONFIG,
       1
     ),
@@ -173,9 +164,8 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
  * 处理删除
  */
 const handleDelete = async (id: string) => {
-  // 防止重复操作
   if (loading.value) return
-  await $trpc.sysUser.remove.mutate(id)
+  await $trpc.demo.remove.mutate(id)
   await onDeleted()
 }
 
@@ -189,7 +179,7 @@ const handleBatchDelete = async () => {
   }
 
   // 调用批量删除接口
-  await $trpc.sysUser.batchDelete.mutate(checkedRowKeys.value)
+  await $trpc.demo.batchDelete.mutate(checkedRowKeys.value)
 
   // 调用批量删除后的回调
   await onBatchDeleted()
