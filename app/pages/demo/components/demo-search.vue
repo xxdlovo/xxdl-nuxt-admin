@@ -4,7 +4,6 @@ const { $ts } = useI18n()
 import { userGenderOptions,enableStatusOptions } from "#shared/constants/business";
 import { translateOptions } from "~/utils/common";
 // set 0: default open search panel
-import {type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
 import { type DemoQueryDTO,DemoQuerySchema } from '#shared/demo';
 const formItemUi = {
   root: 'flex items-center',
@@ -15,7 +14,7 @@ const emit = defineEmits<{
   search: [data: DemoQueryDTO]
 }>()
 
-const schema = SysUserQuerySchema
+const schema = DemoQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
 const state = defineModel<DemoQueryDTO>('model', { required: true });

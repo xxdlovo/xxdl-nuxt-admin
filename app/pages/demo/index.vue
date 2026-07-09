@@ -6,7 +6,7 @@
     </div>
 
     <!-- 表格卡片 -->
-    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0' }">
+    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{body: 'flex flex-col h-full p-0 sm:p-0' }">
       <TableWithPagination
           ref="table"
           :data="data"
