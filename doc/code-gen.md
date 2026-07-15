@@ -12,7 +12,11 @@
 ```
 我已建好 <表名> 表，模块名 <module>，业务名 <business>，请根据 `d:\ws_project\xxdl-nuxt-admin\doc\code-gen.md` 帮我生成代码。
 ```
+例子:
 
+```
+我已建好 sys_department表，模块名 system/department，业务名 SysDept，请根据 `doc\code-gen.md` 帮我生成代码。
+```
 **参数说明**：
 
 | 参数 | 说明 | 示例 |
@@ -181,6 +185,7 @@ export type DemoDto = z.infer<typeof DemoBaseSchema>
 > - 需要模糊查询的字段加 `.meta({ query: 'like' })`，会自动生成 `LIKE %xxx%` 查询条件
 > - 精确查询字段不加 meta
 > - 所有字段设为 nullish（可选），便于继承和复用
+> - 所有字段设为 nullish，但**在 input.ts 和 output.ts 中**，如果 DB schema 中该字段有 `.notNull()`，则需要改为对应的必填类型
 
 #### 5.2 input.ts — 输入 Schema（增/删/改/查 DTO）
 
@@ -545,3 +550,4 @@ export const <module>StatusOptions = transformRecordToOption(<module>StatusRecor
 5. **所有路由使用 `protectedProcedure`**（需要登录认证），除非有特殊需求才用 `publicProcedure`
 6. **前端组件 import 必须有显式后缀 `.vue`**
 7. **`AppError`** 接收 i18n key 作为参数，客户端会自动翻译显示
+8. **input.ts / output.ts 的 NOT NULL 规则**：生成 input.ts 和 output.ts 时，必须根据 DB schema 的 `.notNull()` 设置字段。`common.ts` 的 `BaseSchema` 统一使用 `.nullish()` 便于复用，但在 `AddSchema`/`RespSchema` 中，DB `NOT NULL` 的**业务字段**需通过 `extend()` 覆盖为必填（如 `z.string()` 而非 `z.string().nullish()`）。ID 字段在 `AddSchema` 中用 `.nonoptional()`，在 `UpdateSchema` 中用 `.nonempty()`；`createdAt`/`updatedAt` 等 DB 自管字段保持 `nullish`。

@@ -306,6 +306,29 @@
           "unknow": "未知"
         }
       },
+      "department": {
+        "title": "部门列表",
+        "deptName": "部门名称",
+        "deptCode": "部门编码",
+        "parentDept": "上级部门",
+        "leader": "负责人",
+        "phone": "联系电话",
+        "email": "邮箱",
+        "sortOrder": "排序",
+        "deptStatus": "部门状态",
+        "form": {
+          "deptName": "请输入部门名称",
+          "deptCode": "请输入部门编码",
+          "parentDept": "请选择上级部门",
+          "leader": "请输入负责人",
+          "phone": "请输入联系电话",
+          "email": "请输入邮箱",
+          "sortOrder": "请输入排序",
+          "deptStatus": "请选择部门状态"
+        },
+        "addDept": "新增部门",
+        "editDept": "编辑部门"
+      },
       "menu": {
         "home": "首页",
         "title": "菜单列表",

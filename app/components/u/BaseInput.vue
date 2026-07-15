@@ -9,7 +9,7 @@
       <div class="flex items-center gap-1">
         <!-- 清空按钮 -->
         <UButton
-          v-if="showClear && modelValue"
+          v-if="showClear && hasValue"
           color="neutral"
           variant="link"
           size="xs"
@@ -27,7 +27,7 @@
         />
         <!-- 复制按钮 -->
         <UButton
-          v-if="trailing === 'copy' && modelValue"
+          v-if="trailing === 'copy' && hasValue"
           color="neutral"
           variant="link"
           size="xs"
@@ -64,7 +64,15 @@ const props = withDefaults(defineProps<Props>(), {
   clearable: true
 })
 
-const modelValue = defineModel<string | null | undefined>()
+const modelValue = defineModel<string | number | null | undefined>({
+  set(val) {
+    if (props.type === 'number' && typeof val === 'string' && val !== '') {
+      const parsed = parseFloat(val)
+      return isNaN(parsed) ? null : parsed
+    }
+    return val
+  }
+})
 
 // 密码显示状态
 const showPassword = ref(false)
@@ -80,6 +88,11 @@ const inputType = computed(() => {
   return props.type
 })
 
+// 是否有值（正确处理 number 0 的场景）
+const hasValue = computed(() => {
+  return modelValue.value !== null && modelValue.value !== undefined && modelValue.value !== ''
+})
+
 // 是否显示清空按钮
 const showClear = computed(() => {
   return props.trailing === 'clear' || (props.clearable && !props.trailing)
@@ -87,7 +100,7 @@ const showClear = computed(() => {
 
 // 清空输入
 const handleClear = () => {
-  modelValue.value = ''
+  modelValue.value = props.type === 'number' ? null : ''
 }
 
 // 切换密码显示
@@ -97,7 +110,7 @@ const togglePassword = () => {
 
 // 复制内容
 const handleCopy = async () => {
-  if (!modelValue.value) return
+  if (!hasValue.value) return
   
   try {
     await navigator.clipboard.writeText(String(modelValue.value))

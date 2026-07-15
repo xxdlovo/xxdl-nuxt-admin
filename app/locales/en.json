@@ -306,6 +306,29 @@
           "unknow": "unKnow"
         }
       },
+      "department": {
+        "title": "Department List",
+        "deptName": "Department Name",
+        "deptCode": "Department Code",
+        "parentDept": "Parent Department",
+        "leader": "Leader",
+        "phone": "Phone",
+        "email": "Email",
+        "sortOrder": "Sort Order",
+        "deptStatus": "Department Status",
+        "form": {
+          "deptName": "Please enter department name",
+          "deptCode": "Please enter department code",
+          "parentDept": "Please select parent department",
+          "leader": "Please enter leader",
+          "phone": "Please enter phone",
+          "email": "Please enter email",
+          "sortOrder": "Please enter sort order",
+          "deptStatus": "Please select department status"
+        },
+        "addDept": "Add Department",
+        "editDept": "Edit Department"
+      },
       "menu": {
         "home": "Home",
         "title": "Menu List",

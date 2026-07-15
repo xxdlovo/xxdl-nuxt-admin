@@ -2,11 +2,11 @@
   <div class="h-full flex flex-col p-3 gap-3">
     <!-- 搜索表单 -->
     <div class="flex-shrink-0">
-      <SysUserSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
+      <SysDeptSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
     </div>
 
     <!-- 表格卡片 -->
-    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0 sm:p-0' }">
+    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{body: 'flex flex-col h-full p-0 sm:p-0' }">
       <TableWithPagination
           ref="table"
           :data="data"
@@ -28,12 +28,12 @@
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
-            <span>{{ $ts('module.system.user.title') }}</span>
+            <span>{{ $ts('module.system.department.title') }}</span>
           </template>
         </TableHeaderOperation>
 
-          <!-- 用户操作弹窗 -->
-          <SysUserOperate
+          <!-- 操作弹窗 -->
+          <SysDeptOperate
               v-model:visible="drawerVisible"
               :operate-type="operateType"
               :data="editingData ?? undefined"
@@ -53,13 +53,12 @@ definePageMeta({
 
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
-import type { SysUserQueryDTO } from "#shared/system/user"
-import type { SysUserDto } from "#shared/system/user/common"
-import SysUserSearch from './components/sys-user-search.vue'
-import SysUserOperate from "./components/sys-user-operate.vue"
-import { USER_GENDER_CONFIG, USER_STATUS_CONFIG } from "#shared/constants/business"
+import type { SysDeptDto, SysDeptQueryDTO } from "#shared/system/department"
+import SysDeptSearch from './components/sys-dept-search.vue'
+import SysDeptOperate from "./components/sys-dept-operate.vue"
+
+import { USER_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
-import { useToastSuccess } from '~/utils/toast'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -67,7 +66,7 @@ const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 
 // 搜索参数
-const searchParams = ref<SysUserQueryDTO>({})
+const searchParams = ref<SysDeptQueryDTO>({})
 
 // 表格 hook
 const {
@@ -78,13 +77,13 @@ const {
   search,
   refresh,
   getDataByPage
-} = usePaginatedTable<SysUserDto>({
-  query: (params) => $trpc.sysUser.page.query(params),
+} = usePaginatedTable<SysDeptDto>({
+  query: (params) => $trpc.sysDept.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
 })
 
 // 表格操作 hook
-const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysUserDto>({
+const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysDeptDto>({
   data,
   idKey: 'id',
   refresh
@@ -92,14 +91,14 @@ const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, hand
 
 // 选择列
 const UCheckbox = resolveComponent('UCheckbox')
-const { selectionColumn } = useSelectionColumn<SysUserDto>({
+const { selectionColumn } = useSelectionColumn<SysDeptDto>({
   data,
   checkedRowKeys,
   checkboxComponent: UCheckbox as Component
 })
 
 // 定义列配置（包含选择列）
-const columns = computed<TableColumn<SysUserDto>[]>(() => {
+const columns = computed<TableColumn<SysDeptDto>[]>(() => {
   return [
     // 选择列
     selectionColumn,
@@ -114,28 +113,36 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
     },
     // 数据列
     {
-      accessorKey: 'username',
-      header: () => $ts('module.system.user.userName')
+      accessorKey: 'name',
+      header: () => $ts('module.system.department.deptName')
+    },
+    {
+      accessorKey: 'code',
+      header: () => $ts('module.system.department.deptCode')
+    },
+    {
+      accessorKey: 'leader',
+      header: () => $ts('module.system.department.leader')
     },
     {
       accessorKey: 'phone',
-      header: () => $ts('module.system.user.userPhone')
+      header: () => $ts('module.system.department.phone')
     },
-    useBadgeColumn<SysUserDto>(
-      'gender',
-      'module.system.user.userGender',
-      USER_GENDER_CONFIG,
-      0
-    ),
     {
       accessorKey: 'email',
-      header: () => $ts('module.system.user.userEmail')
+      header: () => $ts('module.system.department.email')
     },
-    useBadgeColumn<SysUserDto>(
+    useBadgeColumn<SysDeptDto>(
       'status',
-      'module.system.user.userStatus',
+      'module.system.department.deptStatus',
       USER_STATUS_CONFIG,
       1
+    ),
+    useBadgeColumn<SysDeptDto>(
+      'sortOrder',
+      'module.system.department.sortOrder',
+      USER_STATUS_CONFIG,
+      0
     ),
     {
       id: 'actions',
@@ -173,9 +180,8 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
  * 处理删除
  */
 const handleDelete = async (id: string) => {
-  // 防止重复操作
   if (loading.value) return
-  await $trpc.sysUser.remove.mutate(id)
+  await $trpc.sysDept.remove.mutate(id)
   await onDeleted()
 }
 
@@ -183,19 +189,12 @@ const handleDelete = async (id: string) => {
  * 处理批量删除
  */
 const handleBatchDelete = async () => {
-  // 如果正在加载或没有选中项，忽略操作
   if (loading.value || checkedRowKeys.value.length === 0) {
     return
   }
-
-  // 调用批量删除接口
-  await $trpc.sysUser.batchDelete.mutate(checkedRowKeys.value)
-
-  // 调用批量删除后的回调
+  await $trpc.sysDept.batchDelete.mutate(checkedRowKeys.value)
   await onBatchDeleted()
 }
-
-
 
 // 初始化加载
 onMounted(async () => {
@@ -204,17 +203,15 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 确保表格容器正确处理滚动 */
 :deep(.overflow-auto) {
-  -webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
+  -webkit-overflow-scrolling: touch;
 }
 
-/* 移动端优化 - 确保表格可以横向滚动 */
 @media (max-width: 640px) {
   :deep(table) {
     display: table;
     width: 100%;
-    min-width: 600px; /* 根据实际列数调整 */
+    min-width: 600px;
   }
 }
 </style>
