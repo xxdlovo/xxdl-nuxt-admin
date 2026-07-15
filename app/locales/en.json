@@ -329,6 +329,25 @@
         "addDept": "Add Department",
         "editDept": "Edit Department"
       },
+      "dictData": {
+        "title": "Dict Data List",
+        "typeId": "Dict Type ID",
+        "label": "Dict Label",
+        "value": "Dict Value",
+        "sortOrder": "Sort Order",
+        "dictStatus": "Dict Status",
+        "remark": "Remark",
+        "form": {
+          "typeId": "Please enter dict type ID",
+          "label": "Please enter dict label",
+          "value": "Please enter dict value",
+          "sortOrder": "Please enter sort order",
+          "dictStatus": "Please select dict status",
+          "remark": "Please enter remark"
+        },
+        "addDictData": "Add Dict Data",
+        "editDictData": "Edit Dict Data"
+      },
       "menu": {
         "home": "Home",
         "title": "Menu List",

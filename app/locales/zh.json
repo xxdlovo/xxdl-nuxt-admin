@@ -329,6 +329,25 @@
         "addDept": "新增部门",
         "editDept": "编辑部门"
       },
+      "dictData": {
+        "title": "字典数据列表",
+        "typeId": "字典类型ID",
+        "label": "字典标签",
+        "value": "字典值",
+        "sortOrder": "排序",
+        "dictStatus": "字典状态",
+        "remark": "备注",
+        "form": {
+          "typeId": "请输入字典类型ID",
+          "label": "请输入字典标签",
+          "value": "请输入字典值",
+          "sortOrder": "请输入排序",
+          "dictStatus": "请选择字典状态",
+          "remark": "请输入备注"
+        },
+        "addDictData": "新增字典数据",
+        "editDictData": "编辑字典数据"
+      },
       "menu": {
         "home": "首页",
         "title": "菜单列表",

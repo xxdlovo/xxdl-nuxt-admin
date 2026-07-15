@@ -50,3 +50,15 @@ export const menuIconTypeRecord: Record<string, string> = {
 };
 
 export const menuIconTypeOptions = transformRecordToOption(menuIconTypeRecord);
+
+export const DICT_DATA_STATUS_CONFIG = {
+    '1': { i18nKey: 'page.manage.common.status.enable', color: 'success' },
+    '2': { i18nKey: 'page.manage.common.status.disable', color: 'warning' }
+} as const
+
+export const dictDataStatusRecord: Record<string, string> = {
+    '1': 'page.manage.common.status.enable',
+    '2': 'page.manage.common.status.disable'
+};
+
+export const dictDataStatusOptions = transformRecordToOption(dictDataStatusRecord);

@@ -12,11 +12,6 @@
 ```
 我已建好 <表名> 表，模块名 <module>，业务名 <business>，请根据 `d:\ws_project\xxdl-nuxt-admin\doc\code-gen.md` 帮我生成代码。
 ```
-例子:
-
-```
-我已建好 sys_department表，模块名 system/department，业务名 SysDept，请根据 `doc\code-gen.md` 帮我生成代码。
-```
 **参数说明**：
 
 | 参数 | 说明 | 示例 |
@@ -34,12 +29,16 @@
 > ```
 > 我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 `d:\ws_project\xxdl-nuxt-admin\doc\code-gen.md` 帮我生成代码。
 > ```
+>```
+>我已建好 sys_department表，模块名 system/department，业务名 SysDept，请根据 `doc\code-gen.md` 帮我生成代码。
+>```
+
 
 ---
 
 ## 一、命名规则
 
-- 模块目录以 **模块名/业务名** 形式组织（支持两级目录），例如 `system/user`、`system/role`
+- 模块目录以 **模块名/业务名** 形式组织（支持两级目录），例如 `system/user`、`system/role`、`system/dictType`
 - AI 需向用户确认模块名，例如"请输入模块名（如 `demo` 或 `system/user`）"
 - 所有文件名、路由名、翻译 key 均以此模块名为基础
 
@@ -394,7 +393,7 @@ export type AppRouter = typeof appRouter;
 
 ### Step 10: 创建前端页面
 
-`app/pages/<module>/index.vue`
+`app/pages/<module>/index.vue`, 以snake_case形式命名
 
 > 使用显式布局 `system`（通过 `definePageMeta`），导入要有显式文件后缀 `.vue`
 
@@ -425,7 +424,7 @@ definePageMeta({
 
 ### Step 11: 创建前端搜索组件
 
-`app/pages/<module>/components/<module>-search.vue`
+`app/pages/<module>/components/<module>-search.vue`, 以snake_case形式命名
 
 - 使用 `UForm` + `UFormField` + `UBaseInput` / `USelect` 构建搜索表单
 - 通过 `@search` emit 触发列表查询
@@ -437,7 +436,7 @@ definePageMeta({
 
 ### Step 12: 创建前端操作弹窗组件
 
-`app/pages/<module>/components/<module>-operate.vue`
+`app/pages/<module>/components/<module>-operate.vue`, 以snake_case形式命名
 
 - 使用 `UModal` 作为弹窗容器
 - 使用 `UForm` + `useZodValidation` 做表单验证

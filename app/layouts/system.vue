@@ -41,7 +41,14 @@ const links = [[{
     onSelect: () => {
       open.value = false
     }
-  }
+  }    , {
+      label: '字典数据管理',
+      to: '/system/dict-data',
+      exact: true,
+      onSelect: () => {
+        open.value = false
+      }
+    }
     , {
     label: '菜单管理',
     to: '/system/menu',
@@ -141,7 +148,7 @@ onMounted(async () => {
         </UDashboardNavbar>
       </template>
       <template #body >
-        <div class="bg-blue-200 h-[40px] flex-shrink-0">
+        <div class="h-[40px] flex-shrink-0">
           标题栏
         </div>
         <div class="flex-1 min-h-0">
