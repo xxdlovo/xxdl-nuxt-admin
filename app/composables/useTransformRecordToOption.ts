@@ -10,8 +10,10 @@ interface SelectOption {
  */
 export function useTransformRecordToOption(record: Record<string, string>){
     const { $ts } = useI18n()
-    return Object.entries(record).map(([value, label]) => ({
-        value,
-        label: $ts(label)
-    })) as SelectOption[];
+    return computed(() =>
+        Object.entries(record).map(([value, label]) => ({
+            value,
+            label: $ts(label)
+        }))
+    ) as ComputedRef<SelectOption[]>;
 }

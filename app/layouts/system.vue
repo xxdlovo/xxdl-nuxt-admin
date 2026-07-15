@@ -50,6 +50,14 @@ const links = [[{
       }
     }
     , {
+      label: '字典管理',
+      to: '/system/dict-type',
+      exact: true,
+      onSelect: () => {
+        open.value = false
+      }
+    }
+    , {
     label: '菜单管理',
     to: '/system/menu',
     exact: true,
