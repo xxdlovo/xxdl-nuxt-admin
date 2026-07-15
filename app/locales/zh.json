@@ -348,6 +348,21 @@
         "addDictData": "新增字典数据",
         "editDictData": "编辑字典数据"
       },
+      "dictType": {
+        "title": "字典类型列表",
+        "name": "字典名称",
+        "code": "字典编码",
+        "dictStatus": "字典状态",
+        "remark": "备注",
+        "form": {
+          "name": "请输入字典名称",
+          "code": "请输入字典编码",
+          "dictStatus": "请选择字典状态",
+          "remark": "请输入备注"
+        },
+        "addDictType": "新增字典类型",
+        "editDictType": "编辑字典类型"
+      },
       "menu": {
         "home": "首页",
         "title": "菜单列表",

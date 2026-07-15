@@ -348,6 +348,21 @@
         "addDictData": "Add Dict Data",
         "editDictData": "Edit Dict Data"
       },
+      "dictType": {
+        "title": "Dict Type List",
+        "name": "Dict Name",
+        "code": "Dict Code",
+        "dictStatus": "Dict Status",
+        "remark": "Remark",
+        "form": {
+          "name": "Please enter dict name",
+          "code": "Please enter dict code",
+          "dictStatus": "Please select dict status",
+          "remark": "Please enter remark"
+        },
+        "addDictType": "Add Dict Type",
+        "editDictType": "Edit Dict Type"
+      },
       "menu": {
         "home": "Home",
         "title": "Menu List",

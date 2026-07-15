@@ -4,6 +4,7 @@ import { sysUserRouter } from '#server/sys-router/user'
 import { sysDeptRouter } from '#server/sys-router/dept'
 import { demoRouter } from '#server/demo-router'
 import { sysDictDataRouter } from '#server/sys-router/dictData'
+import { sysDictTypeRouter } from '#server/sys-router/dictType'
 
 // 收集相关路由
 export const appRouter = router({
@@ -11,6 +12,7 @@ export const appRouter = router({
     sysDept: sysDeptRouter,
     demo: demoRouter,
     sysDictData: sysDictDataRouter,
+    sysDictType: sysDictTypeRouter,
 });
 
 // export type definition of API
