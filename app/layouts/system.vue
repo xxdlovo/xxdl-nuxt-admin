@@ -67,6 +67,19 @@ const links = [[{
   }
   ]
 },
+{
+  label: '示例页面',
+  icon: 'i-lucide-house',
+  children: [{
+    label: 'Split Layout',
+    to: '/show-case/split-layout',
+    exact: true,
+    onSelect: () => {
+      open.value = false
+    }
+  }
+  ]
+},
 ], []] satisfies NavigationMenuItem[][]
 
 const groups = computed(() => [{
