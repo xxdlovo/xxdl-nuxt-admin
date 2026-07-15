@@ -47,7 +47,7 @@
 
 import { ref, computed } from 'vue'
 
-type TrailingType = 'clear' | 'password' | 'copy' | null
+type TrailingType = 'clear' | 'password' | 'copy' | 'other' | null
 
 interface Props {
   /** 输入框类型 */

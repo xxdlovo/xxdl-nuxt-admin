@@ -336,6 +336,8 @@
         "value": "字典值",
         "sortOrder": "排序",
         "dictStatus": "字典状态",
+        "emptyTitle": "暂无字典数据",
+        "emptyDesc": "当前查询条件下没有字典数据，可以点击新增创建。",
         "remark": "备注",
         "form": {
           "typeId": "请输入字典类型ID",

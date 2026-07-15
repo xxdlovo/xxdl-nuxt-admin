@@ -46,7 +46,6 @@ const customLink: TRPCLink<AppRouter> = () => {
     // this is when passing the result to the next link
     // each link needs to return an observable which propagates results
     return observable((observer) => {
-      console.log('performing operation:', op);
         // console.log('翻译:',$ts('form.userName.required'))
       const unsubscribe = next(op).subscribe({
         next(value) {

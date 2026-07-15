@@ -18,6 +18,8 @@ const props = defineProps<{
   visible: boolean;
   operateType: string;
   data?: SysDictDataDto;
+  defaultTypeId?: string;
+  disableTypeId?: boolean;
   close?: () => void;
   refresh?: () => void;
 }>();
@@ -77,7 +79,7 @@ const initFormData = () => {
     // 新增模式：重置表单
     Object.assign(state.value, {
       id: '',
-      typeId: '',
+      typeId: props.defaultTypeId || '',
       label: '',
       value: '',
       sortOrder: 0,
@@ -135,7 +137,13 @@ const title = computed(() => {
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
           <UFormField name="typeId" required :label="$ts('module.system.dictData.typeId')" orientation="horizontal"
             :ui="formItemUi">
-            <UBaseInput v-model="state.typeId" :placeholder="$ts('module.system.dictData.form.typeId')" trailing="clear" />
+            <UBaseInput
+              v-model="state.typeId"
+              :placeholder="$ts('module.system.dictData.form.typeId')"
+              :variant="disableTypeId ? 'subtle' : 'outline'"
+              :disabled="disableTypeId"
+              :trailing="disableTypeId ? 'other' : 'clear'"
+            />
           </UFormField>
           <UFormField name="label" required :label="$ts('module.system.dictData.label')" orientation="horizontal"
             :ui="formItemUi">

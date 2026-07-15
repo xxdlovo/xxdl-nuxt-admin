@@ -336,6 +336,8 @@
         "value": "Dict Value",
         "sortOrder": "Sort Order",
         "dictStatus": "Dict Status",
+        "emptyTitle": "No dictionary data",
+        "emptyDesc": "There is no dictionary data under the current query conditions, you can click Add to create。",
         "remark": "Remark",
         "form": {
           "typeId": "Please enter dict type ID",

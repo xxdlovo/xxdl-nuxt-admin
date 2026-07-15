@@ -11,7 +11,14 @@
         <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
           <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4   gap-x-6 gap-y-6">
             <UFormField name="typeId" :label="$ts('module.system.dictData.typeId')" orientation="horizontal"   :ui="formItemUi">
-              <UBaseInput v-model="state.typeId" :placeholder="$ts('module.system.dictData.form.typeId')" trailing="clear" class="w-full" />
+              <UBaseInput
+                v-model="state.typeId"
+                :placeholder="$ts('module.system.dictData.form.typeId')"
+                :variant="Boolean(fixedTypeId) ? 'subtle' : 'outline'"
+                :disabled="Boolean(fixedTypeId)"
+                :trailing="Boolean(fixedTypeId) ? 'other' : 'clear'"
+                class="w-full"
+              />
             </UFormField>
             <UFormField name="label" :label="$ts('module.system.dictData.label')" orientation="horizontal"   :ui="formItemUi">
               <UBaseInput v-model="state.label" :placeholder="$ts('module.system.dictData.form.label')" trailing="clear" class="w-full" />
@@ -54,6 +61,10 @@ const emit = defineEmits<{
   search: [data: SysDictDataQueryDTO]
 }>()
 
+const props = defineProps<{
+  fixedTypeId?: string
+}>()
+
 const schema = SysDictDataQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
@@ -73,8 +84,23 @@ const submit = async () => {
 }
 const reset =()=> {
   form.value?.clear()
-  state.value = {}
+  state.value = {
+    typeId: props.fixedTypeId || undefined
+  }
 
 }
+
+watch(
+  () => props.fixedTypeId,
+  (value) => {
+    if (value) {
+      state.value = {
+        ...state.value,
+        typeId: value
+      }
+    }
+  },
+  { immediate: true }
+)
 
 </script>

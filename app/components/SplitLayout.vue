@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 interface SelectOption {
   label: string
   value: string
@@ -210,14 +209,14 @@ onUnmounted(() => {
           width: collapsed ? '0px' : `${panelWidth}px`,
           minWidth: collapsed ? '0px' : undefined
         }"
-        class="relative flex flex-col border-r border-(--ui-border) bg-(--ui-bg) transition-[width] duration-200 hidden lg:flex"
+        class="relative hidden flex-col border-r border-(--ui-border) bg-(--ui-bg-elevated)/30 transition-[width] duration-200 lg:flex"
         :class="{
           'overflow-hidden': collapsed,
           'min-w-0': collapsed
         }"
       >
         <!-- Search bar -->
-        <div class="flex items-center gap-1 p-3 border-b border-(--ui-border)">
+        <div class="flex flex-shrink-0 items-center gap-1 p-3 pr-5">
           <UInput
             :model-value="searchQuery"
             size="sm"
@@ -240,79 +239,85 @@ onUnmounted(() => {
             </template>
           </UInput>
           <slot name="search-extra" />
-          <!-- Collapse button -->
-          <UButton
-            v-if="collapsible"
-            :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
-            size="sm"
-            color="neutral"
-            variant="ghost"
-            square
-            @click="toggleCollapse"
-          />
         </div>
 
-        <!-- List area -->
-        <UScrollArea class="flex-1">
-          <template #default>
-            <template v-if="loading">
-              <div class="space-y-2 p-3">
-                <USkeleton v-for="i in 5" :key="i" class="h-12 w-full rounded-md" />
-              </div>
-            </template>
-            <template v-else-if="data.length === 0">
-              <slot name="empty">
-                <div class="flex flex-col items-center justify-center py-12 text-(--ui-text-muted)">
-                  <UIcon name="i-lucide-inbox" class="size-10 mb-2 opacity-40" />
-                  <p class="text-sm">暂无数据</p>
-                </div>
-              </slot>
-            </template>
-            <div v-else class="divide-y divide-(--ui-border)/50">
-              <div
-                v-for="(item, index) in data"
-                :key="item.id"
-                class="group flex items-center gap-2 px-3 py-2.5 cursor-pointer border-l-[3px] border-transparent transition-all duration-150"
-                :class="{
-                  'bg-(--ui-bg-elevated)/50 border-l-(--ui-primary)': isSelected(item),
-                  'hover:bg-(--ui-bg-elevated)/30': !isSelected(item)
-                }"
-                @click="toggleSelect(item)"
-              >
-                <slot name="item" :item="item" :index="index" :selected="isSelected(item)">
-                  <span class="truncate text-sm flex-1">{{ (item.label as string) || (item.name as string) || item.id }}</span>
-                </slot>
-              </div>
-            </div>
-          </template>
-        </UScrollArea>
+        <!-- Collapse button -->
+        <UButton
+          v-if="collapsible"
+          :icon="collapsed ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
+          size="xs"
+          color="neutral"
+          variant="soft"
+          square
+          class="absolute right-0 top-1/2 z-20 translate-x-1/2 -translate-y-1/2 border border-(--ui-border) bg-(--ui-bg) shadow-sm"
+          @click="toggleCollapse"
+        />
 
-        <!-- Pagination -->
-        <div v-if="showPagination && pagination.total > 0" class="flex items-center justify-between gap-2 p-3 border-t border-(--ui-border) text-sm">
-          <div class="flex items-center gap-2">
-            <UBadge variant="subtle" color="neutral" size="sm">
-              共 {{ pagination.total }} 条
-            </UBadge>
-            <USelect
-              :model-value="String(pagination.pageSize)"
-              size="xs"
-              variant="subtle"
-              :items="pageSizeOptions"
-              class="w-20"
-              @update:model-value="handlePageSizeChange"
-            />
+        <div class="mx-3 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-(--ui-border) bg-(--ui-bg)">
+          <!-- List area -->
+          <UScrollArea class="flex-1">
+            <template #default>
+              <template v-if="loading">
+                <div class="space-y-2 p-3">
+                  <USkeleton v-for="i in 5" :key="i" class="h-12 w-full rounded-md" />
+                </div>
+              </template>
+              <template v-else-if="data.length === 0">
+                <slot name="empty">
+                  <div class="flex flex-col items-center justify-center py-12 text-(--ui-text-muted)">
+                    <UIcon name="i-lucide-inbox" class="size-10 mb-2 opacity-40" />
+                    <p class="text-sm">暂无数据 | No Data</p>
+                  </div>
+                </slot>
+              </template>
+              <div v-else class="divide-y divide-(--ui-border)/50">
+                <div
+                  v-for="(item, index) in data"
+                  :key="item.id"
+                  class="group flex items-center gap-2 px-3 py-2.5 cursor-pointer border-l-[3px] border-transparent transition-all duration-150"
+                  :class="{
+                    'bg-(--ui-bg-elevated)/50 border-l-(--ui-primary)': isSelected(item),
+                    'hover:bg-(--ui-bg-elevated)/30': !isSelected(item)
+                  }"
+                  @click="toggleSelect(item)"
+                >
+                  <slot name="item" :item="item" :index="index" :selected="isSelected(item)">
+                    <span class="truncate text-base flex-1">{{ (item.label as string) || (item.name as string) || item.id }}</span>
+                  </slot>
+                </div>
+              </div>
+            </template>
+          </UScrollArea>
+
+          <!-- Pagination -->
+          <div
+            v-if="showPagination && pagination.total > 0"
+            class="flex-shrink-0 border-t border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900"
+          >
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <div class="text-sm text-gray-700 dark:text-gray-300">
+                共 {{ pagination.total }} 条
+              </div>
+              <USelect
+                :model-value="String(pagination.pageSize)"
+                :items="pageSizeOptions"
+                :disabled="loading"
+                class="w-16 sm:w-20"
+                @update:model-value="handlePageSizeChange"
+              />
+              <UPagination
+                v-if="pagination.total > pagination.pageSize"
+                :page="pagination.page"
+                :total="pagination.total"
+                :items-per-page="pagination.pageSize"
+                :disabled="loading"
+                :max="5"
+                show-first
+                show-last
+                @update:page="onPageChange"
+              />
+            </div>
           </div>
-          <UPagination
-            v-if="pagination.total > pagination.pageSize"
-            :page="pagination.page"
-            :total="pagination.total"
-            :items-per-page="pagination.pageSize"
-            size="sm"
-            color="neutral"
-            active-color="primary"
-            show-edges
-            @update:page="onPageChange"
-          />
         </div>
       </div>
 
