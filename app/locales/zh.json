@@ -658,6 +658,12 @@
           "enable": "启用",
           "disable": "禁用"
         }
+      },
+      "menu": {
+        "type": {
+          "directory": "目录",
+          "menu": "菜单"
+        }
       }
     }
   },

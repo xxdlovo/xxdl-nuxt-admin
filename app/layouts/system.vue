@@ -42,8 +42,8 @@ const links = [[{
       open.value = false
     }
   }    , {
-      label: '字典数据管理',
-      to: '/system/dict-data',
+      label: '新增内容',
+      to: '/system/menu',
       exact: true,
       onSelect: () => {
         open.value = false

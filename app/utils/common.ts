@@ -1,4 +1,6 @@
 
+import { computed } from 'vue'
+import type { ComputedRef } from 'vue'
 
 interface SelectOption<T> {
     value: T;
@@ -17,3 +19,12 @@ export function translateOptions<T>(options: SelectOption<T>[]): SelectOption<nu
     label: $ts(option.label)
   }));
 }
+
+
+// export function translateOptions<T>(options: SelectOption<T>[]): ComputedRef<SelectOption<number>[]> {
+//     const { $ts } = useNuxtApp()
+//     return computed(() => options.map(option => ({
+//         value: Number(option.value),
+//         label: $ts(option.label)
+//     })));
+// }
