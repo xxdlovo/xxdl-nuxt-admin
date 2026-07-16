@@ -25,6 +25,8 @@
               :loading="loading"
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
+              :add-permission="demoPermissions.codes.add"
+              :delete-permission="demoPermissions.codes.del"
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
@@ -53,19 +55,18 @@ definePageMeta({
 
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
-import type { SysUserQueryDTO } from "#shared/system/user"
-import type { SysUserDto } from "#shared/system/user/common"
-import type {DemoDto,DemoQueryDTO} from "#shared/demo"
+import type { DemoDto, DemoQueryDTO } from "#shared/demo"
 import DemoSearch from './components/demo-search.vue'
 import DemoOperate from "./components/demo-operate.vue"
 
-import { USER_GENDER_CONFIG, USER_STATUS_CONFIG } from "#shared/constants/business"
+import { USER_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
+const demoPermissions = useCrudPermissions('demo')
 
 // 搜索参数
 const searchParams = ref<DemoQueryDTO>({})
@@ -101,9 +102,42 @@ const { selectionColumn } = useSelectionColumn<DemoDto>({
 
 // 定义列配置（包含选择列）
 const columns = computed<TableColumn<DemoDto>[]>(() => {
+  const actionColumn: TableColumn<DemoDto> = {
+    id: 'actions',
+    header: () => $ts('common.operate'),
+    cell: ({ row }) => {
+      const UButton = resolveComponent('UButton')
+      const Popconfirm = resolveComponent('Popconfirm')
+      const actions = []
+
+      if (demoPermissions.canEdit.value) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          onClick: () => handleEdit(row.original.id as string)
+        }, { default: () => $ts('common.edit') }))
+      }
+
+      if (demoPermissions.canDel.value) {
+        actions.push(h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original.id as string)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error',
+            size: 'xs'
+          }, { default: () => $ts('common.delete') })
+        }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
+    }
+  }
+
   return [
     // 选择列
-    selectionColumn,
+    ...(demoPermissions.canDel.value ? [selectionColumn] : []),
     // 序号列
     {
       id: 'index',
@@ -128,33 +162,7 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
       USER_STATUS_CONFIG,
       1
     ),
-    {
-      id: 'actions',
-      header: () => $ts('common.operate'),
-      cell: ({ row }) => {
-        const UButton = resolveComponent('UButton')
-        const Popconfirm = resolveComponent('Popconfirm')
-
-        return h('div', { class: 'flex gap-2' }, [
-          h(UButton, {
-            variant: 'outline',
-            color: 'primary',
-            size: 'xs',
-            onClick: () => handleEdit(row.original.id as string)
-          }, { default: () => $ts('common.edit') }),
-
-          h(Popconfirm, {
-            onConfirm: () => handleDelete(row.original.id as string)
-          }, {
-            trigger: () => h(UButton, {
-              variant: 'outline',
-              color: 'error',
-              size: 'xs'
-            }, { default: () => $ts('common.delete') })
-          })
-        ])
-      }
-    }
+    ...(demoPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
 

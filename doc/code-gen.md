@@ -330,46 +330,53 @@ export function demoService(ctx: Context) {
 
 `server/<module>-router/index.ts`
 
+**权限资源码规则**：
+- 单级模块：`<module>`，例如 `demo`
+- 多级模块：将 `/` 替换为 `:`，例如 `system/user` -> `system:user`
+- 标准 CRUD 权限码固定为：`<resource>:list`、`<resource>:add`、`<resource>:edit`、`<resource>:del`
+
 ```typescript
 //#server/<module>-router
-import { router, protectedProcedure } from '~~/server/trpc/init'
+import { router, crudPermissionProcedures } from '~~/server/trpc/init'
 import { demoService } from './DemoService'
 import z from 'zod'
 import { DemoAddSchema, DemoUpdateSchema, DemoQuerySchema, DemoPageQuerySchema } from "#shared/demo";
 
+const p = crudPermissionProcedures('demo')
+
 export const demoRouter = router({
-    create: protectedProcedure.input(DemoAddSchema)
+    create: p.add.input(DemoAddSchema)
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).create(input)
         }),
-    remove: protectedProcedure.input(z.string())
+    remove: p.del.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).remove(input)
         }),
-    batchDelete: protectedProcedure.input(z.array(z.string()))
+    batchDelete: p.del.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).batchRemove(input)
         }),
-    update: protectedProcedure.input(DemoUpdateSchema)
+    update: p.edit.input(DemoUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).updateById(input.id, input)
         }),
-    getOne: protectedProcedure.input(DemoQuerySchema)
+    getOne: p.list.input(DemoQuerySchema)
         .query(async ({ ctx, input }) => {
             return demoService(ctx).getOne(input)
         }),
-    getById: protectedProcedure.input(z.string())
+    getById: p.list.input(z.string())
         .query(async ({ ctx, input }) => {
             return demoService(ctx).getById(input)
         }),
-    page: protectedProcedure.input(DemoPageQuerySchema)
+    page: p.list.input(DemoPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return demoService(ctx).page(input)
         })
 })
 ```
 
-> **注意**：固定 7 个接口方法（create / remove / batchDelete / update / getOne / getById / page），确保一致性
+> **注意**：固定 7 个接口方法（create / remove / batchDelete / update / getOne / getById / page），确保一致性。查询类接口统一使用 `p.list`，新增使用 `p.add`，修改使用 `p.edit`，删除和批量删除使用 `p.del`。
 
 ---
 
@@ -391,6 +398,43 @@ export type AppRouter = typeof appRouter;
 
 ---
 
+### Step 9.1: 配置 RBAC 菜单与按钮权限
+
+接口级权限和前端按钮权限都依赖 `sys_menu.code`。生成新模块时，必须同步规划并写入权限码，否则普通用户即使有角色也无法访问对应接口。
+
+**权限码规则**：
+
+| 操作 | 权限码示例 |
+|------|----------|
+| 列表/详情/查询 | `demo:list` |
+| 新增 | `demo:add` |
+| 修改 | `demo:edit` |
+| 删除/批量删除 | `demo:del` |
+
+多级模块示例：`system/user` 对应 `system:user:list`、`system:user:add`、`system:user:edit`、`system:user:del`。
+
+AI 生成模块时需要给出菜单/按钮权限初始化 SQL，或提示用户在系统菜单中维护这些权限码。示例：
+
+```sql
+-- 页面菜单：用于侧边栏入口和页面访问
+INSERT INTO sys_menu
+  (id, parent_id, name, code, type, path, component, icon, sort_order, visible, status, remark, created_by, updated_by, is_deleted)
+VALUES
+  ('<menu_id>', NULL, 'Demo管理', 'demo:list', 2, '/demo', 'demo/index', 'i-lucide-table', 0, 1, 1, 'Demo列表权限', '<admin_id>', '<admin_id>', 0);
+
+-- 按钮权限：用于新增/编辑/删除按钮和接口权限
+INSERT INTO sys_menu
+  (id, parent_id, name, code, type, path, component, icon, sort_order, visible, status, remark, created_by, updated_by, is_deleted)
+VALUES
+  ('<add_id>', '<menu_id>', '新增Demo', 'demo:add', 3, NULL, NULL, NULL, 1, 0, 1, 'Demo新增权限', '<admin_id>', '<admin_id>', 0),
+  ('<edit_id>', '<menu_id>', '编辑Demo', 'demo:edit', 3, NULL, NULL, NULL, 2, 0, 1, 'Demo编辑权限', '<admin_id>', '<admin_id>', 0),
+  ('<del_id>', '<menu_id>', '删除Demo', 'demo:del', 3, NULL, NULL, NULL, 3, 0, 1, 'Demo删除权限', '<admin_id>', '<admin_id>', 0);
+```
+
+> `type` 取值以当前项目菜单约定为准：页面菜单使用菜单类型，按钮权限使用按钮类型；按钮权限通常 `visible=0`，不显示在侧边栏。
+
+---
+
 ### Step 10: 创建前端页面
 
 `app/pages/<module>/index.vue`, 以snake_case形式命名
@@ -401,6 +445,10 @@ export type AppRouter = typeof appRouter;
 - 使用 `usePaginatedTable` hook 管理分页
 - 使用 `useTableOperate` hook 管理新增/编辑/删除
 - 使用 `useSelectionColumn` + `useBadgeColumn` 辅助列配置
+- 使用 `useCrudPermissions('<resource>')` 生成前端 CRUD 权限码和权限状态
+- `TableHeaderOperation` 必须传入 `:add-permission="permissions.codes.add"` 和 `:delete-permission="permissions.codes.del"`
+- 行编辑按钮通过 `permissions.canEdit` 控制，行删除按钮通过 `permissions.canDel` 控制
+- 没有删除权限时隐藏选择列，没有编辑/删除权限时隐藏操作列
 - 通过 `$trpc.<module>.<method>` 调用后端 API
 - 使用 `$ts()` 翻译 i18n key
 
@@ -415,6 +463,63 @@ import DemoOperate from "./components/demo-operate.vue"
 ```typescript
 definePageMeta({
   layout: 'system'
+})
+```
+
+权限声明示例：
+```typescript
+const demoPermissions = useCrudPermissions('demo')
+```
+
+顶部操作示例：
+```vue
+<TableHeaderOperation
+  :add-permission="demoPermissions.codes.add"
+  :delete-permission="demoPermissions.codes.del"
+/>
+```
+
+表格列权限示例：
+```typescript
+const columns = computed<TableColumn<DemoDto>[]>(() => {
+  const actionColumn: TableColumn<DemoDto> = {
+    id: 'actions',
+    header: () => $ts('common.operate'),
+    cell: ({ row }) => {
+      const UButton = resolveComponent('UButton')
+      const Popconfirm = resolveComponent('Popconfirm')
+      const actions = []
+
+      if (demoPermissions.canEdit.value) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          onClick: () => handleEdit(row.original.id as string)
+        }, { default: () => $ts('common.edit') }))
+      }
+
+      if (demoPermissions.canDel.value) {
+        actions.push(h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original.id as string)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error',
+            size: 'xs'
+          }, { default: () => $ts('common.delete') })
+        }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
+    }
+  }
+
+  return [
+    ...(demoPermissions.canDel.value ? [selectionColumn] : []),
+    // ...业务列
+    ...(demoPermissions.canOperate.value ? [actionColumn] : [])
+  ]
 })
 ```
 
@@ -535,8 +640,9 @@ export const <module>StatusOptions = transformRecordToOption(<module>StatusRecor
 | 14 | `app/pages/<module>/components/<module>-operate.vue` | **新建** | 新增/编辑弹窗 |
 | 15 | `app/locales/zh.json` | **修改** | 添加中文翻译 |
 | 16 | `app/locales/en.json` | **修改** | 添加英文翻译 |
-| 17 | `server/assets/_locales/merged/<module>/zh` | **新建** | 服务端中文翻译 |
-| 18 | `shared/constants/business.ts` | **修改** | 业务常量（可选） |
+| 17 | `sys_menu` 权限数据 | **新增/配置** | 菜单入口和 `list/add/edit/del` 按钮权限码 |
+| 18 | `server/assets/_locales/merged/<module>/zh` | **新建** | 服务端中文翻译 |
+| 19 | `shared/constants/business.ts` | **修改** | 业务常量（可选） |
 
 ---
 
@@ -546,7 +652,7 @@ export const <module>StatusOptions = transformRecordToOption(<module>StatusRecor
 2. **搜索组件**的 `schema` 变量必须正确引用当前模块的 `QuerySchema`
 3. **新增接口的 id** 由 Service 层通过 `randomUuid()` 生成，前端新增表单不需要传 id
 4. **模糊查询**通过在 common.ts 的字段上加 `.meta({ query: 'like' })` 实现，后端 `buildWhereBySchema` 自动解析
-5. **所有路由使用 `protectedProcedure`**（需要登录认证），除非有特殊需求才用 `publicProcedure`
+5. **标准 CRUD 路由使用 `crudPermissionProcedures(resourceCode)`**，不要再直接使用 `protectedProcedure`。只有 `auth.profile`、纯登录态接口或特殊非 CRUD 接口才考虑 `protectedProcedure` / `permissionProcedure`
 6. **前端组件 import 必须有显式后缀 `.vue`**
 7. **`AppError`** 接收 i18n key 作为参数，客户端会自动翻译显示
 8. **input.ts / output.ts 的 NOT NULL 规则**：生成 input.ts 和 output.ts 时，必须根据 DB schema 的 `.notNull()` 设置字段。`common.ts` 的 `BaseSchema` 统一使用 `.nullish()` 便于复用，但在 `AddSchema`/`RespSchema` 中，DB `NOT NULL` 的**业务字段**需通过 `extend()` 覆盖为必填（如 `z.string()` 而非 `z.string().nullish()`）。ID 字段在 `AddSchema` 中用 `.nonoptional()`，在 `UpdateSchema` 中用 `.nonempty()`；`createdAt`/`updatedAt` 等 DB 自管字段保持 `nullish`。
