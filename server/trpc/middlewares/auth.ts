@@ -1,18 +1,19 @@
-import { TRPCError } from "@trpc/server"
-import { t } from "../init"
+import { AppError } from '#server/utils/appError'
 
-/**
- * 登录认证中间件
- *
- * 用于 protectedProcedure：
- * - 必须登录
- * - ctx.user 必须存在
- */
-export const authMiddleware = (opts:any) => {
-    // TODO: 替换为你的真实登录判断逻辑
-    const { path, next,ctx } = opts
-    return next({
-        ctx
-    })
+export const authMiddleware = async (opts: any) => {
+  const { next, ctx } = opts
+  const session = ctx.user ? ctx.session : await getUserSession(ctx.event)
+  const user = ctx.user ?? session.user
+
+  if (!user) {
+    throw new AppError('auth.unauthorized')
+  }
+
+  return next({
+    ctx: {
+      ...ctx,
+      session,
+      user
+    }
+  })
 }
-

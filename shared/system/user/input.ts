@@ -15,7 +15,7 @@ SysUserBaseSchema.pick({
 }).extend({
         id: SysUserBaseSchema.shape.id.nonoptional(),
         username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
-        password: z.string().min(6,'form.userName.invalid').max(18,'form.userName.invalid'),
+        password: z.string().min(6,'form.userName.invalid').max(255,'form.userName.invalid'),
         email: z.string().min(6,'form.email.invalid'),
         
     })

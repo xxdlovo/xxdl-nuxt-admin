@@ -2,12 +2,14 @@ import {buildWhereBySchema} from "#server/drizzle/queries/buildWhereBySchema";
 import  {sysUserRepo} from './SysUserRepo'
 import {SysUserBaseSchema, type SysUserDto} from "#shared/system/user/common";
 import { sysUser } from "~~/server/drizzle/schema";
-import {and} from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Context } from '#server/trpc/context';
 import type {OrmPageResp} from '#server/utils/ApiResp'
 import {useDb} from '#server/drizzle/db'
 import type {SysUserAddDTO, SysUserPageQueryDTO, SysUserQueryDTO, SysUserUpdateDTO} from "#shared/system/user";
 import {randomUuid} from "#shared/utils/uuid";
+import { hashUserPassword } from "#server/utils/password";
+import { AppError } from "#server/utils/appError";
 // export const getById = async () =>{
 //     const db = useDb()
 //     console.log('getById调用了')
@@ -23,13 +25,24 @@ type NonNull<T> = {
     [K in keyof T]: Exclude<T[K], null>
 }
 
+function omitPassword<T extends { password?: unknown } | null>(user: T) {
+    if (!user) {
+        return user
+    }
+    const { password, ...safeUser } = user
+    return safeUser
+}
+
 export function sysUserService(ctx: Context) {
     const repo = sysUserRepo(ctx)
 
     return {
         async create(data: SysUserAddDTO): Promise<boolean> {
-            const uuid = randomUuid()
-            const pojo = {...data, id: uuid}
+            const pojo = {
+                ...data,
+                id: data.id ?? randomUuid(),
+                password: await hashUserPassword(data.password)
+            }
             await repo.create(pojo)
             return true
         },
@@ -42,29 +55,44 @@ export function sysUserService(ctx: Context) {
             return ids.length
         },
         async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
-            await repo.updateById(id, data)
+            const pojo = {
+                ...data,
+                password: await hashUserPassword(data.password)
+            }
+            await repo.updateById(id, pojo)
             return true
         },
         async getOne(req:SysUserQueryDTO):Promise<SysUserDto>{
             const pojo = await repo.getOne(req)
             if(!pojo){
-                throw new Error('用户不存在')
+                throw new AppError('common.notExist')
             }
-            return pojo
+            return omitPassword(pojo) as SysUserDto
         },
-        async getById(id: string):Promise<SysUserDto>{
+        async getById(id: string):Promise<SysUserDto | null>{
             const pojo = await repo.getById(id)
-            if(!pojo){
-                throw new Error('用户不存在')
-            }
-            return pojo
+            return omitPassword(pojo) as SysUserDto | null
+        },
+        async getLoginUserByUsername(username: string) {
+            const users = await ctx.db
+                .select()
+                .from(sysUser)
+                .where(and(eq(sysUser.username, username), eq(sysUser.isDeleted, 0)))
+                .limit(1)
+
+            return users[0] ?? null
         },
         async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {
             const {page, pageSize, ...dto} = req
-            return await repo.page(page, pageSize, dto)
+            const result = await repo.page(page, pageSize, dto)
+            return {
+                ...result,
+                list: result.list.map(omitPassword)
+            }
         },
         async list(dto: any):Promise<SysUserDto[]> {
-            return await repo.list(dto)
+            const result = await repo.list(dto)
+            return result.map(omitPassword) as SysUserDto[]
         },
     }
 }

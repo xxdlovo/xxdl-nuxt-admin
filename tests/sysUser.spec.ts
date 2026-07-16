@@ -13,7 +13,19 @@ import type { inferProcedureOutput } from '@trpc/server'
 const createTestContext = async (): Promise<Context> => {
     return {
         db: createTestDb(),
-        event: {} as any
+        event: {} as any,
+        session: {
+            user: {
+                id: 'test-auth-user',
+                username: 'test-admin',
+                isAdmin: 1
+            }
+        },
+        user: {
+            id: 'test-auth-user',
+            username: 'test-admin',
+            isAdmin: 1
+        }
     }
 }
 

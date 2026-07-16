@@ -6,6 +6,10 @@
     "updateConfirm": "Refresh immediately",
     "updateCancel": "Later"
   },
+  "auth": {
+    "invalidCredentials": "Invalid username or password",
+    "unauthorized": "Please log in first"
+  },
   "common": {
     "notExist": "Query data does not exist",
     "action": "Action",

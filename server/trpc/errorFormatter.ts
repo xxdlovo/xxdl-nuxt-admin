@@ -1,17 +1,16 @@
 import { ZodError } from 'zod';
 import { TRPCError } from '@trpc/server';
 import type {TRPCFormattedError} from "#shared/types/common";
-import type { Context } from './context';
 // createLocaleT / getCookie / AppError 由 Nitro auto-import，无需显式导入
 
 // tRPC errorFormatter 的参数类型（tRPC v11 会传入 ctx）
 type ErrorFormatterOpts = {
     error: TRPCError;
     shape: {
-        data: TRPCFormattedError;
+        data: any;
         [key: string]: any;
     };
-    ctx?: Context;
+    ctx?: any;
 };
 
 export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
@@ -37,7 +36,7 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
         for (const field of Object.keys(fieldErrors)) {
             const errors = fieldErrors[field as keyof typeof fieldErrors]
             if (errors) {
-                errors.forEach(msg => {
+                ;(errors as string[]).forEach((msg: string) => {
                     allMessages.push($t(msg))
                 })
             }

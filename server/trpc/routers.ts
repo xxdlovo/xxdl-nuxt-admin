@@ -11,9 +11,11 @@ import { sysRoleMenuRouter } from '#server/sys-router/roleMenu'
 import { sysLoginLogRouter } from '#server/sys-router/loginLog'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
+import { authRouter } from '#server/sys-router/auth'
 
 // 收集相关路由
 export const appRouter = router({
+    auth: authRouter,
     sysUser: sysUserRouter,
     sysDept: sysDeptRouter,
     demo: demoRouter,

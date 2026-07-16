@@ -11,11 +11,13 @@
     "post": "nuxt prepare",
     "db:push": "drizzle-kit push  --config=./server/drizzle/drizzle.config.ts",
     "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
+    "seed:admin": "tsx scripts/seed-admin.ts",
     "test": "vitest",
     "test:type": "tsx scripts/typecheck-tests.ts",
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@adonisjs/hash": "^10.1.0",
     "@nuxt/ui": "4.8.1",
     "@trpc/client": "^11.9.0",
     "@trpc/server": "^11.9.0",
@@ -25,6 +27,7 @@
     "lodash-es": "^4.17.23",
     "mysql2": "^3.16.2",
     "nuxt": "^4.3.0",
+    "nuxt-auth-utils": "^0.5.29",
     "nuxt-echarts": "1.0.1",
     "nuxt-i18n-micro": "^2.20.1",
     "tailwindcss": "^4.1.18",
