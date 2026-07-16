@@ -4,11 +4,15 @@
     "updateTitle": "系统版本更新通知",
     "updateContent": "检测到系统有新版本发布，是否立即刷新页面？",
     "updateConfirm": "立即刷新",
-    "updateCancel": "稍后再说"
+    "updateCancel": "稍后再说",
+    "dbError": "数据库错误",
+    "zodError": "校验错误",
+    "serverError": "服务端错误"
   },
   "auth": {
     "invalidCredentials": "用户名或密码错误",
-    "unauthorized": "请先登录"
+    "unauthorized": "请先登录",
+    "forbidden": "无权限"
   },
   "common": {
     "notExist": "查询数据不存在",

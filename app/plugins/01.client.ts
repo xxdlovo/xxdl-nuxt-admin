@@ -64,7 +64,7 @@ const customLink: TRPCLink<AppRouter> = () => {
           const description = typedErr.message || '发生未知错误'
 
           toast.add({
-            title: typedErr.data?.type + '错误',
+            title: typedErr.data?.type,
             description,
             color: 'error',
           })
@@ -81,8 +81,12 @@ const customLink: TRPCLink<AppRouter> = () => {
 
 // 存放一些默认请求头
 const getHeader =  ()=>{
+  const locale = useCookie<string>('i18n_locale').value || 'en'
+
   return {
-    'zoo':  'zoo'
+    'zoo':  'zoo',
+    'x-locale': locale,
+    'accept-language': locale
   }
 }
 

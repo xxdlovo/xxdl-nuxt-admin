@@ -1,9 +1,8 @@
-import { ZodError } from 'zod';
-import { TRPCError } from '@trpc/server';
-import type {TRPCFormattedError} from "#shared/types/common";
-// createLocaleT / getCookie / AppError 由 Nitro auto-import，无需显式导入
+import { ZodError } from 'zod'
+import { TRPCError } from '@trpc/server'
+import { getCookie, getHeader } from 'h3'
+import type { TRPCFormattedError } from '#shared/types/common'
 
-// tRPC errorFormatter 的参数类型（tRPC v11 会传入 ctx）
 type ErrorFormatterOpts = {
     error: TRPCError;
     shape: {
@@ -13,66 +12,82 @@ type ErrorFormatterOpts = {
     ctx?: any;
 };
 
+const supportedLocales = new Set(['en', 'zh'])
+
+function normalizeLocale(locale?: string | null) {
+    if (!locale) {
+        return null
+    }
+
+    const normalized = locale.toLowerCase().split(',')[0]?.trim().split('-')[0]
+    return normalized && supportedLocales.has(normalized) ? normalized : null
+}
+
+function getRequestLocale(ctx?: any) {
+    const event = ctx?.event
+
+    if (!event) {
+        return 'en'
+    }
+
+    return normalizeLocale(getHeader(event, 'x-locale'))
+        ?? normalizeLocale(getCookie(event, 'i18n_locale'))
+        ?? normalizeLocale(getHeader(event, 'accept-language'))
+        ?? 'en'
+}
+
 export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
-    // 从请求上下文中获取语言环境，创建翻译函数
-    const locale = ctx?.event ? (getCookie(ctx.event, 'i18n_locale') || 'en') : 'en'
+    const locale = getRequestLocale(ctx)
     const $t = createLocaleT(locale)
 
-    let customMessage = error.message;
-    let errorType: string = 'server';
+    let customMessage = error.message
+    let errorType = $t("system.serverError")
 
-    // ========== 1️⃣ AppError — 翻译 i18n key ==========
     if (error.cause instanceof AppError) {
-        errorType = 'app';
+        errorType = $t("system.serverError")
         customMessage = $t(error.cause.i18nKey)
     }
-    // ========== 2️⃣ Zod 验证错误 ==========
     else if (error.cause instanceof ZodError) {
-        errorType = 'zod';
-        const { fieldErrors, formErrors } = error.cause.flatten();
-
-        // 收集并翻译所有字段错误
+        errorType = $t("system.zodError")
+        const { fieldErrors, formErrors } = error.cause.flatten()
         const allMessages: string[] = []
+
         for (const field of Object.keys(fieldErrors)) {
             const errors = fieldErrors[field as keyof typeof fieldErrors]
             if (errors) {
-                ;(errors as string[]).forEach((msg: string) => {
+                ;(errors as string[]).forEach((msg) => {
                     allMessages.push($t(msg))
                 })
             }
         }
 
         if (allMessages.length > 0) {
-            customMessage = allMessages.join('；')
+            customMessage = allMessages.join('，')
         }
         else if (formErrors.length > 0 && formErrors[0]) {
             customMessage = $t(formErrors[0])
         }
         else {
-            customMessage = '提交的数据格式不正确'
+            customMessage = $t('common.pleaseCheckValue')
         }
     }
-    // ========== 3️⃣ Drizzle / 数据库错误 ==========
     else if (isDatabaseError(error.cause)) {
-        errorType = 'database';
+        errorType = $t("system.dbError")
         const dbErr = error.cause as any
-        customMessage = dbErr.cause?.message || '数据库异常'
+        customMessage = dbErr.cause?.message || 'Database error'
     }
-    // ========== 4️⃣ 普通 Error（如服务层 throw new Error('xxx')） ==========
     else if (error.cause instanceof Error) {
-        // 保持原始消息，不做翻译
         customMessage = error.cause.message
     }
 
-    // 如果消息看起来是 i18n key（含点号），尝试翻译
-    if (customMessage && customMessage.includes('.') && !customMessage.includes('；')) {
+    if (customMessage && customMessage.includes('.') && !customMessage.includes('，')) {
         const translated = $t(customMessage)
         if (translated !== customMessage) {
             customMessage = translated
         }
     }
 
-    shape.message = customMessage;
+    shape.message = customMessage
     return {
         ...shape,
         data: {
@@ -80,23 +95,19 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
             type: errorType,
             message: customMessage,
             code: error.code,
-            stack: process.env.NODE_ENV === "development" ? error.stack : undefined,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         } as TRPCFormattedError,
-    };
-};
+    }
+}
 
-/**
- * 判断是否是数据库错误（带空安全）
- */
 function isDatabaseError(cause: unknown): boolean {
-    if (!cause || typeof cause !== 'object') return false;
+    if (!cause || typeof cause !== 'object') return false
 
-    const err = cause as any;
+    const err = cause as any
 
-    // 使用可选链，防止 err.cause 为 undefined 时抛异常
     return (
-        typeof err.cause?.code === 'string' ||        // pg/mysql error
-        typeof err.cause?.sql === 'string' ||         // drizzle query error
-        typeof err.cause?.constraint === 'string'     // pg constraint
-    );
+        typeof err.cause?.code === 'string' ||
+        typeof err.cause?.sql === 'string' ||
+        typeof err.cause?.constraint === 'string'
+    )
 }
