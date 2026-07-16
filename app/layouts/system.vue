@@ -43,7 +43,7 @@ const links = [[{
     }
   }    , {
       label: '新增内容',
-      to: '/system/menu',
+      to: '/system/user-role',
       exact: true,
       onSelect: () => {
         open.value = false

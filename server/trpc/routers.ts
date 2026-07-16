@@ -6,6 +6,11 @@ import { demoRouter } from '#server/demo-router'
 import { sysDictDataRouter } from '#server/sys-router/dictData'
 import { sysDictTypeRouter } from '#server/sys-router/dictType'
 import { sysMenuRouter } from '#server/sys-router/menu'
+import { sysRoleRouter } from '#server/sys-router/role'
+import { sysRoleMenuRouter } from '#server/sys-router/roleMenu'
+import { sysLoginLogRouter } from '#server/sys-router/loginLog'
+import { sysSystemLogRouter } from '#server/sys-router/systemLog'
+import { sysUserRoleRouter } from '#server/sys-router/userRole'
 
 // 收集相关路由
 export const appRouter = router({
@@ -15,6 +20,11 @@ export const appRouter = router({
     sysDictData: sysDictDataRouter,
     sysDictType: sysDictTypeRouter,
     sysMenu: sysMenuRouter,
+    sysRole: sysRoleRouter,
+    sysRoleMenu: sysRoleMenuRouter,
+    sysLoginLog: sysLoginLogRouter,
+    systemLog: sysSystemLogRouter,
+    sysUserRole: sysUserRoleRouter,
 });
 
 // export type definition of API

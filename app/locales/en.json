@@ -267,16 +267,35 @@
         "roleCode": "Role Code",
         "roleStatus": "Role Status",
         "roleDesc": "Role Description",
+        "sortOrder": "Sort Order",
+        "remark": "Remark",
         "menuAuth": "Menu Auth",
         "buttonAuth": "Button Auth",
         "form": {
           "roleName": "Please enter role name",
           "roleCode": "Please enter role code",
           "roleStatus": "Please select role status",
-          "roleDesc": "Please enter role description"
+          "roleDesc": "Please enter role description",
+          "sortOrder": "Please enter sort order",
+          "remark": "Please enter remark"
         },
         "addRole": "Add Role",
         "editRole": "Edit Role"
+      },
+      "roleMenu": {
+        "title": "Role Menu List",
+        "roleId": "Role ID",
+        "menuId": "Menu ID",
+        "roleMenuStatus": "Role Menu Status",
+        "remark": "Remark",
+        "form": {
+          "roleId": "Please enter role ID",
+          "menuId": "Please enter menu ID",
+          "roleMenuStatus": "Please select role menu status",
+          "remark": "Please enter remark"
+        },
+        "addRoleMenu": "Add Role Menu",
+        "editRoleMenu": "Edit Role Menu"
       },
       "user": {
         "title": "User List",
@@ -364,6 +383,70 @@
         },
         "addDictType": "Add Dict Type",
         "editDictType": "Edit Dict Type"
+      },
+      "loginLog": {
+        "title": "Login Log",
+        "username": "Username",
+        "ip": "IP Address",
+        "location": "Location",
+        "browser": "Browser",
+        "os": "OS",
+        "userAgent": "User-Agent",
+        "loginTime": "Login Time",
+        "loginStatus": "Login Status",
+        "loginSuccess": "Success",
+        "loginFailure": "Failure",
+        "remark": "Remark",
+        "form": {
+          "username": "Please enter username",
+          "ip": "Please enter IP address",
+          "location": "Please enter location",
+          "browser": "Please enter browser",
+          "os": "Please enter OS",
+          "loginStatus": "Please select login status"
+        },
+        "addSysLoginLog": "Add Login Log",
+        "editSysLoginLog": "Edit Login Log"
+      },
+      "userRole": {
+        "title": "User Role List",
+        "userId": "User ID",
+        "roleId": "Role ID",
+        "userRoleStatus": "Status",
+        "remark": "Remark",
+        "form": {
+          "userId": "Please enter user ID",
+          "roleId": "Please enter role ID",
+          "userRoleStatus": "Please select status",
+          "remark": "Please enter remark"
+        },
+        "addUserRole": "Add User Role",
+        "editUserRole": "Edit User Role"
+      },
+      "sysLog": {
+        "title": "System Log",
+        "logLevel": "Log Level",
+        "logModule": "Log Module",
+        "logMessage": "Log Message",
+        "logTrace": "Stack Trace",
+        "logStatus": "Log Status",
+        "remark": "Remark",
+        "level": {
+          "0": "Info",
+          "1": "Warning",
+          "2": "Error",
+          "3": "Debug"
+        },
+        "form": {
+          "logLevel": "Please select log level",
+          "logModule": "Please enter log module",
+          "logMessage": "Please enter log message",
+          "logTrace": "Please enter stack trace",
+          "logStatus": "Please select log status",
+          "remark": "Please enter remark"
+        },
+        "addSysLog": "Add System Log",
+        "editSysLog": "Edit System Log"
       },
       "menu": {
         "home": "Home",
@@ -657,6 +740,12 @@
         "status": {
           "enable": "Enable",
           "disable": "Disable"
+        },
+        "sysLogin": {
+          "level": {
+            "success": "success",
+            "failure": "failure"
+          }
         }
       },
       "menu": {

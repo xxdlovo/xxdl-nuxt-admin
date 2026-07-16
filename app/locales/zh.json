@@ -267,16 +267,35 @@
         "roleCode": "角色编码",
         "roleStatus": "角色状态",
         "roleDesc": "角色描述",
+        "sortOrder": "排序",
+        "remark": "备注",
         "menuAuth": "菜单权限",
         "buttonAuth": "按钮权限",
         "form": {
           "roleName": "请输入角色名称",
           "roleCode": "请输入角色编码",
           "roleStatus": "请选择角色状态",
-          "roleDesc": "请输入角色描述"
+          "roleDesc": "请输入角色描述",
+          "sortOrder": "请输入排序",
+          "remark": "请输入备注"
         },
         "addRole": "新增角色",
         "editRole": "编辑角色"
+      },
+      "roleMenu": {
+        "title": "角色菜单列表",
+        "roleId": "角色ID",
+        "menuId": "菜单ID",
+        "roleMenuStatus": "角色菜单状态",
+        "remark": "备注",
+        "form": {
+          "roleId": "请输入角色ID",
+          "menuId": "请输入菜单ID",
+          "roleMenuStatus": "请选择角色菜单状态",
+          "remark": "请输入备注"
+        },
+        "addRoleMenu": "新增角色菜单",
+        "editRoleMenu": "编辑角色菜单"
       },
       "user": {
         "title": "用户列表",
@@ -364,6 +383,70 @@
         },
         "addDictType": "新增字典类型",
         "editDictType": "编辑字典类型"
+      },
+      "loginLog": {
+        "title": "登录日志",
+        "username": "用户名",
+        "ip": "IP地址",
+        "location": "登录地点",
+        "browser": "浏览器",
+        "os": "操作系统",
+        "userAgent": "User-Agent",
+        "loginTime": "登录时间",
+        "loginStatus": "登录状态",
+        "loginSuccess": "登录成功",
+        "loginFailure": "登录失败",
+        "remark": "备注",
+        "form": {
+          "username": "请输入用户名",
+          "ip": "请输入IP地址",
+          "location": "请输入登录地点",
+          "browser": "请输入浏览器",
+          "os": "请输入操作系统",
+          "loginStatus": "请选择登录状态"
+        },
+        "addSysLoginLog": "新增登录日志",
+        "editSysLoginLog": "编辑登录日志"
+      },
+      "userRole": {
+        "title": "用户角色关联列表",
+        "userId": "用户ID",
+        "roleId": "角色ID",
+        "userRoleStatus": "关联状态",
+        "remark": "备注",
+        "form": {
+          "userId": "请输入用户ID",
+          "roleId": "请输入角色ID",
+          "userRoleStatus": "请选择关联状态",
+          "remark": "请输入备注"
+        },
+        "addUserRole": "新增用户角色关联",
+        "editUserRole": "编辑用户角色关联"
+      },
+      "sysLog": {
+        "title": "系统日志",
+        "logLevel": "日志级别",
+        "logModule": "日志模块",
+        "logMessage": "日志消息",
+        "logTrace": "堆栈跟踪",
+        "logStatus": "日志状态",
+        "remark": "备注",
+        "level": {
+          "0": "信息",
+          "1": "警告",
+          "2": "错误",
+          "3": "调试"
+        },
+        "form": {
+          "logLevel": "请选择日志级别",
+          "logModule": "请输入日志模块",
+          "logMessage": "请输入日志消息",
+          "logTrace": "请输入堆栈跟踪",
+          "logStatus": "请选择日志状态",
+          "remark": "请输入备注"
+        },
+        "addSysLog": "新增日志",
+        "editSysLog": "编辑日志"
       },
       "menu": {
         "home": "首页",
@@ -657,67 +740,73 @@
         "status": {
           "enable": "启用",
           "disable": "禁用"
-        }
-      },
-      "menu": {
-        "type": {
-          "directory": "目录",
-          "menu": "菜单"
+        },
+        "sysLogin": {
+          "level": {
+            "success": "成功",
+            "failure": "失败"
+          }
+        },
+        "menu": {
+          "type": {
+            "directory": "目录",
+            "menu": "菜单"
+          }
         }
       }
     }
   },
-  "form": {
-    "required": "不能为空",
-    "id": {
-      "required": "ID不能为空",
-      "invalid": "ID格式不正确"
+    "form": {
+      "required": "不能为空",
+      "id": {
+        "required": "ID不能为空",
+        "invalid": "ID格式不正确"
+      },
+      "userName": {
+        "required": "请输入用户名",
+        "invalid": "用户名格式不正确"
+      },
+      "phone": {
+        "required": "请输入手机号",
+        "invalid": "手机号格式不正确"
+      },
+      "pwd": {
+        "required": "请输入密码",
+        "invalid": "密码格式不正确，6-18位字符，包含字母、数字、下划线"
+      },
+      "confirmPwd": {
+        "required": "请输入确认密码",
+        "invalid": "两次输入密码不一致"
+      },
+      "code": {
+        "required": "请输入验证码",
+        "invalid": "验证码格式不正确"
+      },
+      "email": {
+        "required": "请输入邮箱",
+        "invalid": "邮箱格式不正确"
+      }
     },
-    "userName": {
-      "required": "请输入用户名",
-      "invalid": "用户名格式不正确"
+    "dropdown": {
+      "closeCurrent": "关闭",
+      "closeOther": "关闭其它",
+      "closeLeft": "关闭左侧",
+      "closeRight": "关闭右侧",
+      "closeAll": "关闭所有"
     },
-    "phone": {
-      "required": "请输入手机号",
-      "invalid": "手机号格式不正确"
+    "icon": {
+      "themeConfig": "主题配置",
+      "themeSchema": "主题模式",
+      "lang": "切换语言",
+      "fullscreen": "全屏",
+      "fullscreenExit": "退出全屏",
+      "reload": "刷新页面",
+      "collapse": "折叠菜单",
+      "expand": "展开菜单",
+      "pin": "固定",
+      "unpin": "取消固定"
     },
-    "pwd": {
-      "required": "请输入密码",
-      "invalid": "密码格式不正确，6-18位字符，包含字母、数字、下划线"
-    },
-    "confirmPwd": {
-      "required": "请输入确认密码",
-      "invalid": "两次输入密码不一致"
-    },
-    "code": {
-      "required": "请输入验证码",
-      "invalid": "验证码格式不正确"
-    },
-    "email": {
-      "required": "请输入邮箱",
-      "invalid": "邮箱格式不正确"
+    "datatable": {
+      "itemCount": "共 {total} 条"
     }
-  },
-  "dropdown": {
-    "closeCurrent": "关闭",
-    "closeOther": "关闭其它",
-    "closeLeft": "关闭左侧",
-    "closeRight": "关闭右侧",
-    "closeAll": "关闭所有"
-  },
-  "icon": {
-    "themeConfig": "主题配置",
-    "themeSchema": "主题模式",
-    "lang": "切换语言",
-    "fullscreen": "全屏",
-    "fullscreenExit": "退出全屏",
-    "reload": "刷新页面",
-    "collapse": "折叠菜单",
-    "expand": "展开菜单",
-    "pin": "固定",
-    "unpin": "取消固定"
-  },
-  "datatable": {
-    "itemCount": "共 {total} 条"
   }
-}

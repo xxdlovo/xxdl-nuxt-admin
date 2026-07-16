@@ -74,3 +74,49 @@ export const dictTypeStatusRecord: Record<string, string> = {
 };
 
 export const dictTypeStatusOptions = transformRecordToOption(dictTypeStatusRecord);
+
+export const ROLE_STATUS_CONFIG = {
+    '1': { i18nKey: 'page.manage.common.status.enable', color: 'success' },
+    '2': { i18nKey: 'page.manage.common.status.disable', color: 'warning' }
+} as const
+
+export const roleStatusRecord: Record<string, string> = {
+    '1': 'page.manage.common.status.enable',
+    '2': 'page.manage.common.status.disable'
+};
+
+export const roleStatusOptions = transformRecordToOption(roleStatusRecord);
+
+export const ROLE_MENU_STATUS_CONFIG = {
+    '1': { i18nKey: 'page.manage.common.status.enable', color: 'success' },
+    '2': { i18nKey: 'page.manage.common.status.disable', color: 'warning' }
+} as const
+
+export const roleMenuStatusRecord: Record<string, string> = {
+    '1': 'page.manage.common.status.enable',
+    '2': 'page.manage.common.status.disable'
+};
+
+export const roleMenuStatusOptions = transformRecordToOption(roleMenuStatusRecord);
+
+export const SYS_LOG_LEVEL_CONFIG = {
+    '1': { i18nKey: 'page.manage.common.sysLogin.level.success', color: 'success' },
+    '2': { i18nKey: 'page.manage.common.sysLogin.level.failure', color: 'warning' }
+} as const
+export const sysLogLevelRecord = {
+    '1': 'page.manage.common.sysLogin.level.success',
+    '2': 'page.manage.common.sysLogin.level.failure'
+}
+export const sysLogLevelOptions = transformRecordToOption(sysLogLevelRecord);
+
+export const LOGIN_STATUS_CONFIG = {
+    '1': { i18nKey: 'page.manage.common.status.enable', color: 'success' },
+    '2': { i18nKey: 'page.manage.common.status.disable', color: 'warning' }
+} as const
+
+export const loginStatusRecord: Record<string, string> = {
+    '1': 'module.system.loginLog.loginSuccess',
+    '2': 'module.system.loginLog.loginFailure'
+};
+
+export const loginStatusOptions = transformRecordToOption(loginStatusRecord);
