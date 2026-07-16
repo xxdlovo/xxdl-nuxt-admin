@@ -40,7 +40,7 @@ export function sysUserService(ctx: Context) {
         async create(data: SysUserAddDTO): Promise<boolean> {
             const pojo = {
                 ...data,
-                id: data.id ?? randomUuid(),
+                id: randomUuid(),
                 password: await hashUserPassword(data.password)
             }
             await repo.create(pojo)

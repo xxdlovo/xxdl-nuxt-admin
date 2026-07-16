@@ -1,35 +1,37 @@
 //#server/sys-router/menu
-import { router, protectedProcedure } from '~~/server/trpc/init'
+import { router, crudPermissionProcedures } from '~~/server/trpc/init'
 import { sysMenuService } from './SysMenuService'
 import z from 'zod'
 import { SysMenuAddSchema, SysMenuUpdateSchema, SysMenuQuerySchema, SysMenuPageQuerySchema } from "#shared/system/menu";
 
+const p = crudPermissionProcedures('system:menu')
+
 export const sysMenuRouter = router({
-    create: protectedProcedure.input(SysMenuAddSchema)
+    create: p.add.input(SysMenuAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysMenuService(ctx).create(input)
         }),
-    remove: protectedProcedure.input(z.string())
+    remove: p.del.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysMenuService(ctx).remove(input)
         }),
-    batchDelete: protectedProcedure.input(z.array(z.string()))
+    batchDelete: p.del.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysMenuService(ctx).batchRemove(input)
         }),
-    update: protectedProcedure.input(SysMenuUpdateSchema)
+    update: p.edit.input(SysMenuUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysMenuService(ctx).updateById(input.id, input)
         }),
-    getOne: protectedProcedure.input(SysMenuQuerySchema)
+    getOne: p.list.input(SysMenuQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMenuService(ctx).getOne(input)
         }),
-    getById: protectedProcedure.input(z.string())
+    getById: p.list.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysMenuService(ctx).getById(input)
         }),
-    page: protectedProcedure.input(SysMenuPageQuerySchema)
+    page: p.list.input(SysMenuPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMenuService(ctx).page(input)
         })

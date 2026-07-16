@@ -1,35 +1,37 @@
 //#server/system-userRole-router
-import { router, protectedProcedure } from '~~/server/trpc/init'
+import { router, crudPermissionProcedures } from '~~/server/trpc/init'
 import { sysUserRoleService } from './SysUserRoleService'
 import z from 'zod'
 import { SysUserRoleAddSchema, SysUserRoleUpdateSchema, SysUserRoleQuerySchema, SysUserRolePageQuerySchema } from "#shared/system/userRole";
 
+const p = crudPermissionProcedures('system:userRole')
+
 export const sysUserRoleRouter = router({
-    create: protectedProcedure.input(SysUserRoleAddSchema)
+    create: p.add.input(SysUserRoleAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).create(input)
         }),
-    remove: protectedProcedure.input(z.string())
+    remove: p.del.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).remove(input)
         }),
-    batchDelete: protectedProcedure.input(z.array(z.string()))
+    batchDelete: p.del.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).batchRemove(input)
         }),
-    update: protectedProcedure.input(SysUserRoleUpdateSchema)
+    update: p.edit.input(SysUserRoleUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).updateById(input.id, input)
         }),
-    getOne: protectedProcedure.input(SysUserRoleQuerySchema)
+    getOne: p.list.input(SysUserRoleQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).getOne(input)
         }),
-    getById: protectedProcedure.input(z.string())
+    getById: p.list.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).getById(input)
         }),
-    page: protectedProcedure.input(SysUserRolePageQuerySchema)
+    page: p.list.input(SysUserRolePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysUserRoleService(ctx).page(input)
         })

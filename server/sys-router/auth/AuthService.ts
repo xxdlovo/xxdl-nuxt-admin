@@ -56,6 +56,19 @@ export function authService(ctx: Context) {
         permissions: flatMenus.map(menu => menu.code),
         menus: buildMenuTree(menuTreeItems)
       }
+    },
+
+    /**
+     * List permission codes for backend endpoint guards.
+     * The result is flat and request-cached by the permission middleware.
+     */
+    async listPermissionCodes(user: AuthUser): Promise<string[]> {
+      const roleItems = uniqById(await sysRoleService(ctx).listEnabledByUserId(user.id))
+      const menus = user.isAdmin === 1
+        ? await sysMenuService(ctx).listEnabledForAdmin()
+        : await sysMenuService(ctx).listEnabledByRoleIds(roleItems.map(role => role.id))
+
+      return Array.from(new Set(menus.map(menu => menu.code)))
     }
   }
 }

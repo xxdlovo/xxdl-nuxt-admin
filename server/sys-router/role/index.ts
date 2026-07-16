@@ -1,35 +1,37 @@
 //#server/system-role-router
-import { router, protectedProcedure } from '~~/server/trpc/init'
+import { router, crudPermissionProcedures } from '~~/server/trpc/init'
 import { sysRoleService } from './SysRoleService'
 import z from 'zod'
 import { SysRoleAddSchema, SysRoleUpdateSchema, SysRoleQuerySchema, SysRolePageQuerySchema } from "#shared/system/role";
 
+const p = crudPermissionProcedures('system:role')
+
 export const sysRoleRouter = router({
-    create: protectedProcedure.input(SysRoleAddSchema)
+    create: p.add.input(SysRoleAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).create(input)
         }),
-    remove: protectedProcedure.input(z.string())
+    remove: p.del.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).remove(input)
         }),
-    batchDelete: protectedProcedure.input(z.array(z.string()))
+    batchDelete: p.del.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).batchRemove(input)
         }),
-    update: protectedProcedure.input(SysRoleUpdateSchema)
+    update: p.edit.input(SysRoleUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).updateById(input.id, input)
         }),
-    getOne: protectedProcedure.input(SysRoleQuerySchema)
+    getOne: p.list.input(SysRoleQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).getOne(input)
         }),
-    getById: protectedProcedure.input(z.string())
+    getById: p.list.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).getById(input)
         }),
-    page: protectedProcedure.input(SysRolePageQuerySchema)
+    page: p.list.input(SysRolePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).page(input)
         })

@@ -16,7 +16,8 @@ export async function createContext(event: H3Event) {
     db: useDb(),
     event,
     session,
-    user: session.user ?? null
+    user: session.user ?? null,
+    permissionCodes: null as string[] | null
   }
 }
 

@@ -2,7 +2,7 @@ import { AppError } from '#server/utils/appError'
 
 export const authMiddleware = async (opts: any) => {
   const { next, ctx } = opts
-  const session = ctx.user ? ctx.session : await getUserSession(ctx.event)
+  const session = ctx.session ?? await getUserSession(ctx.event)
   const user = ctx.user ?? session.user
 
   if (!user) {
