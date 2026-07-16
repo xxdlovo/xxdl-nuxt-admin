@@ -84,6 +84,8 @@ describe('系统用户 CRUD 完整测试', async () => {
         expect(result?.id).toBe(testUserId)
         expect(result?.username).toBe(testUsername)
         expect(result?.email).toBe(testEmail)
+        expect(result?.createdBy).toBe('test-auth-user')
+        expect(result?.updatedBy).toBe('test-auth-user')
         console.log('✅ 根据 ID 查询用户成功:', result)
     })
 
@@ -139,6 +141,8 @@ describe('系统用户 CRUD 完整测试', async () => {
         expect(updatedUser?.phone).toBe('13900139000')
         expect(updatedUser?.status).toBe(0)
         expect(updatedUser?.remark).toBe('更新后的备注')
+        expect(updatedUser?.createdBy).toBe('test-auth-user')
+        expect(updatedUser?.updatedBy).toBe('test-auth-user')
     })
 
     it('7. 删除用户', async () => {

@@ -1,16 +1,66 @@
-import { mergeWhere } from "./queries/mergeWhere"
+import { Column, count, eq, inArray, type InferInsertModel } from "drizzle-orm"
+import { MySqlTable } from "drizzle-orm/mysql-core/table"
+import { ZodObject } from "zod"
+import type { Context } from "#server/trpc/context"
 import { buildScope } from "./queries/buildScope"
 import { buildWhereBySchema } from "./queries/buildWhereBySchema"
-import { Column, count, eq, inArray, type InferInsertModel } from "drizzle-orm"
-
-import { ZodObject } from "zod";
-import type { Context } from '#server/trpc/context';
-import { MySqlTable } from "drizzle-orm/mysql-core/table";
-
+import { mergeWhere } from "./queries/mergeWhere"
 
 type TableWithId<T extends MySqlTable> = T & { id: Column<any>; isDeleted: Column<any> }
+type RecordData = Record<string, unknown>
+
+function hasColumn(table: MySqlTable, column: string) {
+    return column in table
+}
+
+// Read the current operator from tRPC context; system jobs can write null.
+function getOperatorId(ctx: Context) {
+    return ctx.user?.id ?? null
+}
+
+// Fill audit defaults only when the target table actually has those columns.
+function withCreateAudit(table: MySqlTable, ctx: Context, data: RecordData) {
+    const operatorId = getOperatorId(ctx)
+    const values: RecordData = { ...data }
+
+    if (hasColumn(table, "isDeleted")) {
+        values.isDeleted = 0
+    }
+    if (hasColumn(table, "createdBy") && values.createdBy == null) {
+        values.createdBy = operatorId
+    }
+    if (hasColumn(table, "updatedBy") && values.updatedBy == null) {
+        values.updatedBy = operatorId
+    }
+
+    return values
+}
+
+// Normal updates must not overwrite creation audit fields or soft-delete state.
+function withUpdateAudit(table: MySqlTable, ctx: Context, data: RecordData) {
+    const operatorId = getOperatorId(ctx)
+    const { createdBy, createdAt, isDeleted, ...values } = data
+
+    if (hasColumn(table, "updatedBy")) {
+        values.updatedBy = operatorId
+    }
+
+    return values
+}
+
+// Soft delete is also an update, so keep the operator in updatedBy.
+function withRemoveAudit(table: MySqlTable, ctx: Context) {
+    const values: RecordData = { isDeleted: 1 }
+
+    if (hasColumn(table, "updatedBy")) {
+        values.updatedBy = getOperatorId(ctx)
+    }
+
+    return values
+}
+
 /**
- * 通用 Repo 工厂, 用来存放通用的增删改查逻辑
+ * Common repository factory for standard CRUD operations.
  */
 export function CommonRepo<
     TSchema extends ZodObject<any>,
@@ -18,16 +68,13 @@ export function CommonRepo<
 >(table: TableWithId<TTable>, schema?: TSchema) {
     return function (ctx: Context) {
         type CreateInput = InferInsertModel<TTable>
-        /** Update 类型（部分字段更新） */
-        // type UpdateInput = Partial<CreateInput>
-        // 允许 null 值
         type UpdateInput = Partial<
             {
                 [K in keyof CreateInput]: CreateInput[K] | null;
             }
-        >;
+        >
+
         return {
-            /** ✅ 查询列表 */
             async list(dto: any = {}) {
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
@@ -44,27 +91,22 @@ export function CommonRepo<
                     )
             },
 
-            /** ✅ 分页查询 */
             async page(page: number, pageSize: number, dto: any) {
-
                 const offset = (page - 1) * pageSize
-
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
-
                 const where = mergeWhere(
                     ...buildScope(table, ctx),
                     ...dynamicWhere
                 )
-                /** 总数 */
+
                 const totalResult = await ctx.db
                     .select({ total: count() })
                     .from(table)
                     .where(where)
 
                 const total = totalResult[0]?.total ?? 0
-                // 数据
                 const data = await ctx.db
                     .select()
                     .from(table)
@@ -79,12 +121,11 @@ export function CommonRepo<
                     list: data,
                 }
             },
-            /** ✅ 根据 参数 查询 */
+
             async getOne(req: UpdateInput) {
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, req)
                     : []
-
                 const where = mergeWhere(
                     ...buildScope(table, ctx),
                     ...dynamicWhere
@@ -94,9 +135,10 @@ export function CommonRepo<
                     .from(table)
                     .where(where)
                     .limit(1)
+
                 return data ? data[0] : null
             },
-            /** ✅ 根据 ID 查询 */
+
             async getById(id: any) {
                 const result = await ctx.db
                     .select()
@@ -112,40 +154,35 @@ export function CommonRepo<
                 return result[0] ?? null
             },
 
-            /** ✅ 新增 */
             async create(data: CreateInput) {
-                return ctx.db.insert(table).values({
-                    ...data,
-                    isDeleted: 0
-                })
+                // Add createdBy, updatedBy and isDeleted without requiring every table to define them.
+                return ctx.db.insert(table).values(withCreateAudit(table, ctx, data as RecordData) as CreateInput)
             },
 
-            /** ✅ 更新 */
             async updateById(id: any, data: UpdateInput) {
+                // Keep creation audit fields immutable during normal updates.
                 return ctx.db
                     .update(table)
-                    .set(data)
+                    .set(withUpdateAudit(table, ctx, data as RecordData) as UpdateInput)
                     .where(eq(table.id, id))
             },
 
-            /** ✅ 逻辑删除 */
             async remove(id: any) {
-                // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
+                // Soft delete through the same audit path as regular updates.
                 return ctx.db
                     .update(table)
-                    .set({ isDeleted: 1 } as any)
+                    .set(withRemoveAudit(table, ctx) as any)
                     .where(eq(table.id, id))
             },
 
-            /** ✅ 批量逻辑删除 */
             async batchRemove(ids: any[]) {
                 if (ids.length === 0) {
                     return 0
                 }
-                // 使用类型断言绕过检查，Drizzle 会正确映射 isDeleted -> is_deleted
+                // Batch soft delete keeps the same audit semantics as single delete.
                 return ctx.db
                     .update(table)
-                    .set({ isDeleted: 1 } as any)
+                    .set(withRemoveAudit(table, ctx) as any)
                     .where(inArray(table.id, ids))
             },
         }
