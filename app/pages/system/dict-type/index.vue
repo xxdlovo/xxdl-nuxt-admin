@@ -24,6 +24,7 @@
             @click="refreshDictTypes"
           />
           <UButton
+            v-permission="dictTypePermissions.codes.add"
             icon="i-ic-round-plus"
             size="sm"
             color="primary"
@@ -50,6 +51,7 @@
           </div>
           <div class="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100" @click.stop>
             <UButton
+              v-permission="dictTypePermissions.codes.edit"
               icon="i-ic-round-edit"
               size="xs"
               color="neutral"
@@ -60,6 +62,7 @@
             <Popconfirm @confirm="handleDictTypeDelete(String(item.id))">
               <template #trigger>
                 <UButton
+                  v-permission="dictTypePermissions.codes.del"
                   icon="i-ic-round-delete"
                   size="xs"
                   color="error"
@@ -144,6 +147,7 @@ interface SelectableItem {
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const splitLayoutKey = ref(0)
+const dictTypePermissions = useCrudPermissions('system:dictType')
 
 const dictTypes = ref<SysDictTypeDto[]>([])
 const dictTypeItems = computed(() => {

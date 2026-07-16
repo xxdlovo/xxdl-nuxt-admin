@@ -25,6 +25,8 @@
               :loading="loading"
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
+              :add-permission="userRolePermissions.codes.add"
+              :delete-permission="userRolePermissions.codes.del"
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
@@ -64,6 +66,7 @@ import TableWithPagination from '~/components/table/TableWithPagination.vue'
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
+const userRolePermissions = useCrudPermissions('system:userRole')
 
 // 搜索参数
 const searchParams = ref<SysUserRoleQueryDTO>({})
@@ -99,8 +102,40 @@ const { selectionColumn } = useSelectionColumn<SysUserRoleDto>({
 
 // 定义列配置
 const columns = computed<TableColumn<SysUserRoleDto>[]>(() => {
+  const actionColumn: TableColumn<SysUserRoleDto> = {
+    id: 'actions',
+    header: () => $ts('common.operate'),
+    cell: ({ row }) => {
+      const UButton = resolveComponent('UButton')
+      const Popconfirm = resolveComponent('Popconfirm')
+      const actions = []
+
+      if (userRolePermissions.canEdit.value) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          onClick: () => handleEdit(row.original.id as string)
+        }, { default: () => $ts('common.edit') }))
+      }
+
+      if (userRolePermissions.canDel.value) {
+        actions.push(h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original.id as string)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error',
+            size: 'xs'
+          }, { default: () => $ts('common.delete') })
+        }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
+    }
+  }
   return [
-    selectionColumn,
+    ...(userRolePermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
       header: () => $ts('common.index'),
@@ -127,33 +162,7 @@ const columns = computed<TableColumn<SysUserRoleDto>[]>(() => {
         USER_STATUS_CONFIG,
       1
     ),
-    {
-      id: 'actions',
-      header: () => $ts('common.operate'),
-      cell: ({ row }) => {
-        const UButton = resolveComponent('UButton')
-        const Popconfirm = resolveComponent('Popconfirm')
-
-        return h('div', { class: 'flex gap-2' }, [
-          h(UButton, {
-            variant: 'outline',
-            color: 'primary',
-            size: 'xs',
-            onClick: () => handleEdit(row.original.id as string)
-          }, { default: () => $ts('common.edit') }),
-
-          h(Popconfirm, {
-            onConfirm: () => handleDelete(row.original.id as string)
-          }, {
-            trigger: () => h(UButton, {
-              variant: 'outline',
-              color: 'error',
-              size: 'xs'
-            }, { default: () => $ts('common.delete') })
-          })
-        ])
-      }
-    }
+    ...(userRolePermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
 

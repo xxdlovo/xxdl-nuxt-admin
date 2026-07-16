@@ -25,6 +25,8 @@
               :loading="loading"
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
+              :add-permission="roleMenuPermissions.codes.add"
+              :delete-permission="roleMenuPermissions.codes.del"
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
@@ -64,6 +66,7 @@ import TableWithPagination from '~/components/table/TableWithPagination.vue'
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
+const roleMenuPermissions = useCrudPermissions('system:roleMenu')
 
 // 搜索参数
 const searchParams = ref<SysRoleMenuQueryDTO>({})
@@ -99,8 +102,40 @@ const { selectionColumn } = useSelectionColumn<SysRoleMenuDto>({
 
 // 定义列配置
 const columns = computed<TableColumn<SysRoleMenuDto>[]>(() => {
+  const actionColumn: TableColumn<SysRoleMenuDto> = {
+    id: 'actions',
+    header: () => $ts('common.operate'),
+    cell: ({ row }) => {
+      const UButton = resolveComponent('UButton')
+      const Popconfirm = resolveComponent('Popconfirm')
+      const actions = []
+
+      if (roleMenuPermissions.canEdit.value) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          onClick: () => handleEdit(row.original.id as string)
+        }, { default: () => $ts('common.edit') }))
+      }
+
+      if (roleMenuPermissions.canDel.value) {
+        actions.push(h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original.id as string)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error',
+            size: 'xs'
+          }, { default: () => $ts('common.delete') })
+        }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
+    }
+  }
   return [
-    selectionColumn,
+    ...(roleMenuPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
       header: () => $ts('common.index'),
@@ -127,33 +162,7 @@ const columns = computed<TableColumn<SysRoleMenuDto>[]>(() => {
       accessorKey: 'remark',
       header: () => $ts('module.system.roleMenu.remark')
     },
-    {
-      id: 'actions',
-      header: () => $ts('common.operate'),
-      cell: ({ row }) => {
-        const UButton = resolveComponent('UButton')
-        const Popconfirm = resolveComponent('Popconfirm')
-
-        return h('div', { class: 'flex gap-2' }, [
-          h(UButton, {
-            variant: 'outline',
-            color: 'primary',
-            size: 'xs',
-            onClick: () => handleEdit(row.original.id as string)
-          }, { default: () => $ts('common.edit') }),
-
-          h(Popconfirm, {
-            onConfirm: () => handleDelete(row.original.id as string)
-          }, {
-            trigger: () => h(UButton, {
-              variant: 'outline',
-              color: 'error',
-              size: 'xs'
-            }, { default: () => $ts('common.delete') })
-          })
-        ])
-      }
-    }
+    ...(roleMenuPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
 

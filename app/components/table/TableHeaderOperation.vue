@@ -11,6 +11,8 @@ const props = defineProps<{
   loading?: boolean
   batchDeleteLoading?: boolean
   selectedCount?: number
+  addPermission?: string | string[]
+  deletePermission?: string | string[]
 }>()
 
 const emit = defineEmits<{
@@ -74,6 +76,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
     <slot>
       <!-- 新增 -->
       <UButton
+          v-permission="addPermission"
           variant="outline"
           color="primary"
           @click="add"
@@ -87,6 +90,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
       <!-- 批量删除 -->
       <UPopover v-model:open="showDeletePopover">
         <UButton
+            v-permission="deletePermission"
             variant="outline"
             color="error"
             :disabled="disabledDelete"

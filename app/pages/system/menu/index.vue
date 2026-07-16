@@ -25,6 +25,8 @@
               :loading="loading"
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
+              :add-permission="menuPermissions.codes.add"
+              :delete-permission="menuPermissions.codes.del"
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
@@ -64,6 +66,7 @@ import TableWithPagination from '~/components/table/TableWithPagination.vue'
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
+const menuPermissions = useCrudPermissions('system:menu')
 
 // 搜索参数
 const searchParams = ref<SysMenuQueryDTO>({})
@@ -99,9 +102,41 @@ const { selectionColumn } = useSelectionColumn<SysMenuDto>({
 
 // 定义列配置（包含选择列）
 const columns = computed<TableColumn<SysMenuDto>[]>(() => {
+  const actionColumn: TableColumn<SysMenuDto> = {
+    id: 'actions',
+    header: () => $ts('common.operate'),
+    cell: ({ row }) => {
+      const UButton = resolveComponent('UButton')
+      const Popconfirm = resolveComponent('Popconfirm')
+      const actions = []
+
+      if (menuPermissions.canEdit.value) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          onClick: () => handleEdit(row.original.id as string)
+        }, { default: () => $ts('common.edit') }))
+      }
+
+      if (menuPermissions.canDel.value) {
+        actions.push(h(Popconfirm, {
+          onConfirm: () => handleDelete(row.original.id as string)
+        }, {
+          trigger: () => h(UButton, {
+            variant: 'outline',
+            color: 'error',
+            size: 'xs'
+          }, { default: () => $ts('common.delete') })
+        }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
+    }
+  }
   return [
     // 选择列
-    selectionColumn,
+    ...(menuPermissions.canDel.value ? [selectionColumn] : []),
     // 序号列
     {
       id: 'index',
@@ -147,33 +182,7 @@ const columns = computed<TableColumn<SysMenuDto>[]>(() => {
       USER_STATUS_CONFIG,
       1
     ),
-    {
-      id: 'actions',
-      header: () => $ts('common.operate'),
-      cell: ({ row }) => {
-        const UButton = resolveComponent('UButton')
-        const Popconfirm = resolveComponent('Popconfirm')
-
-        return h('div', { class: 'flex gap-2' }, [
-          h(UButton, {
-            variant: 'outline',
-            color: 'primary',
-            size: 'xs',
-            onClick: () => handleEdit(row.original.id as string)
-          }, { default: () => $ts('common.edit') }),
-
-          h(Popconfirm, {
-            onConfirm: () => handleDelete(row.original.id as string)
-          }, {
-            trigger: () => h(UButton, {
-              variant: 'outline',
-              color: 'error',
-              size: 'xs'
-            }, { default: () => $ts('common.delete') })
-          })
-        ])
-      }
-    }
+    ...(menuPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
 

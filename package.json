@@ -19,6 +19,7 @@
   "dependencies": {
     "@adonisjs/hash": "^10.1.0",
     "@nuxt/ui": "4.8.1",
+    "@pinia/nuxt": "^1.0.1",
     "@trpc/client": "^11.9.0",
     "@trpc/server": "^11.9.0",
     "dotenv": "^17.2.3",
@@ -30,6 +31,7 @@
     "nuxt-auth-utils": "^0.5.29",
     "nuxt-echarts": "1.0.1",
     "nuxt-i18n-micro": "^2.20.1",
+    "pinia": "^4.0.2",
     "tailwindcss": "^4.1.18",
     "trpc-nuxt": "^2.0.1",
     "vue": "^3.5.27",
