@@ -12,16 +12,14 @@ export function useTable<T>(options: UseTableOptions<T>) {
   const error = ref<Error | null>(null)
 
   // 列配置（使用函数支持国际化动态更新）
-  const hasColumns = options.columns && typeof options.columns === 'function'
-  const columns = ref<TableColumn<T>[]>(hasColumns ? options.columns() : [])
+  const getColumns = options.columns ?? (() => [])
+  const columns = ref<TableColumn<T>[]>(getColumns())
 
   /**
    * 重新加载列配置（用于语言切换时更新）
    */
   const reloadColumns = () => {
-    if (hasColumns) {
-      columns.value = options.columns()
-    }
+    columns.value = getColumns()
   }
 
   /**
@@ -58,8 +56,8 @@ export function useTable<T>(options: UseTableOptions<T>) {
   /**
    * 监听国际化变化，重新加载列配置
    */
-  const { $i18n } = useNuxtApp()
-  watch(() => $i18n.locale, reloadColumns)
+  const i18n = (useNuxtApp() as unknown as { $i18n?: { locale?: unknown } }).$i18n
+  watch(() => i18n?.locale, reloadColumns)
 
   return {
     data,

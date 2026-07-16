@@ -1,8 +1,9 @@
 import { z } from 'zod'
-import { publicProcedure, router } from '~~/server/trpc/init'
+import { protectedProcedure, publicProcedure, router } from '~~/server/trpc/init'
 import { verifyUserPassword } from '#server/utils/password'
 import { sysUserService } from '#server/sys-router/user/SysUserService'
 import { AppError } from '#server/utils/appError'
+import { authService } from './AuthService'
 
 const LoginSchema = z.object({
   username: z.string().min(1, 'form.userName.required'),
@@ -47,5 +48,12 @@ export const authRouter = router({
   me: publicProcedure.query(async ({ ctx }) => {
     const session = await getUserSession(ctx.event)
     return session.user ?? null
+  }),
+
+  profile: protectedProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) {
+      throw new AppError('auth.unauthorized')
+    }
+    return authService(ctx).getRbacProfile(ctx.user)
   })
 })

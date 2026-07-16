@@ -26,7 +26,7 @@ const moreNewsHandle = ()=>{
 
 <template>
   <UCard 
-    :title="$t('page.home.creativity')" 
+    :title="String($t('page.home.creativity'))" 
     borderless  
     size="sm"  
     class="h-[500px] w-full"

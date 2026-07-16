@@ -4,6 +4,9 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysRoleAddDTO, SysRoleDto, SysRolePageQueryDTO, SysRoleQueryDTO, SysRoleUpdateDTO } from "#shared/system/role";
 import { randomUuid } from "#shared/utils/uuid";
+import { and, eq } from 'drizzle-orm'
+import { sysRole, sysUserRole } from '#server/drizzle/schema'
+import type { RbacRole } from '#shared/auth'
 
 export function sysRoleService(ctx: Context) {
     const repo = sysRoleRepo(ctx)
@@ -43,6 +46,29 @@ export function sysRoleService(ctx: Context) {
         },
         async list(dto: any): Promise<SysRoleDto[]> {
             return await repo.list(dto)
+        },
+        /**
+         * List enabled roles actually assigned to a user.
+         * Admin privilege is handled by the auth read model, not by faking extra roles here.
+         */
+        async listEnabledByUserId(userId: string): Promise<RbacRole[]> {
+            const roles = await ctx.db
+                .select({
+                    id: sysRole.id,
+                    name: sysRole.name,
+                    code: sysRole.code
+                })
+                .from(sysUserRole)
+                .innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
+                .where(and(
+                    eq(sysUserRole.userId, userId),
+                    eq(sysUserRole.status, 1),
+                    eq(sysUserRole.isDeleted, 0),
+                    eq(sysRole.status, 1),
+                    eq(sysRole.isDeleted, 0)
+                ))
+
+            return roles
         },
     }
 }

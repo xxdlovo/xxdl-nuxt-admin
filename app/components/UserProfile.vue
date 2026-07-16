@@ -1,10 +1,12 @@
 <script setup lang="ts">
 const { user, clear } = useUserSession()
+const { clearProfile } = useRbacProfile()
 
 const displayName = computed(() => user.value?.nickname || user.value?.username || '用户')
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 
 async function handleLogout() {
+  clearProfile()
   await clear()
   await navigateTo('/login')
 }

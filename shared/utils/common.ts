@@ -1,12 +1,10 @@
-
-
-
 interface SelectOption {
     value: string;
     label: string;
 }
+
 /**
- * Transform record to option
+ * Transform record to option.
  *
  * @example
  *   ```ts
@@ -19,7 +17,7 @@ interface SelectOption {
  *   //   { value: 'key1', label: 'label1' },
  *   //   { value: 'key2', label: 'label2' }
  *   // ]
- *   ```;
+ *   ```
  *
  * @param record
  */
@@ -30,16 +28,24 @@ export function transformRecordToOption<T extends Record<string, string>>(record
     })) as SelectOption[];
 }
 
- 
-
 /**
- * Toggle html class
+ * Toggle html class when a browser document is available.
  *
  * @param className
  */
 export function toggleHtmlClass(className: string) {
-    // 检查是否在浏览器环境
-    if (typeof window === 'undefined') {
+    const browserGlobal = globalThis as typeof globalThis & {
+        document?: {
+            documentElement?: {
+                classList?: {
+                    add: (value: string) => void
+                    remove: (value: string) => void
+                }
+            }
+        }
+    }
+
+    if (!browserGlobal.document?.documentElement?.classList) {
         return {
             add: () => {},
             remove: () => {}
@@ -47,13 +53,11 @@ export function toggleHtmlClass(className: string) {
     }
 
     function add() {
-        // @ts-ignore - document only exists in browser
-        document.documentElement.classList.add(className);
+        browserGlobal.document?.documentElement?.classList?.add(className);
     }
 
     function remove() {
-        // @ts-ignore - document only exists in browser
-        document.documentElement.classList.remove(className);
+        browserGlobal.document?.documentElement?.classList?.remove(className);
     }
 
     return {

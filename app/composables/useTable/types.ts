@@ -6,6 +6,8 @@
 import type { TableColumn } from '@nuxt/ui'
 import type { ApiReq, TrpcPageResp } from '#shared/types/common'
 
+export type { TableColumn }
+
 /**
  * 分页参数（复用 shared 类型）
  */
