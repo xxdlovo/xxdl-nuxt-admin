@@ -27,6 +27,8 @@
     "close": "Close",
     "check": "Check",
     "expandColumn": "Expand Column",
+    "expand": "Expand",
+    "collapse": "Collapse",
     "columnSetting": "Column Setting",
     "config": "Config",
     "confirm": "Confirm",
@@ -484,7 +486,10 @@
         "button": "Button",
         "buttonCode": "Button Code",
         "buttonDesc": "Button Desc",
+        "buttonPermission": "Button Permission",
+        "visible": "Visible",
         "menuStatus": "Menu Status",
+        "remark": "Remark",
         "form": {
           "home": "Please select home",
           "menuType": "Please select menu type",
@@ -513,11 +518,16 @@
           "menuStatus": "Please select menu status"
         },
         "addMenu": "Add Menu",
+        "addRootMenu": "Add Root Menu",
         "editMenu": "Edit Menu",
         "addChildMenu": "Add Child Menu",
+        "addButton": "Add Button",
+        "noButtonPermission": "No button permissions",
+        "rootMenu": "Root Menu",
         "type": {
           "directory": "Directory",
-          "menu": "Menu"
+          "menu": "Menu",
+          "button": "Button"
         },
         "iconType": {
           "iconify": "Iconify Icon",

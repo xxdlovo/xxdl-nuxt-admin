@@ -45,6 +45,7 @@ const colorClasses: Record<string, string> = {
  *   USER_GENDER_CONFIG,
  *   0
  * )
+ * configMap: 定义值相关的颜色
  * ```
  */
 export function useBadgeColumn<TData = any>(

@@ -27,6 +27,8 @@
     "close": "关闭",
     "check": "勾选",
     "expandColumn": "展开列",
+    "expand": "展开",
+    "collapse": "收起",
     "columnSetting": "列设置",
     "config": "配置",
     "confirm": "确认",
@@ -484,7 +486,10 @@
         "button": "按钮",
         "buttonCode": "按钮编码",
         "buttonDesc": "按钮描述",
+        "buttonPermission": "按钮权限",
+        "visible": "显示",
         "menuStatus": "菜单状态",
+        "remark": "备注",
         "form": {
           "home": "请选择首页",
           "menuType": "请选择菜单类型",
@@ -513,11 +518,16 @@
           "menuStatus": "请选择菜单状态"
         },
         "addMenu": "新增菜单",
+        "addRootMenu": "新增主菜单",
         "editMenu": "编辑菜单",
         "addChildMenu": "新增子菜单",
+        "addButton": "新增按钮",
+        "noButtonPermission": "暂无按钮权限",
+        "rootMenu": "根菜单",
         "type": {
           "directory": "目录",
-          "menu": "菜单"
+          "menu": "菜单",
+          "button": "按钮"
         },
         "iconType": {
           "iconify": "iconify图标",

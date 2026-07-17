@@ -44,7 +44,7 @@ function bindPermission(el: PermissionElement, binding: DirectiveBinding<Permiss
           return
         }
 
-        if (rbac.hasAnyPermission(codes)) {
+        if (profile.user.isAdmin === 1 || rbac.hasAnyPermission(codes)) {
           el.style.display = el.__permissionDisplay__ ?? ''
           return
         }

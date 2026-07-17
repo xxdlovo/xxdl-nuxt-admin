@@ -21,9 +21,14 @@
           :data="data"
           :columns="columns"
           :loading="loading"
+          :ui="ui"
           sticky
           class="min-w-full h-full"
-      />
+      >
+        <template v-for="(_, name) in tableSlots" :key="name" #[name]="slotData">
+          <slot :name="name" v-bind="slotData" />
+        </template>
+      </UTable>
     </div>
 
     <!-- 分页 -->
@@ -72,6 +77,7 @@ interface Props {
   loading?: boolean
   pagination: Pagination
   pageSizeOptions?: number[]
+  ui?: Record<string, unknown>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -81,6 +87,11 @@ const props = withDefaults(defineProps<Props>(), {
 
 const tableRef = useTemplateRef('tableRef')
 const { $ts } = useI18n()
+const slots = useSlots()
+const tableSlots = computed(() => {
+  const { header: _header, ...rest } = slots
+  return rest
+})
 
 // 暴露 tableRef 给父组件
 defineExpose({

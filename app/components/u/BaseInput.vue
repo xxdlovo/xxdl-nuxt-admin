@@ -34,6 +34,7 @@
           :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
           @click="handleCopy"
         />
+        <slot name="trailing" />
       </div>
     </template>
   </UInput>

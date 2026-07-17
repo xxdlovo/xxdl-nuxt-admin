@@ -4,7 +4,7 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysMenuAddDTO, SysMenuDto, SysMenuPageQueryDTO, SysMenuQueryDTO, SysMenuUpdateDTO } from "#shared/system/menu";
 import { randomUuid } from "#shared/utils/uuid";
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, asc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm'
 import { sysMenu, sysRoleMenu } from '#server/drizzle/schema'
 import type { RbacFlatMenu } from '#shared/auth'
 
@@ -31,19 +31,25 @@ export function sysMenuService(ctx: Context) {
     const repo = sysMenuRepo(ctx)
 
     return {
-        async create(data: SysMenuAddDTO): Promise<boolean> {
+        async create(data: SysMenuAddDTO): Promise<string> {
             const uuid = randomUuid()
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
-            return true
+            return uuid
         },
         async remove(id: string): Promise<boolean> {
-            await repo.remove(id)
+            const ids = await repo.listSelfAndDescendantIds([id])
+            await repo.batchRemove(ids)
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
-            await repo.batchRemove(ids)
-            return ids.length
+            if (ids.length === 0) {
+                return 0
+            }
+
+            const deleteIds = await repo.listSelfAndDescendantIds(ids)
+            await repo.batchRemove(deleteIds)
+            return deleteIds.length
         },
         async updateById(id: string, data: SysMenuUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
@@ -60,8 +66,19 @@ export function sysMenuService(ctx: Context) {
             return pojo
         },
         async page(req: SysMenuPageQueryDTO): Promise<OrmPageResp> {
-            const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto)
+            const { page, pageSize, parentId, ...dto } = req
+            const isRootQuery = parentId === '0'
+            const extraWhere: SQL[] = []
+            if (isRootQuery) {
+                const rootParentWhere = or(eq(sysMenu.parentId, '0'), isNull(sysMenu.parentId))
+                if (rootParentWhere) {
+                    extraWhere.push(rootParentWhere)
+                }
+            } else if (parentId) {
+                extraWhere.push(eq(sysMenu.parentId, parentId))
+            }
+
+            return await repo.page(page, pageSize, dto, [asc(sysMenu.sortOrder)], extraWhere)
         },
         async list(dto: any): Promise<SysMenuDto[]> {
             return await repo.list(dto)

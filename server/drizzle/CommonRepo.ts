@@ -75,13 +75,14 @@ export function CommonRepo<
         >
 
         return {
-            async list(dto: any = {}, orderBy: SQL[] = []) {
+            async list(dto: any = {}, orderBy: SQL[] = [], extraWhere: SQL[] = []) {
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
                 const where = mergeWhere(
                     ...buildScope(table, ctx),
-                    ...dynamicWhere
+                    ...dynamicWhere,
+                    ...extraWhere
                 )
                 return ctx.db
                     .select()
@@ -90,14 +91,15 @@ export function CommonRepo<
                     .orderBy(...orderBy)
             },
 
-            async page(page: number, pageSize: number, dto: any, orderBy: SQL[] = []) {
+            async page(page: number, pageSize: number, dto: any, orderBy: SQL[] = [], extraWhere: SQL[] = []) {
                 const offset = (page - 1) * pageSize
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
                 const where = mergeWhere(
                     ...buildScope(table, ctx),
-                    ...dynamicWhere
+                    ...dynamicWhere,
+                    ...extraWhere
                 )
 
                 const totalResult = await ctx.db

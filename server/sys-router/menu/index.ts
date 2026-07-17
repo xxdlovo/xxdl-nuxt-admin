@@ -31,6 +31,10 @@ export const sysMenuRouter = router({
         .query(async ({ ctx, input }) => {
             return sysMenuService(ctx).getById(input)
         }),
+    list: p.list.input(SysMenuQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysMenuService(ctx).list(input)
+        }),
     page: p.list.input(SysMenuPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMenuService(ctx).page(input)
