@@ -1,4 +1,4 @@
-import { Column, count, eq, inArray, type InferInsertModel } from "drizzle-orm"
+import { Column, count, eq, inArray, type InferInsertModel, type SQL } from "drizzle-orm"
 import { MySqlTable } from "drizzle-orm/mysql-core/table"
 import { ZodObject } from "zod"
 import type { Context } from "#server/trpc/context"
@@ -75,23 +75,22 @@ export function CommonRepo<
         >
 
         return {
-            async list(dto: any = {}) {
+            async list(dto: any = {}, orderBy: SQL[] = []) {
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
-
+                const where = mergeWhere(
+                    ...buildScope(table, ctx),
+                    ...dynamicWhere
+                )
                 return ctx.db
                     .select()
                     .from(table)
-                    .where(
-                        mergeWhere(
-                            ...buildScope(table, ctx),
-                            ...dynamicWhere
-                        )
-                    )
+                    .where(where)
+                    .orderBy(...orderBy)
             },
 
-            async page(page: number, pageSize: number, dto: any) {
+            async page(page: number, pageSize: number, dto: any, orderBy: SQL[] = []) {
                 const offset = (page - 1) * pageSize
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
@@ -111,6 +110,7 @@ export function CommonRepo<
                     .select()
                     .from(table)
                     .where(where)
+                    .orderBy(...orderBy)
                     .limit(pageSize)
                     .offset(offset)
 
