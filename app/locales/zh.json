@@ -72,6 +72,12 @@
     "tokenExpired": "token已过期"
   },
   "theme": {
+    "appearance": "外观",
+    "layout": "布局",
+    "general": "通用",
+    "recommended": "推荐颜色",
+    "recommendedDesc": "下面这些是可直接选择的快捷颜色。",
+    "radius": "圆角",
     "themeSchema": {
       "title": "主题模式",
       "light": "亮色模式",
@@ -97,6 +103,8 @@
       "success": "成功色",
       "warning": "警告色",
       "error": "错误色",
+      "neutral": "中性色",
+      "blackAsPrimary": "黑色主色",
       "followPrimary": "跟随主色"
     },
     "scrollMode": {

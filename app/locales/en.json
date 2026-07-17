@@ -72,6 +72,12 @@
     "tokenExpired": "The requested token has expired"
   },
   "theme": {
+    "appearance": "Appearance",
+    "layout": "Layout",
+    "general": "General",
+    "recommended": "Recommended Colors",
+    "recommendedDesc": "Quick presets you can pick from.",
+    "radius": "Radius",
     "themeSchema": {
       "title": "Theme Schema",
       "light": "Light",
@@ -97,6 +103,8 @@
       "success": "Success",
       "warning": "Warning",
       "error": "Error",
+      "neutral": "Neutral",
+      "blackAsPrimary": "Black as primary",
       "followPrimary": "Follow Primary"
     },
     "scrollMode": {
