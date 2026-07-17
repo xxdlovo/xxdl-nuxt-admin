@@ -59,7 +59,7 @@ import type { SysRoleMenuDto, SysRoleMenuQueryDTO } from '#shared/system/roleMen
 import SysRoleMenuSearch from './components/sys-role-menu-search.vue'
 import SysRoleMenuOperate from "./components/sys-role-menu-operate.vue"
 
-import { ROLE_MENU_STATUS_CONFIG } from "#shared/constants/business"
+import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -155,7 +155,7 @@ const columns = computed<TableColumn<SysRoleMenuDto>[]>(() => {
     useBadgeColumn<SysRoleMenuDto>(
       'status',
       'module.system.roleMenu.roleMenuStatus',
-      ROLE_MENU_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       1
     ),
     {

@@ -91,7 +91,7 @@
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysDictDataDto, SysDictDataQueryDTO } from '#shared/system/dictData'
-import { USER_STATUS_CONFIG } from '#shared/constants/business'
+import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
 import { useBadgeColumn, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import TableHeaderOperation from '~/components/table/TableHeaderOperation.vue'
@@ -212,7 +212,7 @@ const columns = computed<TableColumn<SysDictDataDto>[]>(() => {
     useBadgeColumn<SysDictDataDto>(
       'status',
       'module.system.dictData.dictStatus',
-      USER_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       1
     ),
     ...(dictDataPermissions.canOperate.value ? [actionColumn] : [])

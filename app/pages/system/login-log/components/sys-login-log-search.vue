@@ -17,7 +17,7 @@
               <UBaseInput v-model="state.ip" :placeholder="$ts('module.system.loginLog.form.ip')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.loginLog.loginStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.loginLog.form.loginStatus')" class="w-full" :items="translateOptions(loginStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.loginLog.form.loginStatus')" class="w-full" :items="translateOptions(successFailureOptions)" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 const { $ts } = useI18n()
-import { loginStatusOptions } from "#shared/constants/business";
+import { successFailureOptions } from "#shared/constants/business";
 import { translateOptions } from "~/utils/common";
 import { type SysLoginLogQueryDTO, SysLoginLogQuerySchema } from '#shared/system/loginLog';
 const formItemUi = {

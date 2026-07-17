@@ -10,7 +10,7 @@ import {
 
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import {enableStatusRecord, sysLogLevelRecord} from "#shared/constants/business";
+import { successFailureRecord, sysLogLevelRecord } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -59,7 +59,7 @@ const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysLogAddSchema : SysLogUpdateSchema
 })
 const levelItems = useTransformRecordToOption(sysLogLevelRecord)
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useTransformRecordToOption(successFailureRecord)
 const closeDrawer = () => {
   props.close?.()
 }

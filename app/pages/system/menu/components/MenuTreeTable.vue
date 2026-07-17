@@ -2,7 +2,8 @@
 import type { Component } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { MenuTreeNode, SysMenuDto } from '#shared/system/menu'
-import { useSelectionColumn } from '~/composables/useTable'
+import { ENABLE_STATUS_CONFIG, YES_NO_CONFIG, menuTypeConfig } from '#shared/constants/business'
+import { useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $ts } = useI18n()
@@ -35,22 +36,6 @@ const expanded = ref<Record<string, boolean>>({})
 const tableRef = useTemplateRef('table')
 const checkedRowKeys = ref<string[]>([])
 const UCheckbox = resolveComponent('UCheckbox')
-
-const typeMeta: Record<number, { labelKey: string, color: 'primary' | 'success' | 'warning' }> = {
-  0: { labelKey: 'module.system.menu.type.directory', color: 'primary' },
-  1: { labelKey: 'module.system.menu.type.menu', color: 'success' },
-  2: { labelKey: 'module.system.menu.type.button', color: 'warning' }
-}
-
-const statusMeta: Record<number, { labelKey: string, color: 'success' | 'warning' }> = {
-  1: { labelKey: 'page.manage.common.status.enable', color: 'success' },
-  2: { labelKey: 'page.manage.common.status.disable', color: 'warning' }
-}
-
-const hiddenMeta: Record<number, { labelKey: string, color: 'error' | 'neutral' }> = {
-  0: { labelKey: 'common.yesOrNo.yes', color: 'error' },
-  1: { labelKey: 'common.yesOrNo.no', color: 'neutral' }
-}
 
 const stableColumn = (width: number) => ({
   size: width,
@@ -108,8 +93,7 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
     ...stableColumn(90)
   },
   {
-    accessorKey: 'type',
-    header: $ts('module.system.menu.menuType'),
+    ...useBadgeColumn<MenuTreeNode>('type', 'module.system.menu.menuType', menuTypeConfig, 1),
     ...stableColumn(88)
   },
   {
@@ -131,13 +115,11 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
     header: $ts('module.system.menu.routePath')
   },
   {
-    accessorKey: 'visible',
-    header: $ts('module.system.menu.hideInMenu'),
+    ...useBadgeColumn<MenuTreeNode>('visible', 'module.system.menu.hideInMenu', YES_NO_CONFIG, 1),
     ...stableColumn(88)
   },
   {
-    accessorKey: 'status',
-    header: $ts('module.system.menu.menuStatus'),
+    ...useBadgeColumn<MenuTreeNode>('status', 'module.system.menu.menuStatus', ENABLE_STATUS_CONFIG, 1),
     ...stableColumn(88)
   },
   {
@@ -262,30 +244,12 @@ const handleBatchDelete = () => {
       </div>
     </template>
 
-    <template #type-cell="{ row }">
-        <UBadge :color="typeMeta[row.original.type ?? 1]?.color || 'neutral'" variant="soft">
-          {{ $ts(typeMeta[row.original.type ?? 1]?.labelKey || 'module.system.menu.type.menu') }}
-        </UBadge>
-    </template>
-
     <template #code-cell="{ row }">
       <span class="inline-block w-full truncate font-mono text-xs text-default">{{ row.original.code }}</span>
     </template>
 
     <template #path-cell="{ row }">
       <span class="inline-block w-full truncate text-muted">{{ row.original.path || '-' }}</span>
-    </template>
-
-    <template #visible-cell="{ row }">
-      <UBadge :color="hiddenMeta[row.original.visible ?? 1]?.color || 'neutral'" variant="soft">
-        {{ $ts(hiddenMeta[row.original.visible ?? 1]?.labelKey || 'common.yesOrNo.no') }}
-      </UBadge>
-    </template>
-
-    <template #status-cell="{ row }">
-      <UBadge :color="statusMeta[row.original.status ?? 1]?.color || 'neutral'" variant="soft">
-        {{ $ts(statusMeta[row.original.status ?? 1]?.labelKey || 'page.manage.common.status.enable') }}
-      </UBadge>
     </template>
 
     <template #parentId-cell="{ row }">

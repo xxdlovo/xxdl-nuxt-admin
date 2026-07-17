@@ -15,7 +15,7 @@ function isBadgeConfig(config: unknown): config is BadgeConfig {
 export function useBadgeColumn<TData = any>(
   accessorKey: string,
   headerI18nKey: string,
-  configMap: Record<string, BadgeConfig>,
+  configMap: Readonly<Record<string, BadgeConfig>>,
   defaultValue: number = 0
 ): TableColumn<TData> {
   const { $ts } = useI18n()

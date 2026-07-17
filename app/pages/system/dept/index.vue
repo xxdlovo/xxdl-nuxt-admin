@@ -59,7 +59,7 @@ import type { SysDeptDto, SysDeptQueryDTO } from "#shared/system/department"
 import SysDeptSearch from './components/sys-dept-search.vue'
 import SysDeptOperate from "./components/sys-dept-operate.vue"
 
-import { USER_STATUS_CONFIG } from "#shared/constants/business"
+import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -170,13 +170,13 @@ const columns = computed<TableColumn<SysDeptDto>[]>(() => {
     useBadgeColumn<SysDeptDto>(
       'status',
       'module.system.department.deptStatus',
-      USER_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       1
     ),
     useBadgeColumn<SysDeptDto>(
       'sortOrder',
       'module.system.department.sortOrder',
-      USER_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       0
     ),
     ...(deptPermissions.canOperate.value ? [actionColumn] : [])

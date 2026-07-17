@@ -59,7 +59,7 @@ import type { SysUserRoleDto, SysUserRoleQueryDTO } from '#shared/system/userRol
 import SysUserRoleSearch from './components/sys-user-role-search.vue'
 import SysUserRoleOperate from "./components/sys-user-role-operate.vue"
 
-import { USER_STATUS_CONFIG} from "#shared/constants/business"
+import { ENABLE_STATUS_CONFIG} from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -159,7 +159,7 @@ const columns = computed<TableColumn<SysUserRoleDto>[]>(() => {
     useBadgeColumn<SysUserRoleDto>(
       'status',
       'module.system.userRole.userRoleStatus',
-        USER_STATUS_CONFIG,
+        ENABLE_STATUS_CONFIG,
       1
     ),
     ...(userRolePermissions.canOperate.value ? [actionColumn] : [])

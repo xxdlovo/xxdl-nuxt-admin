@@ -59,7 +59,7 @@ import type { SysUserQueryDTO } from "#shared/system/user"
 import type { SysUserDto } from "#shared/system/user/common"
 import SysUserSearch from './components/sys-user-search.vue'
 import SysUserOperate from "./components/sys-user-operate.vue"
-import { USER_GENDER_CONFIG, USER_STATUS_CONFIG } from "#shared/constants/business"
+import { ENABLE_STATUS_CONFIG, USER_GENDER_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { useToastSuccess } from '~/utils/toast'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
@@ -169,7 +169,7 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
     useBadgeColumn<SysUserDto>(
       'status',
       'module.system.user.userStatus',
-      USER_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       1
     ),
     ...(userPermissions.canOperate.value ? [actionColumn] : [])

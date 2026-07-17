@@ -59,7 +59,7 @@ import type { DemoDto, DemoQueryDTO } from "#shared/demo"
 import DemoSearch from './components/demo-search.vue'
 import DemoOperate from "./components/demo-operate.vue"
 
-import { USER_STATUS_CONFIG } from "#shared/constants/business"
+import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -159,7 +159,7 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
     useBadgeColumn<DemoDto>(
       'status',
       'module.demo.demoStatus',
-      USER_STATUS_CONFIG,
+      ENABLE_STATUS_CONFIG,
       1
     ),
     ...(demoPermissions.canOperate.value ? [actionColumn] : [])

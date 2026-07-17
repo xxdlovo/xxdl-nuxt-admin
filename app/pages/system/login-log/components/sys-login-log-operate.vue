@@ -10,7 +10,7 @@ import {
 
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { loginStatusRecord } from "#shared/constants/business";
+import { successFailureRecord } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -56,7 +56,7 @@ const state = ref<SysLoginLogAddDTO | SysLoginLogUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysLoginLogAddSchema : SysLoginLogUpdateSchema
 })
-const statusItems = useTransformRecordToOption(loginStatusRecord)
+const statusItems = useTransformRecordToOption(successFailureRecord)
 const closeDrawer = () => {
   props.close?.()
 }

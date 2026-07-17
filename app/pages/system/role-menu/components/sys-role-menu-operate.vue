@@ -10,7 +10,7 @@ import {
 
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { roleMenuStatusRecord } from "#shared/constants/business";
+import { enableStatusRecord } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -52,7 +52,7 @@ const state = ref<SysRoleMenuAddDTO | SysRoleMenuUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysRoleMenuAddSchema : SysRoleMenuUpdateSchema
 })
-const statusItems = useTransformRecordToOption(roleMenuStatusRecord)
+const statusItems = useTransformRecordToOption(enableStatusRecord)
 const closeDrawer = () => {
   props.close?.()
 }

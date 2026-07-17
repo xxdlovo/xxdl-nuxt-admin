@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import type { SysDictTypeDto, SysDictTypeQueryDTO } from '#shared/system/dictType'
-import { USER_STATUS_CONFIG } from '#shared/constants/business'
+import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
 import SplitLayout from '~/components/SplitLayout.vue'
 import SysDictTypeOperate from './components/sys-dict-type-operate.vue'
 import SysDictDataPanel from '../dict-data/components/sys-dict-data-panel.vue'
@@ -180,13 +180,13 @@ const {
 
 const statusText = (status: unknown) => {
   const normalizedStatus = String(status ?? 1)
-  const config = USER_STATUS_CONFIG[normalizedStatus as keyof typeof USER_STATUS_CONFIG]
+  const config = ENABLE_STATUS_CONFIG[normalizedStatus as keyof typeof ENABLE_STATUS_CONFIG]
   return config ? $ts(config.i18nKey) : normalizedStatus
 }
 
 const statusColor = (status: unknown) => {
   const normalizedStatus = String(status ?? 1)
-  const config = USER_STATUS_CONFIG[normalizedStatus as keyof typeof USER_STATUS_CONFIG]
+  const config = ENABLE_STATUS_CONFIG[normalizedStatus as keyof typeof ENABLE_STATUS_CONFIG]
   return config?.color || 'neutral'
 }
 

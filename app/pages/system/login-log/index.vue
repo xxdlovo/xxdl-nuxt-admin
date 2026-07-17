@@ -59,7 +59,7 @@ import type { SysLoginLogDto, SysLoginLogQueryDTO } from '#shared/system/loginLo
 import SysLoginLogSearch from './components/sys-login-log-search.vue'
 import SysLoginLogOperate from "./components/sys-login-log-operate.vue"
 
-import { LOGIN_STATUS_CONFIG } from "#shared/constants/business"
+import { SUCCESS_FAILURE_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -171,7 +171,7 @@ const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
     useBadgeColumn<SysLoginLogDto>(
       'status',
       'module.system.loginLog.loginStatus',
-      LOGIN_STATUS_CONFIG,
+      SUCCESS_FAILURE_CONFIG,
       1
     ),
     ...(loginLogPermissions.canOperate.value ? [actionColumn] : [])
