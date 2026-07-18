@@ -136,7 +136,9 @@ import { useTableOperate } from '~/composables/useTable'
 import { useToastSuccess } from '~/utils/toast'
 
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '字典类型',
+  icon: 'i-lucide-book-type'
 })
 
 interface SelectableItem {

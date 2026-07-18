@@ -50,7 +50,9 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '系统日志',
+  icon: 'i-lucide-file-text'
 })
 
 import type { TableColumn } from '@nuxt/ui'

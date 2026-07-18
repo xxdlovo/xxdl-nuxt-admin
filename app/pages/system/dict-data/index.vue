@@ -8,7 +8,9 @@
 import SysDictDataPanel from './components/sys-dict-data-panel.vue'
 
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '字典数据',
+  icon: 'i-lucide-database'
 })
 </script>
 

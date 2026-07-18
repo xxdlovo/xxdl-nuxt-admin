@@ -1,12 +1,16 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import type { RbacMenu } from '#shared/auth'
+import { useTabsStore } from '~/stores/tabs'
 
-const route = useRoute()
 const toast = useToast()
 const { profile, loading: menuLoading, loadProfile } = useRbacProfile()
+const tabsStore = useTabsStore()
+const { refreshKey } = storeToRefs(tabsStore)
 
 const open = ref(false)
+const sidebarCollapsed = ref(false)
 
 function closeSidebar() {
   open.value = false
@@ -16,10 +20,6 @@ function normalizeMenuIcon(icon?: string | null) {
   return icon || 'i-lucide-circle'
 }
 
-/**
- * Convert backend RBAC menus into Nuxt UI navigation items.
- * This stays in the app layer because NavigationMenuItem belongs to the UI library.
- */
 function toNavigationItem(menu: RbacMenu): NavigationMenuItem {
   const children = menu.children.map(toNavigationItem)
 
@@ -33,19 +33,8 @@ function toNavigationItem(menu: RbacMenu): NavigationMenuItem {
   }
 }
 
-function flattenMenus(menus: RbacMenu[]): RbacMenu[] {
-  return menus.flatMap(menu => [menu, ...flattenMenus(menu.children)])
-}
-
 const menuItems = computed<NavigationMenuItem[]>(() => {
   return profile.value?.menus.map(toNavigationItem) ?? []
-})
-
-const currentTitle = computed(() => {
-  const currentMenu = flattenMenus(profile.value?.menus ?? [])
-    .find(menu => menu.path === route.path)
-
-  return currentMenu?.name ?? 'Nuxt Admin'
 })
 
 onMounted(async () => {
@@ -85,13 +74,14 @@ onMounted(async () => {
     <UDashboardSidebar
       id="default"
       v-model:open="open"
+      v-model:collapsed="sidebarCollapsed"
       collapsible
       resizable
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
-      <template #header="{ collapsed }">
+      <template #header>
         <UIcon name="i-tabler:brand-nuxt" size="2em" class="text-primary" />
-        <span v-if="!collapsed" class="text-primary">Nuxt Admin</span>
+        <span v-if="!sidebarCollapsed" class="text-primary">Nuxt Admin</span>
       </template>
 
       <template #default="{ collapsed }">
@@ -118,29 +108,19 @@ onMounted(async () => {
 
     <UDashboardPanel id="home" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0' }">
       <template #header>
-        <UDashboardNavbar :ui="{ right: 'gap-3' }">
-          <template #leading>
-            <UDashboardSidebarCollapse />
-          </template>
-
-          <template #title>
-            {{ currentTitle }}
-          </template>
-
+        <AppBreadcrumb :collapsed="sidebarCollapsed" @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed">
           <template #right>
             <BaseSearch />
             <BaseSwitchLocal />
             <BaseThemePick />
             <UserProfile />
           </template>
-        </UDashboardNavbar>
+        </AppBreadcrumb>
+        <AppTabsBar />
       </template>
 
       <template #body>
-        <div class="h-[40px] flex-shrink-0">
-          {{ currentTitle }}
-        </div>
-        <div class="flex-1 min-h-0">
+        <div :key="refreshKey" class="flex-1 min-h-0">
           <slot />
         </div>
       </template>

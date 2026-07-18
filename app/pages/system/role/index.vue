@@ -50,7 +50,9 @@
 
 <script setup lang="ts">
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '角色管理',
+  icon: 'i-lucide-shield-user'
 })
 
 import type { TableColumn } from '@nuxt/ui'

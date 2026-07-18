@@ -1,6 +1,8 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '首页',
+  icon: 'i-lucide-house'
 })
 
 import HeaderBanner from './components/header-banner.vue'

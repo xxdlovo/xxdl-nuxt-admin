@@ -2,7 +2,9 @@
 import SplitLayout from '@/components/SplitLayout.vue'
 
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '分栏布局',
+  icon: 'i-lucide-layout-dashboard'
 })
 
 interface DemoProject {

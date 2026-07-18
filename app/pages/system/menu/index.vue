@@ -6,7 +6,9 @@ import MenuTreeTable from './components/MenuTreeTable.vue'
 import type { MenuOpenPayload, MenuTreeNode } from '#shared/system/menu'
 
 definePageMeta({
-  layout: 'system'
+  layout: 'system',
+  title: '菜单管理',
+  icon: 'i-lucide-list-tree'
 })
 
 const { $trpc } = useNuxtApp()
