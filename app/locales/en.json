@@ -814,6 +814,7 @@
     }
   },
   "dropdown": {
+    "flush": "Flush Current",
     "closeCurrent": "Close Current",
     "closeOther": "Close Other",
     "closeLeft": "Close Left",

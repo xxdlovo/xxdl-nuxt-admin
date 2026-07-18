@@ -71,7 +71,12 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function closeOthers(path: string) {
+    if (!tabs.value.some(tab => tab.path === path)) {
+      return
+    }
+
     tabs.value = tabs.value.filter(tab => tab.path === path || !tab.closable)
+    activePath.value = path
   }
 
   function closeRight(path: string) {

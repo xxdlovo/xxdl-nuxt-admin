@@ -9,6 +9,7 @@ const { profile, loading: menuLoading, loadProfile } = useRbacProfile()
 const tabsStore = useTabsStore()
 const { refreshKey } = storeToRefs(tabsStore)
 
+// 侧栏弹层与折叠态，分别对应移动端展开和桌面端收起
 const open = ref(false)
 const sidebarCollapsed = ref(false)
 
@@ -22,14 +23,15 @@ function normalizeMenuIcon(icon?: string | null) {
 
 function toNavigationItem(menu: RbacMenu): NavigationMenuItem {
   const children = menu.children.map(toNavigationItem)
+  const clickable = menu.type !== 0 && Boolean(menu.path)
 
   return {
     label: menu.name,
     icon: normalizeMenuIcon(menu.icon),
-    to: menu.path || undefined,
-    exact: Boolean(menu.path),
+    to: clickable ? menu.path || undefined : undefined,
+    exact: clickable,
     children: children.length > 0 ? children : undefined,
-    onSelect: closeSidebar
+    onSelect: clickable ? closeSidebar : undefined
   }
 }
 
@@ -70,7 +72,9 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- 整体后台布局容器：左侧菜单 + 右侧主工作区 -->
   <UDashboardGroup unit="rem">
+    <!-- 左侧功能菜单：根据 RBAC 菜单树渲染，可折叠、可拖拽宽度 -->
     <UDashboardSidebar
       id="default"
       v-model:open="open"
@@ -106,8 +110,10 @@ onMounted(async () => {
       </template>
     </UDashboardSidebar>
 
+    <!-- 右侧主区域：顶部导航 + 页签栏 + 页面内容 -->
     <UDashboardPanel id="home" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0' }">
       <template #header>
+        <!-- 顶部第一栏：面包屑、侧栏折叠按钮和右侧工具区 -->
         <AppBreadcrumb :collapsed="sidebarCollapsed" @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed">
           <template #right>
             <BaseSearch />
@@ -116,16 +122,19 @@ onMounted(async () => {
             <UserProfile />
           </template>
         </AppBreadcrumb>
+        <!-- 顶部第二栏：多标签页导航 -->
         <AppTabsBar />
       </template>
 
       <template #body>
+        <!-- 页面内容出口：路由页面在这里渲染 -->
         <div :key="refreshKey" class="flex-1 min-h-0">
           <slot />
         </div>
       </template>
 
       <template #footer>
+        <!-- 底部辅助信息区 -->
         <div class="text-center">
           PowerBy nuxt
         </div>

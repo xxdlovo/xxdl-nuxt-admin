@@ -1,78 +1,42 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import type { RbacMenu } from '#shared/auth'
 import type { AppTab } from '~/stores/tabs'
+import { resolveNavigationMeta } from '~/utils/navigation'
 
 const route = useRoute()
 const router = useRouter()
 const { profile } = useRbacProfile()
 const tabsStore = useTabsStore()
 const { tabs, activePath } = storeToRefs(tabsStore)
-
+const {$ts} = useI18n()
 type RouteMetaTab = {
   title?: string
-  icon?: string
 }
 
 const routeMeta = computed(() => route.meta as RouteMetaTab)
 
-function normalizeIcon(icon?: string | null) {
-  return icon || 'i-lucide-circle'
-}
-
-function findMenuByPath(menus: RbacMenu[], path: string): RbacMenu | null {
-  for (const menu of menus) {
-    if (menu.path === path) {
-      return menu
-    }
-
-    const child = findMenuByPath(menu.children, path)
-    if (child) {
-      return child
-    }
-  }
-
-  return null
-}
-
-function resolveTabTitle(path: string, meta: RouteMetaTab) {
-  if (path === '/system/home') {
-    return findMenuByPath(profile.value?.menus ?? [], path)?.name || meta.title || '首页'
-  }
-
-  return meta.title || path
-}
-
-function resolveTabIcon(path: string, meta: RouteMetaTab) {
-  if (path === '/system/home') {
-    return findMenuByPath(profile.value?.menus ?? [], path)?.icon || meta.icon || null
-  }
-
-  return meta.icon || null
-}
-
 function syncRouteTab() {
   const meta = routeMeta.value
   const path = route.path
-
-  const homeMenu = findMenuByPath(profile.value?.menus ?? [], '/system/home')
+  const navMeta = resolveNavigationMeta(profile.value?.menus ?? [], path, meta, path)
+  const homeMeta = resolveNavigationMeta(profile.value?.menus ?? [], '/system/home', { title: '首页' }, '首页')
 
   tabsStore.ensureHome({
     path: '/system/home',
-    title: homeMenu?.name || '首页',
-    icon: homeMenu?.icon || 'i-lucide-house'
+    title: homeMeta.title,
+    icon: homeMeta.icon
   })
 
   tabsStore.upsertTab({
     path,
-    title: resolveTabTitle(path, meta),
-    icon: resolveTabIcon(path, meta),
+    title: navMeta.title,
+    icon: navMeta.icon,
     closable: path !== '/system/home'
   })
 }
 
 watch(
-  () => [route.path, routeMeta.value.title, routeMeta.value.icon, profile.value?.menus] as const,
+  () => [route.path, routeMeta.value.title, profile.value?.menus] as const,
   syncRouteTab,
   { immediate: true }
 )
@@ -106,8 +70,9 @@ async function closeCurrentTab(tab: AppTab) {
 }
 
 async function closeOthers(tab: AppTab) {
-  tabsStore.closeOthers(tab.path)
   await activateTab(tab)
+  await nextTick()
+  tabsStore.closeOthers(tab.path)
 }
 
 async function closeRight(tab: AppTab) {
@@ -129,23 +94,23 @@ function refreshCurrent() {
 function menuItems(tab: AppTab) {
   return [[
     {
-      label: '刷新当前',
+      label: $ts('dropdown.flush'),
       icon: 'i-lucide-refresh-cw',
       onSelect: refreshCurrent
     },
     {
-      label: '关闭当前',
+      label: $ts('dropdown.closeCurrent'),
       icon: 'i-lucide-x',
       disabled: !tab.closable,
       onSelect: () => closeCurrentTab(tab)
     },
     {
-      label: '关闭其他',
+      label: $ts('dropdown.closeOther'),
       icon: 'i-lucide-copy-x',
       onSelect: () => closeOthers(tab)
     },
     {
-      label: '关闭右侧',
+      label: $ts('dropdown.closeRight'),
       icon: 'i-lucide-panel-right-close',
       onSelect: () => closeRight(tab)
     }
@@ -164,7 +129,7 @@ function menuItems(tab: AppTab) {
         <div
           role="button"
           tabindex="0"
-          class="group flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30"
+          class="group flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30"
           :class="isActive(tab)
             ? 'bg-primary/10 text-primary'
             : 'text-muted hover:bg-gray-100 hover:text-default dark:hover:bg-gray-800'"

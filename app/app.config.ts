@@ -18,6 +18,12 @@ export default defineAppConfig({
       warning: 'yellow',
       error: 'red',
       neutral: 'slate'
+    },
+    //   设置鼠悬浮样式
+    button: {
+      slots: {
+        base: 'cursor-pointer disabled:cursor-not-allowed aria-disabled:cursor-not-allowed'
+      }
     }
   }
 })
