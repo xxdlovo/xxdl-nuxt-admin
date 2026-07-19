@@ -265,19 +265,19 @@
     "plugin_tables_vtable": "VTable"
   },
   "module": {
-    "demo":{
-        "title": "Demo列表",
-        "demoStatus": "Demo状态",
-                  "field1": "字段1",
-          "field2": "字段2",
-        "form": {
-          "field1": "请输入字段1",
-          "field2": "请输入字段2",
-          "demoStatus": "请选择状态"
-        },
-        "addDemo": "新增Demo",
-        "editDemo": "编辑Demo"
+    "demo": {
+      "title": "Demo列表",
+      "demoStatus": "Demo状态",
+      "field1": "字段1",
+      "field2": "字段2",
+      "form": {
+        "field1": "请输入字段1",
+        "field2": "请输入字段2",
+        "demoStatus": "请选择状态"
       },
+      "addDemo": "新增Demo",
+      "editDemo": "编辑Demo"
+    },
     "system": {
       "role": {
         "title": "角色列表",
@@ -328,6 +328,7 @@
         "userEmail": "邮箱",
         "userStatus": "用户状态",
         "userRole": "用户角色",
+        "remark": "备注",
         "form": {
           "userName": "请输入用户名",
           "password": "请输入密码",
@@ -336,7 +337,10 @@
           "userPhone": "请输入手机号",
           "userEmail": "请输入邮箱",
           "userStatus": "请选择用户状态",
-          "userRole": "请选择用户角色"
+          "userRole": "请选择用户角色",
+          "remark": "请输入备注",
+          "newPassword": "请输入新密码",
+          "confirmPassword": "请再次输入新密码"
         },
         "addUser": "新增用户",
         "editUser": "编辑用户",
@@ -344,7 +348,11 @@
           "male": "男",
           "female": "女",
           "unknow": "未知"
-        }
+        },
+        "resetPassword": "重置密码",
+        "resetPasswordSuccess": "重置密码成功",
+        "newPassword": "新密码",
+        "confirmPassword": "确认密码"
       },
       "department": {
         "title": "部门列表",
@@ -785,58 +793,58 @@
       }
     }
   },
-    "form": {
-      "required": "不能为空",
-      "id": {
-        "required": "ID不能为空",
-        "invalid": "ID格式不正确"
-      },
-      "userName": {
-        "required": "请输入用户名",
-        "invalid": "用户名格式不正确"
-      },
-      "phone": {
-        "required": "请输入手机号",
-        "invalid": "手机号格式不正确"
-      },
-      "pwd": {
-        "required": "请输入密码",
-        "invalid": "密码格式不正确，6-18位字符，包含字母、数字、下划线"
-      },
-      "confirmPwd": {
-        "required": "请输入确认密码",
-        "invalid": "两次输入密码不一致"
-      },
-      "code": {
-        "required": "请输入验证码",
-        "invalid": "验证码格式不正确"
-      },
-      "email": {
-        "required": "请输入邮箱",
-        "invalid": "邮箱格式不正确"
-      }
+  "form": {
+    "required": "不能为空",
+    "id": {
+      "required": "ID不能为空",
+      "invalid": "ID格式不正确"
     },
-    "dropdown": {
-      "flush": "刷新",
-      "closeCurrent": "关闭",
-      "closeOther": "关闭其它",
-      "closeLeft": "关闭左侧",
-      "closeRight": "关闭右侧",
-      "closeAll": "关闭所有"
+    "userName": {
+      "required": "请输入用户名",
+      "invalid": "用户名格式不正确"
     },
-    "icon": {
-      "themeConfig": "主题配置",
-      "themeSchema": "主题模式",
-      "lang": "切换语言",
-      "fullscreen": "全屏",
-      "fullscreenExit": "退出全屏",
-      "reload": "刷新页面",
-      "collapse": "折叠菜单",
-      "expand": "展开菜单",
-      "pin": "固定",
-      "unpin": "取消固定"
+    "phone": {
+      "required": "请输入手机号",
+      "invalid": "手机号格式不正确"
     },
-    "datatable": {
-      "itemCount": "共 {total} 条"
+    "pwd": {
+      "required": "请输入密码",
+      "invalid": "密码格式不正确，6-18位字符，包含字母、数字、下划线"
+    },
+    "confirmPwd": {
+      "required": "请输入确认密码",
+      "invalid": "两次输入密码不一致"
+    },
+    "code": {
+      "required": "请输入验证码",
+      "invalid": "验证码格式不正确"
+    },
+    "email": {
+      "required": "请输入邮箱",
+      "invalid": "邮箱格式不正确"
     }
+  },
+  "dropdown": {
+    "flush": "刷新",
+    "closeCurrent": "关闭",
+    "closeOther": "关闭其它",
+    "closeLeft": "关闭左侧",
+    "closeRight": "关闭右侧",
+    "closeAll": "关闭所有"
+  },
+  "icon": {
+    "themeConfig": "主题配置",
+    "themeSchema": "主题模式",
+    "lang": "切换语言",
+    "fullscreen": "全屏",
+    "fullscreenExit": "退出全屏",
+    "reload": "刷新页面",
+    "collapse": "折叠菜单",
+    "expand": "展开菜单",
+    "pin": "固定",
+    "unpin": "取消固定"
+  },
+  "datatable": {
+    "itemCount": "共 {total} 条"
   }
+}

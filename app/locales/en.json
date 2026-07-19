@@ -265,19 +265,19 @@
     "plugin_tables_vtable": "VTable"
   },
   "module": {
-        "demo":{
-        "title": "Demo List",
-        "demoStatus": "demoStatus",
-                  "field1": "field1",
-          "field2": "field2",
-        "form": {
-          "field1": "Please enter field1",
-          "field2": "Please enter field2",
-          "demoStatus": "Please select demo status"
-        },
-        "addDemo": "add Demo",
-        "editDemo": "edit Demo"
+    "demo": {
+      "title": "Demo List",
+      "demoStatus": "demoStatus",
+      "field1": "field1",
+      "field2": "field2",
+      "form": {
+        "field1": "Please enter field1",
+        "field2": "Please enter field2",
+        "demoStatus": "Please select demo status"
       },
+      "addDemo": "add Demo",
+      "editDemo": "edit Demo"
+    },
     "system": {
       "role": {
         "title": "Role List",
@@ -328,6 +328,7 @@
         "userEmail": "Email",
         "userStatus": "User Status",
         "userRole": "User Role",
+        "remark": "Remark",
         "form": {
           "userName": "Please enter user name",
           "password": "Please enter password",
@@ -336,7 +337,10 @@
           "userPhone": "Please enter phone number",
           "userEmail": "Please enter email",
           "userStatus": "Please select user status",
-          "userRole": "Please select user role"
+          "userRole": "Please select user role",
+          "remark": "Please enter remark",
+          "newPassword": "Please enter new password",
+          "confirmPassword": "Please enter new password again"
         },
         "addUser": "Add User",
         "editUser": "Edit User",
@@ -344,7 +348,11 @@
           "male": "Male",
           "female": "Female",
           "unknow": "unKnow"
-        }
+        },
+        "resetPassword": "Reset Password",
+        "resetPasswordSuccess": "Reset password success",
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password"
       },
       "department": {
         "title": "Department List",

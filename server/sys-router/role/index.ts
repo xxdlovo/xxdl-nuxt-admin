@@ -34,6 +34,10 @@ export const sysRoleRouter = router({
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).getById(input)
         }),
+    list: p.list.input(SysRoleQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysRoleService(ctx).list(input)
+        }),
     page: p.list.input(SysRolePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).page(input)

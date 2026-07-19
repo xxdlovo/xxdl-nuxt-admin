@@ -45,6 +45,45 @@
         </template>
       </TableWithPagination>
     </UCard>
+
+    <UModal
+      v-model:open="resetPasswordVisible"
+      :title="$ts('module.system.user.resetPassword')"
+      :dismissible="false"
+      :ui="{ content: 'max-w-md' }"
+    >
+      <template #body>
+        <UForm
+          :validate="validateResetPassword"
+          :state="resetPasswordState"
+          class="space-y-4"
+          @submit="handleResetPassword"
+        >
+          <UFormField
+            name="password"
+            required
+            :label="$ts('module.system.user.newPassword')"
+            orientation="horizontal"
+            :ui="{ root: 'flex items-center', label: 'w-20 text-right pr-2 flex-shrink-0', container: 'flex-1' }"
+          >
+            <UBaseInput v-model="resetPasswordState.password" :placeholder="$ts('module.system.user.form.newPassword')" trailing="password" />
+          </UFormField>
+          <UFormField
+            name="confirmPassword"
+            required
+            :label="$ts('module.system.user.confirmPassword')"
+            orientation="horizontal"
+            :ui="{ root: 'flex items-center', label: 'w-20 text-right pr-2 flex-shrink-0', container: 'flex-1' }"
+          >
+            <UBaseInput v-model="resetPasswordState.confirmPassword" :placeholder="$ts('module.system.user.form.confirmPassword')" trailing="password" />
+          </UFormField>
+          <div class="flex justify-end gap-2 pt-2">
+            <UButton :label="$ts('common.cancel')" color="neutral" variant="subtle" @click="resetPasswordVisible = false" />
+            <UButton :label="$ts('common.confirm')" color="primary" type="submit" />
+          </div>
+        </UForm>
+      </template>
+    </UModal>
   </div>
 </template>
 
@@ -55,9 +94,9 @@ definePageMeta({
   icon: 'i-lucide-users'
 })
 
-import type { TableColumn } from '@nuxt/ui'
+import type { FormSubmitEvent, TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
-import type { SysUserQueryDTO } from "#shared/system/user"
+import { SysUserResetPasswordSchema, type SysUserQueryDTO, type SysUserResetPasswordDTO } from "#shared/system/user"
 import type { SysUserDto } from "#shared/system/user/common"
 import SysUserSearch from './components/sys-user-search.vue'
 import SysUserOperate from "./components/sys-user-operate.vue"
@@ -70,6 +109,12 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const userPermissions = useCrudPermissions('system:user')
+const resetPasswordVisible = ref(false)
+const resetPasswordState = ref<SysUserResetPasswordDTO>({
+  id: '',
+  password: '',
+  confirmPassword: ''
+})
 
 // 搜索参数
 const searchParams = ref<SysUserQueryDTO>({})
@@ -86,6 +131,10 @@ const {
 } = usePaginatedTable<SysUserDto>({
   query: (params) => $trpc.sysUser.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
+})
+
+const { validate: validateResetPassword } = useZodValidation({
+  schema: () => SysUserResetPasswordSchema as any
 })
 
 // 表格操作 hook
@@ -119,7 +168,14 @@ const columns = computed<TableColumn<SysUserDto>[]>(() => {
           color: 'primary',
           size: 'xs',
           onClick: () => handleEdit(row.original.id as string)
-        }, { default: () => $ts('common.edit') }))
+          }, { default: () => $ts('common.edit') }))
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'neutral',
+          size: 'xs',
+          icon: 'i-lucide-key-round',
+          onClick: () => openResetPassword(row.original)
+        }, { default: () => $ts('module.system.user.resetPassword') }))
       }
 
       if (userPermissions.canDel.value) {
@@ -204,6 +260,25 @@ const handleBatchDelete = async () => {
 
   // 调用批量删除后的回调
   await onBatchDeleted()
+}
+
+const openResetPassword = (row: SysUserDto) => {
+  resetPasswordState.value = {
+    id: row.id || '',
+    password: '',
+    confirmPassword: ''
+  }
+  resetPasswordVisible.value = true
+}
+
+const handleResetPassword = async (event: FormSubmitEvent<SysUserResetPasswordDTO>) => {
+  if (!event.data.id) {
+    return
+  }
+
+  await $trpc.sysUser.resetPassword.mutate(event.data)
+  useToastSuccess($ts('module.system.user.resetPasswordSuccess'))
+  resetPasswordVisible.value = false
 }
 
 
