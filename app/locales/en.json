@@ -289,6 +289,9 @@
         "remark": "Remark",
         "menuAuth": "Menu Auth",
         "buttonAuth": "Button Auth",
+        "selectedCount": "Selected {count} items",
+        "selectAll": "Select All",
+        "clearSelection": "Clear Selection",
         "form": {
           "roleName": "Please enter role name",
           "roleCode": "Please enter role code",

@@ -12,6 +12,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
 import { enableStatusRecord } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
+import RolePermissionAssignModal from './RolePermissionAssignModal.vue'
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const props = defineProps<{
@@ -55,8 +56,26 @@ const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysRoleAddSchema : SysRoleUpdateSchema
 })
 const statusItems = useTransformRecordToOption(enableStatusRecord)
+const permissionAssignVisible = ref(false)
+const permissionAssignType = ref<'menu' | 'button'>('menu')
+const permissionAssignRole = computed<SysRoleDto | null>(() => {
+  if (props.operateType !== 'edit' || !state.value.id) {
+    return null
+  }
+
+  return {
+    ...props.data,
+    ...state.value,
+    id: state.value.id
+  } as SysRoleDto
+})
 const closeDrawer = () => {
   props.close?.()
+}
+
+function openPermissionAssign(assignType: 'menu' | 'button') {
+  permissionAssignType.value = assignType
+  permissionAssignVisible.value = true
 }
 
 // 初始化表单数据
@@ -158,6 +177,28 @@ const title = computed(() => {
           </UFormField>
         </div>
         <USeparator class="p-4" />
+        <div v-if="props.operateType === 'edit'" class="mb-4 rounded-md border border-default p-3">
+          <div class="mb-3 flex items-center gap-2 text-sm font-medium text-highlighted">
+            <UIcon name="i-lucide-shield-check" class="size-4" />
+            <span>{{ $ts('module.system.role.menuAuth') }} / {{ $ts('module.system.role.buttonAuth') }}</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              :label="$ts('module.system.role.menuAuth')"
+              icon="i-lucide-menu"
+              color="neutral"
+              variant="outline"
+              @click="openPermissionAssign('menu')"
+            />
+            <UButton
+              :label="$ts('module.system.role.buttonAuth')"
+              icon="i-lucide-square-check"
+              color="neutral"
+              variant="outline"
+              @click="openPermissionAssign('button')"
+            />
+          </div>
+        </div>
         <div class="flex justify-end gap-2">
           <UButton :label="$ts('common.cancel')" color="neutral" variant="subtle" @click="closeDrawer" />
           <UButton :label="$ts('common.confirm')" color="primary" type="submit" />
@@ -166,4 +207,11 @@ const title = computed(() => {
 
     </template>
   </UModal>
+
+  <RolePermissionAssignModal
+    v-if="permissionAssignVisible && permissionAssignRole"
+    v-model:open="permissionAssignVisible"
+    :role="permissionAssignRole"
+    :assign-type="permissionAssignType"
+  />
 </template>

@@ -2,7 +2,15 @@ import { sysRoleMenuRepo } from './SysRoleMenuRepo'
 import type { Context } from '#server/trpc/context';
 import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
-import type { SysRoleMenuAddDTO, SysRoleMenuDto, SysRoleMenuPageQueryDTO, SysRoleMenuQueryDTO, SysRoleMenuUpdateDTO } from "#shared/system/roleMenu";
+import type {
+    SysRoleMenuAddDTO,
+    SysRoleMenuAssignedIdsQueryDTO,
+    SysRoleMenuAssignDTO,
+    SysRoleMenuDto,
+    SysRoleMenuPageQueryDTO,
+    SysRoleMenuQueryDTO,
+    SysRoleMenuUpdateDTO
+} from "#shared/system/roleMenu";
 import { randomUuid } from "#shared/utils/uuid";
 
 export function sysRoleMenuService(ctx: Context) {
@@ -43,6 +51,39 @@ export function sysRoleMenuService(ctx: Context) {
         },
         async list(dto: any): Promise<SysRoleMenuDto[]> {
             return await repo.list(dto)
+        },
+        /**
+         * Query the menu or button IDs already assigned to a role.
+         * The menu type filter lets the role edit dialog reuse one relation table for menu permissions and button permissions.
+         */
+        async listAssignedMenuIds(req: SysRoleMenuAssignedIdsQueryDTO): Promise<string[]> {
+            return await repo.listAssignedMenuIds(req)
+        },
+        /**
+         * Replace a role's permissions within the requested menu types.
+         * Existing rows are re-enabled or soft-deleted, and only new role-menu pairs are inserted.
+         */
+        async assignByRoleAndTypes(data: SysRoleMenuAssignDTO): Promise<boolean> {
+            const assignableIds = await repo.listMenuIdsByTypes(data.types)
+            const assignableMenuIds = new Set(assignableIds)
+            const selectedMenuIds = Array.from(new Set(data.menuIds.filter(id => assignableMenuIds.has(id))))
+            const existingRows = await repo.listByRoleIdAndMenuIds(data.roleId, Array.from(assignableMenuIds))
+            const selectedSet = new Set(selectedMenuIds)
+            const existingMenuIds = new Set(existingRows.map(row => row.menuId))
+            const enableIds = existingRows
+                .filter(row => selectedSet.has(row.menuId))
+                .map(row => row.id)
+            const disableIds = existingRows
+                .filter(row => !selectedSet.has(row.menuId))
+                .map(row => row.id)
+            const insertMenuIds = selectedMenuIds.filter(id => !existingMenuIds.has(id))
+            const operatorId = ctx.user?.id ?? null
+
+            await repo.enableByIds(enableIds, operatorId)
+            await repo.disableByIds(disableIds, operatorId)
+            await repo.createActiveAssignments(data.roleId, insertMenuIds, operatorId)
+
+            return true
         },
     }
 }

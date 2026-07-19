@@ -36,3 +36,22 @@ export type SysRoleMenuQueryDTO = z.infer<typeof SysRoleMenuQuerySchema>;
 export const SysRoleMenuPageQuerySchema =
     SysRoleMenuQuerySchema.extend(ApiRequestSchema.shape)
 export type SysRoleMenuPageQueryDTO = z.infer<typeof SysRoleMenuPageQuerySchema>;
+
+export const SysRoleMenuAssignTypesSchema = z.array(z.union([
+    z.literal(0),
+    z.literal(1),
+    z.literal(2),
+])).min(1, 'form.required')
+
+export const SysRoleMenuAssignSchema = z.object({
+    roleId: z.string().min(1, 'form.required'),
+    menuIds: z.array(z.string()).default([]),
+    types: SysRoleMenuAssignTypesSchema,
+})
+export type SysRoleMenuAssignDTO = z.infer<typeof SysRoleMenuAssignSchema>;
+
+export const SysRoleMenuAssignedIdsQuerySchema = z.object({
+    roleId: z.string().min(1, 'form.required'),
+    types: SysRoleMenuAssignTypesSchema,
+})
+export type SysRoleMenuAssignedIdsQueryDTO = z.infer<typeof SysRoleMenuAssignedIdsQuerySchema>;

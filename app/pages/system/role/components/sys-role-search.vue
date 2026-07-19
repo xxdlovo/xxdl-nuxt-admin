@@ -17,7 +17,7 @@
               <UBaseInput v-model="state.code" :placeholder="$ts('module.system.role.form.roleCode')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.role.roleStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.role.form.roleStatus')" class="w-full" :items="translateOptions(roleStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.role.form.roleStatus')" class="w-full" :items="translateOptions(enableStatusOptions)" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 const { $ts } = useI18n()
-import { roleStatusOptions } from "#shared/constants/business";
+import { enableStatusOptions } from "#shared/constants/business";
 import { translateOptions } from "~/utils/common";
 import { type SysRoleQueryDTO, SysRoleQuerySchema } from '#shared/system/role';
 const formItemUi = {
