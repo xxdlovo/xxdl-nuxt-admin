@@ -4,8 +4,11 @@ import { useDb } from '#server/drizzle/db'
 export type AuthUser = {
   id: string
   username: string
+  email?: string | null
   nickname?: string | null
   avatar?: string | null
+  phone?: string | null
+  gender?: number | null
   isAdmin?: number | null
 }
 

@@ -5,6 +5,8 @@ import { sysDictData } from "./system/dictData"
 import { sysDictType } from "./system/dictType"
 import { sysLoginLog } from "./system/loginLog"
 import { sysMenu } from "./system/menu"
+import { sysOss } from "./system/oss"
+import { sysOssConfig } from "./system/ossConfig"
 import { sysRole } from "./system/role"
 import { sysRoleMenu } from "./system/roleMenu"
 import { sysSystemLog } from "./system/systemLog"
@@ -20,6 +22,8 @@ export {
   sysDictType,
   sysLoginLog,
   sysMenu,
+  sysOss,
+  sysOssConfig,
   sysRole,
   sysRoleMenu,
   sysSystemLog,

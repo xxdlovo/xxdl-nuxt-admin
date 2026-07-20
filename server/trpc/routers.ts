@@ -9,6 +9,8 @@ import { sysMenuRouter } from '#server/sys-router/menu'
 import { sysRoleRouter } from '#server/sys-router/role'
 import { sysRoleMenuRouter } from '#server/sys-router/roleMenu'
 import { sysLoginLogRouter } from '#server/sys-router/loginLog'
+import { sysOssRouter } from '#server/sys-router/oss'
+import { sysOssConfigRouter } from '#server/sys-router/ossConfig'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
 import { authRouter } from '#server/sys-router/auth'
@@ -25,6 +27,8 @@ export const appRouter = router({
     sysRole: sysRoleRouter,
     sysRoleMenu: sysRoleMenuRouter,
     sysLoginLog: sysLoginLogRouter,
+    sysOss: sysOssRouter,
+    sysOssConfig: sysOssConfigRouter,
     systemLog: sysSystemLogRouter,
     sysUserRole: sysUserRoleRouter,
 });
