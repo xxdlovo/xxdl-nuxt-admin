@@ -37,16 +37,52 @@ export const SysUserUpdateSchema = SysUserBaseSchema.pick({
 })
 export type SysUserUpdateDTO = z.infer<typeof SysUserUpdateSchema>
 
-// reset password
-export const SysUserResetPasswordSchema = z.object({
-  id: z.string().min(1, 'form.id.required'),
+const SysUserPasswordFieldsSchema = z.object({
   password: z.string().min(6, 'form.pwd.required').max(255, 'form.pwd.invalid'),
   confirmPassword: z.string().min(6, 'form.confirmPwd.required').max(255, 'form.confirmPwd.invalid')
-}).refine(data => data.password === data.confirmPassword, {
+})
+
+const withMatchingPasswords = <T extends z.ZodType>(schema: T) => schema.refine(data => {
+  const values = data as { password: string, confirmPassword: string }
+  return values.password === values.confirmPassword
+}, {
   message: 'form.confirmPwd.invalid',
   path: ['confirmPassword']
 })
+
+// reset password
+export const SysUserResetPasswordSchema = withMatchingPasswords(
+  SysUserPasswordFieldsSchema.extend({
+    id: z.string().min(1, 'form.id.required')
+  })
+)
 export type SysUserResetPasswordDTO = z.infer<typeof SysUserResetPasswordSchema>
+
+// current user profile update
+export const SysUserProfileUpdateSchema = SysUserBaseSchema.pick({
+  nickname: true,
+  email: true,
+  phone: true,
+  avatar: true,
+  gender: true,
+  remark: true
+}).extend({
+  nickname: z.string().max(50, 'form.userName.invalid').optional(),
+  email: z.string().min(6, 'form.email.required').max(100, 'form.email.invalid'),
+  phone: z.string().max(20, 'form.phone.invalid').optional(),
+  avatar: z.string().max(255, 'form.required').optional(),
+  gender: z.number().optional(),
+  remark: z.string().max(500, 'form.required').optional()
+})
+export type SysUserProfileUpdateDTO = z.infer<typeof SysUserProfileUpdateSchema>
+
+// current user password change, requires old password check in auth service
+export const SysUserChangePasswordSchema = withMatchingPasswords(
+  SysUserPasswordFieldsSchema.extend({
+    oldPassword: z.string().min(1, 'form.pwd.required')
+  })
+)
+export type SysUserChangePasswordDTO = z.infer<typeof SysUserChangePasswordSchema>
 
 // query
 export const SysUserQuerySchema = SysUserBaseSchema.pick({

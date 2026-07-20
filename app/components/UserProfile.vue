@@ -1,8 +1,9 @@
 <script setup lang="ts">
 const { user, clear } = useUserSession()
 const { clearProfile } = useRbacProfile()
+const { $ts } = useI18n()
 
-const displayName = computed(() => user.value?.nickname || user.value?.username || '用户')
+const displayName = computed(() => user.value?.nickname || user.value?.username || $ts('module.system.profile.userFallback'))
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 
 async function handleLogout() {
@@ -13,11 +14,13 @@ async function handleLogout() {
 
 const items = computed(() => [[
   {
-    label: displayName.value,
-    icon: 'i-lucide-user'
-  },
+    label: $ts('common.userCenter'),
+    icon: 'i-lucide-id-card',
+    to: '/system/user/profile'
+  }
+], [
   {
-    label: '退出登录',
+    label: $ts('common.logout'),
     icon: 'i-lucide-log-out',
     onSelect: handleLogout
   }
