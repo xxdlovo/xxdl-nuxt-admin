@@ -4,6 +4,8 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysLogAddDTO, SysLogDto, SysLogPageQueryDTO, SysLogQueryDTO, SysLogUpdateDTO } from "#shared/system/SysLog";
 import { randomUuid } from "#shared/utils/uuid";
+import { desc } from 'drizzle-orm'
+import { sysSystemLog } from '#server/drizzle/schema'
 
 export function sysSystemLogService(ctx: Context) {
     const repo = sysSystemLogRepo(ctx)
@@ -39,10 +41,10 @@ export function sysSystemLogService(ctx: Context) {
         },
         async page(req: SysLogPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto)
+            return await repo.page(page, pageSize, dto, [desc(sysSystemLog.createdAt)])
         },
         async list(dto: any): Promise<SysLogDto[]> {
-            return await repo.list(dto)
+            return await repo.list(dto, [desc(sysSystemLog.createdAt)])
         },
     }
 }

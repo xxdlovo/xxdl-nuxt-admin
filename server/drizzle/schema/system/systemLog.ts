@@ -1,7 +1,22 @@
-import { mysqlTable, primaryKey, varchar, tinyint, timestamp, text } from "drizzle-orm/mysql-core"
+import { mysqlTable, primaryKey, varchar, tinyint, timestamp, text, int, json } from "drizzle-orm/mysql-core"
 
 export const sysSystemLog = mysqlTable("sys_system_log", {
 	id: varchar({ length: 36 }).notNull(),
+	userId: varchar("user_id", { length: 36 }),
+	username: varchar({ length: 50 }),
+	ip: varchar({ length: 50 }),
+	userAgent: varchar("user_agent", { length: 500 }),
+	browser: varchar({ length: 50 }),
+	os: varchar({ length: 50 }),
+	requestMethod: varchar("request_method", { length: 20 }),
+	requestPath: varchar("request_path", { length: 255 }),
+	trpcType: varchar("trpc_type", { length: 20 }),
+	trpcPath: varchar("trpc_path", { length: 150 }),
+	durationMs: int("duration_ms"),
+	requestParams: json("request_params").$type<unknown>(),
+	requestResult: json("request_result").$type<unknown>(),
+	errorCode: varchar("error_code", { length: 80 }),
+	traceId: varchar("trace_id", { length: 64 }),
 	level: tinyint().default(0).notNull(),
 	module: varchar({ length: 50 }),
 	message: text().notNull(),

@@ -12,8 +12,11 @@ export const SysLoginLogAddSchema =
         browser: true,
         os: true,
         userAgent: true,
+        loginType: true,
         status: true,
         remark: true,
+        errorCode: true,
+        traceId: true,
     }).extend({
         id: SysLoginLogBaseSchema.shape.id.nonoptional(),
         username: z.string().min(1, 'form.required'),
@@ -37,6 +40,9 @@ export const SysLoginLogQuerySchema = SysLoginLogBaseSchema.pick({
     location: true,
     status: true,
     remark: true,
+    loginType: true,
+    errorCode: true,
+    traceId: true,
 })
 export type SysLoginLogQueryDTO = z.infer<typeof SysLoginLogQuerySchema>;
 

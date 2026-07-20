@@ -10,8 +10,11 @@ export const SysLoginLogRespSchema = z.object({
     browser: SysLoginLogBaseSchema.shape.browser,
     os: SysLoginLogBaseSchema.shape.os,
     userAgent: SysLoginLogBaseSchema.shape.userAgent,
+    loginType: SysLoginLogBaseSchema.shape.loginType,
     loginTime: SysLoginLogBaseSchema.shape.loginTime,
     status: SysLoginLogBaseSchema.shape.status,
     remark: SysLoginLogBaseSchema.shape.remark,
+    errorCode: SysLoginLogBaseSchema.shape.errorCode,
+    traceId: SysLoginLogBaseSchema.shape.traceId,
 });
 export type SysLoginLogRespDTO = z.infer<typeof SysLoginLogRespSchema>;
