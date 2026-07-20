@@ -3,9 +3,11 @@ import type { OssBody, OssProvider, OssUploadInput } from './types'
 import {
     assertOk,
     createVerifyPayload,
+    createPublicUrl,
     encodePathname,
     getBucket,
     getRequired,
+    getResponseEtag,
     hmacSha1Base64,
     normalizeEndpoint,
     normalizeObjectKey
@@ -64,6 +66,7 @@ async function request(method: 'PUT' | 'DELETE', config: SysOssConfigDto, object
         body: method === 'PUT' ? body as unknown as BodyInit : undefined
     })
     await assertOk(response, `Aliyun OSS ${method}`)
+    return { response, url }
 }
 
 export const aliyunProvider: OssProvider = {
@@ -78,7 +81,11 @@ export const aliyunProvider: OssProvider = {
         await this.delete(config, objectKey)
     },
     async upload(config: SysOssConfigDto, input: OssUploadInput) {
-        await request('PUT', config, input.objectKey, input.body, input.contentType)
+        const { response, url } = await request('PUT', config, input.objectKey, input.body, input.contentType)
+        return {
+            url: createPublicUrl(config, input.objectKey, url),
+            etag: getResponseEtag(response)
+        }
     },
     async delete(config: SysOssConfigDto, objectKey: string) {
         await request('DELETE', config, objectKey)

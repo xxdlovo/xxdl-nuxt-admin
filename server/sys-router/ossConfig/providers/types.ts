@@ -8,9 +8,14 @@ export type OssUploadInput = {
     contentType?: string
 }
 
+export type OssUploadResult = {
+    url: string
+    etag?: string | null
+}
+
 export type OssProvider = {
     service: string
     verify: (config: SysOssConfigDto) => Promise<void>
-    upload: (config: SysOssConfigDto, input: OssUploadInput) => Promise<void>
+    upload: (config: SysOssConfigDto, input: OssUploadInput) => Promise<OssUploadResult>
     delete: (config: SysOssConfigDto, objectKey: string) => Promise<void>
 }

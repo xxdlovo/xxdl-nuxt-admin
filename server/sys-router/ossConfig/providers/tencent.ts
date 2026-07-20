@@ -2,10 +2,12 @@ import type { SysOssConfigDto } from '#shared/system/ossConfig'
 import type { OssBody, OssProvider, OssUploadInput } from './types'
 import {
     assertOk,
+    createPublicUrl,
     createVerifyPayload,
     encodePathname,
     getBucket,
     getRequired,
+    getResponseEtag,
     hmacSha1Hex,
     normalizeEndpoint,
     normalizeObjectKey,
@@ -73,6 +75,7 @@ async function request(method: 'PUT' | 'DELETE', config: SysOssConfigDto, object
         body: method === 'PUT' ? body as unknown as BodyInit : undefined
     })
     await assertOk(response, `Tencent COS ${method}`)
+    return { response, url }
 }
 
 export const tencentProvider: OssProvider = {
@@ -87,7 +90,11 @@ export const tencentProvider: OssProvider = {
         await this.delete(config, objectKey)
     },
     async upload(config: SysOssConfigDto, input: OssUploadInput) {
-        await request('PUT', config, input.objectKey, input.body, input.contentType)
+        const { response, url } = await request('PUT', config, input.objectKey, input.body, input.contentType)
+        return {
+            url: createPublicUrl(config, input.objectKey, url),
+            etag: getResponseEtag(response)
+        }
     },
     async delete(config: SysOssConfigDto, objectKey: string) {
         await request('DELETE', config, objectKey)

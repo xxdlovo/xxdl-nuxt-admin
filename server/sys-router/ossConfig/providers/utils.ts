@@ -31,6 +31,22 @@ export function normalizeObjectKey(prefix?: string | null) {
         .join('/')
 }
 
+export function createObjectKey(prefix: string | null | undefined, fileName: string, id: string) {
+    const safePrefix = prefix
+        ?.split('/')
+        .filter(segment => segment && segment !== '.' && segment !== '..')
+        .join('/')
+    const date = new Date()
+    const yyyy = date.getFullYear()
+    const mm = String(date.getMonth() + 1).padStart(2, '0')
+    const dd = String(date.getDate()).padStart(2, '0')
+    const extension = getFileExtension(fileName)
+
+    return [safePrefix, yyyy, mm, dd, `${id}${extension}`]
+        .filter(Boolean)
+        .join('/')
+}
+
 export function createVerifyPayload() {
     return new Uint8Array(Buffer.from(`xxdl-nuxt-admin oss verify ${new Date().toISOString()}\n`, 'utf8')) as OssBody
 }
@@ -75,4 +91,25 @@ export async function assertOk(response: Response, action: string) {
 
 export function getBucket(config: SysOssConfigDto) {
     return getRequired(config.bucketName, 'Bucket')
+}
+
+export function getFileExtension(fileName: string) {
+    const index = fileName.lastIndexOf('.')
+    if (index <= 0 || index === fileName.length - 1) {
+        return ''
+    }
+    return fileName.slice(index).toLowerCase()
+}
+
+export function createPublicUrl(config: SysOssConfigDto, objectKey: string, fallbackUrl: URL) {
+    const domain = normalizeEndpoint(config.domain, config.isHttps ?? 1)
+    if (!domain) {
+        return fallbackUrl.toString()
+    }
+
+    return `${domain}/${encodePathname(objectKey)}`
+}
+
+export function getResponseEtag(response: Response) {
+    return response.headers.get('etag')?.replace(/^"|"$/g, '') ?? null
 }

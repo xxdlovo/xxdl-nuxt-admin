@@ -13,6 +13,8 @@ const props = defineProps<{
   selectedCount?: number
   addPermission?: string | string[]
   deletePermission?: string | string[]
+  addLabel?: string
+  addIcon?: string
 }>()
 
 const emit = defineEmits<{
@@ -82,9 +84,9 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
           @click="add"
       >
         <template #leading>
-          <UIcon name="i-ic-round-plus" class="w-4 h-4" />
+          <UIcon :name="addIcon || 'i-ic-round-plus'" class="w-4 h-4" />
         </template>
-       {{ $ts('common.add') }}
+       {{ addLabel || $ts('common.add') }}
       </UButton>
 
       <!-- 批量删除 -->

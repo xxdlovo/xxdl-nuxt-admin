@@ -25,6 +25,8 @@
             :selectedCount="checkedRowKeys.length"
             :add-permission="ossPermissions.codes.add"
             :delete-permission="ossPermissions.codes.del"
+            :add-label="$ts('module.system.oss.upload')"
+            add-icon="i-lucide-upload"
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
             <template #prefix>
@@ -61,6 +63,7 @@ import SysOssOperate from './components/sys-oss-operate.vue'
 import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
+import { useToastSuccess, useToastWarning } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -82,7 +85,7 @@ const {
   pageSizeOptions: [10, 20, 50, 100]
 })
 
-const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysOssDto>({
+const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysOssDto>({
   data,
   idKey: 'id',
   refresh
@@ -103,6 +106,44 @@ const formatFileSize = (size?: number | null) => {
   return `${(value / 1024 / 1024 / 1024).toFixed(2)} GB`
 }
 
+const downloadFile = (row: SysOssDto) => {
+  if (!row.url) {
+    useToastWarning($ts('module.system.oss.linkEmpty'))
+    return
+  }
+
+  const link = document.createElement('a')
+  link.href = row.url
+  link.download = row.originalName || row.fileName || ''
+  link.target = '_blank'
+  link.rel = 'noopener noreferrer'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+const copyLink = async (url?: string | null) => {
+  if (!url) {
+    useToastWarning($ts('module.system.oss.linkEmpty'))
+    return
+  }
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(url)
+  } else {
+    const textarea = document.createElement('textarea')
+    textarea.value = url
+    textarea.style.position = 'fixed'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    textarea.remove()
+  }
+
+  useToastSuccess($ts('common.copySuccess'))
+}
+
 const columns = computed<TableColumn<SysOssDto>[]>(() => {
   const actionColumn: TableColumn<SysOssDto> = {
     id: 'actions',
@@ -112,26 +153,23 @@ const columns = computed<TableColumn<SysOssDto>[]>(() => {
       const Popconfirm = resolveComponent('Popconfirm')
       const actions = []
 
-      if (row.original.url) {
-        actions.push(h(UButton, {
-          variant: 'outline',
-          color: 'neutral',
-          size: 'xs',
-          icon: 'i-lucide-external-link',
-          to: row.original.url,
-          target: '_blank'
-        }, { default: () => $ts('module.system.oss.open') }))
-      }
+      actions.push(h(UButton, {
+        variant: 'outline',
+        color: 'neutral',
+        size: 'xs',
+        icon: 'i-lucide-download',
+        disabled: !row.original.url,
+        onClick: () => downloadFile(row.original)
+      }, { default: () => $ts('module.system.oss.download') }))
 
-      if (ossPermissions.canEdit.value) {
-        actions.push(h(UButton, {
-          variant: 'outline',
-          color: 'primary',
-          size: 'xs',
-          icon: 'i-ic-round-edit',
-          onClick: () => handleEdit(row.original.id as string)
-        }, { default: () => $ts('common.edit') }))
-      }
+      actions.push(h(UButton, {
+        variant: 'outline',
+        color: 'primary',
+        size: 'xs',
+        icon: 'i-lucide-copy',
+        disabled: !row.original.url,
+        onClick: () => copyLink(row.original.url)
+      }, { default: () => $ts('module.system.oss.copyLink') }))
 
       if (ossPermissions.canDel.value) {
         actions.push(h(Popconfirm, {

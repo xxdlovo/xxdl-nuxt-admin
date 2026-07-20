@@ -34,5 +34,9 @@ export const sysOssRouter = router({
     page: p.list.input(SysOssPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOssService(ctx).page(input)
+        }),
+    uploadConfigs: p.add
+        .query(async ({ ctx }) => {
+            return sysOssService(ctx).listUploadConfigs()
         })
 })

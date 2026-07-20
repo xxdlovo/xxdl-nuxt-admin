@@ -6,9 +6,21 @@ import type { SysOssAddDTO, SysOssDto, SysOssPageQueryDTO, SysOssQueryDTO, SysOs
 import { randomUuid } from "#shared/utils/uuid";
 import { desc } from 'drizzle-orm'
 import { sysOss } from '#server/drizzle/schema'
+import { createHash } from 'node:crypto'
+import { sysOssConfigRepo } from '#server/sys-router/ossConfig/SysOssConfigRepo'
+import { getOssProvider } from '#server/sys-router/ossConfig/providers'
+import { createObjectKey, getFileExtension } from '#server/sys-router/ossConfig/providers/utils'
+
+export type SysOssUploadFileInput = {
+    configId: string
+    fileName: string
+    contentType?: string | null
+    body: Uint8Array<ArrayBufferLike>
+}
 
 export function sysOssService(ctx: Context) {
     const repo = sysOssRepo(ctx)
+    const configRepo = sysOssConfigRepo(ctx)
 
     return {
         async create(data: SysOssAddDTO): Promise<boolean> {
@@ -45,6 +57,58 @@ export function sysOssService(ctx: Context) {
         },
         async list(dto: any): Promise<SysOssDto[]> {
             return await repo.list(dto, [desc(sysOss.createdAt)])
+        },
+        async listUploadConfigs() {
+            return await configRepo.listUploadable()
+        },
+        async uploadFile(input: SysOssUploadFileInput): Promise<SysOssDto> {
+            if (!input.fileName) {
+                throw new AppError('module.system.oss.uploadFileRequired')
+            }
+            if (!input.configId) {
+                throw new AppError('module.system.oss.uploadConfigRequired')
+            }
+
+            const config = await configRepo.getUploadableById(input.configId)
+            if (!config) {
+                throw new AppError('module.system.oss.uploadConfigUnavailable')
+            }
+
+            const provider = getOssProvider(config.service)
+            if (!provider) {
+                throw new AppError('module.system.oss.uploadProviderUnsupported')
+            }
+
+            const id = randomUuid()
+            const objectName = createObjectKey(config.prefix, input.fileName, id)
+            const contentType = input.contentType || 'application/octet-stream'
+            const uploadResult = await provider.upload(config, {
+                objectKey: objectName,
+                body: input.body,
+                contentType
+            })
+            const md5 = createHash('md5').update(input.body).digest('hex')
+            const record = {
+                id,
+                configId: config.id!,
+                fileName: objectName.split('/').pop() || input.fileName,
+                originalName: input.fileName,
+                fileSuffix: getFileExtension(input.fileName),
+                fileSize: input.body.byteLength,
+                contentType,
+                bucketName: config.bucketName ?? null,
+                objectName,
+                url: uploadResult.url,
+                md5,
+                etag: uploadResult.etag ?? null,
+                service: config.service!,
+                uploadUserId: ctx.user?.id ?? null,
+                status: 1,
+                remark: null
+            }
+
+            await repo.createUploadRecord(record)
+            return record
         },
     }
 }
