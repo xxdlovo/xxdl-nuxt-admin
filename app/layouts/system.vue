@@ -12,6 +12,31 @@ const { refreshKey } = storeToRefs(tabsStore)
 // 侧栏弹层与折叠态，分别对应移动端展开和桌面端收起
 const open = ref(false)
 const sidebarCollapsed = ref(false)
+const isSmallScreen = ref(false)
+const sidebarToggleCollapsed = computed(() => isSmallScreen.value ? !open.value : sidebarCollapsed.value)
+
+let smallScreenMedia: MediaQueryList | null = null
+
+function syncSmallScreen(value: boolean) {
+  isSmallScreen.value = value
+
+  if (!value) {
+    open.value = false
+  }
+}
+
+function toggleSidebar() {
+  if (isSmallScreen.value) {
+    open.value = !open.value
+    return
+  }
+
+  sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+function handleSmallScreenChange(event: MediaQueryListEvent) {
+  syncSmallScreen(event.matches)
+}
 
 function closeSidebar() {
   open.value = false
@@ -40,6 +65,10 @@ const menuItems = computed<NavigationMenuItem[]>(() => {
 })
 
 onMounted(async () => {
+  smallScreenMedia = window.matchMedia('(max-width: 1023px)')
+  syncSmallScreen(smallScreenMedia.matches)
+  smallScreenMedia.addEventListener('change', handleSmallScreenChange)
+
   try {
     await loadProfile()
   } catch {
@@ -68,6 +97,10 @@ onMounted(async () => {
       variant: 'ghost'
     }]
   })
+})
+
+onBeforeUnmount(() => {
+  smallScreenMedia?.removeEventListener('change', handleSmallScreenChange)
 })
 </script>
 
@@ -114,7 +147,7 @@ onMounted(async () => {
     <UDashboardPanel id="home" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0' }">
       <template #header>
         <!-- 顶部第一栏：面包屑、侧栏折叠按钮和右侧工具区 -->
-        <AppBreadcrumb :collapsed="sidebarCollapsed" @toggle-sidebar="sidebarCollapsed = !sidebarCollapsed">
+        <AppBreadcrumb :collapsed="sidebarToggleCollapsed" @toggle-sidebar="toggleSidebar">
           <template #right>
             <BaseSearch />
             <BaseSwitchLocal />
