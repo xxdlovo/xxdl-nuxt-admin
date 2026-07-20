@@ -18,6 +18,9 @@ export const SysOssConfigAddSchema =
         isHttps: true,
         accessPolicy: true,
         isDefault: true,
+        verifyStatus: true,
+        verifyTime: true,
+        verifyMessage: true,
         status: true,
         remark: true,
     }).extend({
@@ -44,6 +47,7 @@ export const SysOssConfigQuerySchema = SysOssConfigBaseSchema.pick({
     bucketName: true,
     domain: true,
     isDefault: true,
+    verifyStatus: true,
     status: true,
     remark: true,
 })

@@ -23,6 +23,10 @@ export const sysOssConfigRouter = router({
         .mutation(async ({ ctx, input }) => {
             return sysOssConfigService(ctx).updateById(input.id, input)
         }),
+    verify: p.edit.input(z.string())
+        .mutation(async ({ ctx, input }) => {
+            return sysOssConfigService(ctx).verify(input)
+        }),
     getOne: p.list.input(SysOssConfigQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOssConfigService(ctx).getOne(input)

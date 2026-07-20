@@ -38,7 +38,8 @@
 
 <script setup lang="ts">
 import { type SysOssConfigQueryDTO, SysOssConfigQuerySchema } from '#shared/system/ossConfig'
-import { enableStatusOptions } from '#shared/constants/business'
+import { enableStatusOptions, ossServiceRecord } from '#shared/constants/business'
+import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
 import { translateOptions } from '~/utils/common'
 
 const { $ts } = useI18n()
@@ -59,13 +60,7 @@ const serviceValue = computed({
   get: () => state.value.service ?? undefined,
   set: value => state.value.service = value || undefined
 })
-const serviceItems = computed(() => [
-  { label: 'Local', value: 'local' },
-  { label: 'MinIO', value: 'minio' },
-  { label: 'Aliyun OSS', value: 'aliyun' },
-  { label: 'Tencent COS', value: 'tencent' },
-  { label: 'Qiniu', value: 'qiniu' }
-])
+const serviceItems = useTransformRecordToOption(ossServiceRecord)
 const items = computed(() => [
   {
     label: $ts('common.search'),

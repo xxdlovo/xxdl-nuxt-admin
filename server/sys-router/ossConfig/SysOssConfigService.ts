@@ -4,8 +4,13 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysOssConfigAddDTO, SysOssConfigDto, SysOssConfigPageQueryDTO, SysOssConfigQueryDTO, SysOssConfigUpdateDTO } from "#shared/system/ossConfig";
 import { randomUuid } from "#shared/utils/uuid";
-import { desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { sysOssConfig } from '#server/drizzle/schema'
+import { verifyOssConfig } from './OssConfigVerifier'
+
+function nowForMysql() {
+    return new Date().toISOString().slice(0, 19).replace('T', ' ')
+}
 
 export function sysOssConfigService(ctx: Context) {
     const repo = sysOssConfigRepo(ctx)
@@ -26,8 +31,30 @@ export function sysOssConfigService(ctx: Context) {
             return ids.length
         },
         async updateById(id: string, data: SysOssConfigUpdateDTO): Promise<boolean> {
-            await repo.updateById(id, data)
+            await repo.updateById(id, {
+                ...data,
+                verifyStatus: 0,
+                verifyTime: null,
+                verifyMessage: null
+            })
             return true
+        },
+        async verify(id: string): Promise<{ success: boolean, message: string }> {
+            const config = await repo.getById(id)
+            if (!config) throw new AppError('common.notExist')
+
+            const result = await verifyOssConfig(config)
+            await ctx.db
+                .update(sysOssConfig)
+                .set({
+                    verifyStatus: result.success ? 1 : 2,
+                    verifyTime: nowForMysql(),
+                    verifyMessage: result.message,
+                    updatedBy: ctx.user?.id ?? null
+                })
+                .where(eq(sysOssConfig.id, id))
+
+            return result
         },
         async getOne(req: SysOssConfigQueryDTO): Promise<SysOssConfigDto> {
             const pojo = await repo.getOne(req)

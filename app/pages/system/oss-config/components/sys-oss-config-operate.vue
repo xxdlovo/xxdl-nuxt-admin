@@ -8,7 +8,7 @@ import {
 } from '#shared/system/ossConfig'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
-import { enableStatusRecord } from '#shared/constants/business'
+import { enableStatusRecord, ossAccessPolicyRecord, ossBooleanRecord, ossServiceRecord } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
@@ -40,7 +40,7 @@ const state = ref<SysOssConfigAddDTO | SysOssConfigUpdateDTO>({
   id: '',
   configKey: '',
   configName: '',
-  service: 'local',
+  service: 'aliyun',
   endpoint: '',
   region: '',
   bucketName: '',
@@ -59,25 +59,13 @@ const { validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysOssConfigAddSchema : SysOssConfigUpdateSchema
 })
 const statusItems = useTransformRecordToOption(enableStatusRecord)
-const serviceItems = computed(() => [
-  { label: 'Local', value: 'local' },
-  { label: 'MinIO', value: 'minio' },
-  { label: 'Aliyun OSS', value: 'aliyun' },
-  { label: 'Tencent COS', value: 'tencent' },
-  { label: 'Qiniu', value: 'qiniu' }
-])
+const serviceItems = useTransformRecordToOption(ossServiceRecord)
 const serviceValue = computed({
   get: () => state.value.service ?? undefined,
   set: value => state.value.service = value || ''
 })
-const booleanItems = computed(() => [
-  { label: $ts('common.yesOrNo.no'), value: '0' },
-  { label: $ts('common.yesOrNo.yes'), value: '1' }
-])
-const accessPolicyItems = computed(() => [
-  { label: $ts('module.system.ossConfig.accessPolicyPrivate'), value: '0' },
-  { label: $ts('module.system.ossConfig.accessPolicyPublic'), value: '1' }
-])
+const booleanItems = useTransformRecordToOption(ossBooleanRecord)
+const accessPolicyItems = useTransformRecordToOption(ossAccessPolicyRecord)
 
 const httpsValue = computed({
   get: () => String(state.value.isHttps ?? 1),
@@ -109,7 +97,7 @@ const resetState = () => {
     id: '',
     configKey: '',
     configName: '',
-    service: 'local',
+    service: 'aliyun',
     endpoint: '',
     region: '',
     bucketName: '',
@@ -132,7 +120,7 @@ const initFormData = () => {
       id: props.data.id,
       configKey: props.data.configKey || '',
       configName: props.data.configName || '',
-      service: props.data.service || 'local',
+      service: props.data.service || 'aliyun',
       endpoint: props.data.endpoint || '',
       region: props.data.region || '',
       bucketName: props.data.bucketName || '',

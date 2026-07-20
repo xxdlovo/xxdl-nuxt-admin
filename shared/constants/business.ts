@@ -1,5 +1,50 @@
 import { transformRecordToOption } from '#shared/utils/common';
 import type { BadgeConfig } from '#shared/types/nuxtui'
+
+export const ossServiceRecord = {
+    aliyun: 'module.system.ossConfig.serviceAliyun',
+    tencent: 'module.system.ossConfig.serviceTencent',
+    aws: 'module.system.ossConfig.serviceAws'
+} as const satisfies Record<string, string>
+
+export const ossServiceOptions = transformRecordToOption(ossServiceRecord)
+
+export const ossAccessPolicyRecord = {
+    '0': 'module.system.ossConfig.accessPolicyPrivate',
+    '1': 'module.system.ossConfig.accessPolicyPublic'
+} as const satisfies Record<string, string>
+
+export const ossAccessPolicyOptions = transformRecordToOption(ossAccessPolicyRecord)
+
+export const ossAccessPolicyConfig = {
+    '0': { i18nKey: ossAccessPolicyRecord['0'], color: 'warning' },
+    '1': { i18nKey: ossAccessPolicyRecord['1'], color: 'primary' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const ossBooleanRecord = {
+    '0': 'common.yesOrNo.no',
+    '1': 'common.yesOrNo.yes'
+} as const satisfies Record<string, string>
+
+export const ossBooleanOptions = transformRecordToOption(ossBooleanRecord)
+
+export const ossBooleanConfig = {
+    '0': { i18nKey: ossBooleanRecord['0'], color: 'neutral' },
+    '1': { i18nKey: ossBooleanRecord['1'], color: 'primary' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const ossVerifyStatusRecord = {
+    '0': 'module.system.ossConfig.verifyPending',
+    '1': 'module.system.ossConfig.verifyPassed',
+    '2': 'module.system.ossConfig.verifyFailed'
+} as const satisfies Record<string, string>
+
+export const ossVerifyStatusConfig = {
+    '0': { i18nKey: ossVerifyStatusRecord['0'], color: 'neutral' },
+    '1': { i18nKey: ossVerifyStatusRecord['1'], color: 'success' },
+    '2': { i18nKey: ossVerifyStatusRecord['2'], color: 'error' }
+} as const satisfies Record<string, BadgeConfig>
+
 // import {useTransformRecordToOption} from "~/composables/useTransformRecordToOption";
 //**********************字符串转标记
 export const USER_GENDER_CONFIG = {
