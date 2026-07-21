@@ -9,6 +9,7 @@ export type RbacUser = {
   avatar?: string | null
   phone?: string | null
   gender?: number | null
+  deptId?: string | null
   isAdmin?: number | null
 }
 
@@ -19,6 +20,7 @@ export type RbacRole = {
   id: string
   name: string
   code: string
+  dataScope?: string | null
 }
 
 /**

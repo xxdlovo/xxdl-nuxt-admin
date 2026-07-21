@@ -4,6 +4,7 @@ export const SysRoleBaseSchema = z.object({
     id: z.string().nullish(),
     name: z.string().nullish().meta({ query: 'like' }),
     code: z.string().nullish().meta({ query: 'like' }),
+    dataScope: z.string().nullish(),
     description: z.string().nullish().meta({ query: 'like' }),
     isSystem: z.number().nullish(),
     sortOrder: z.number().nullish(),

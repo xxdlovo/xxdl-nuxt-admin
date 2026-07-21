@@ -35,6 +35,7 @@ export const authRouter = router({
         avatar: user.avatar,
         phone: user.phone,
         gender: user.gender,
+        deptId: user.deptId,
         isAdmin: user.isAdmin
       }
 
@@ -110,6 +111,7 @@ export const authRouter = router({
       avatar: input.avatar || null,
       phone: input.phone || null,
       gender: input.gender ?? null,
+      deptId: currentUser.deptId ?? null,
       isAdmin: currentUser.isAdmin ?? ctx.user.isAdmin ?? null
     }
 

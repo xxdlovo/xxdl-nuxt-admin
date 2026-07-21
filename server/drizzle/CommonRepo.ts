@@ -2,9 +2,8 @@ import { Column, count, eq, inArray, type InferInsertModel, type SQL } from "dri
 import { MySqlTable } from "drizzle-orm/mysql-core/table"
 import { ZodObject } from "zod"
 import type { Context } from "#server/trpc/context"
-import { buildScope } from "./queries/buildScope"
+import { buildScopedWhere } from "./queries/buildScope"
 import { buildWhereBySchema } from "./queries/buildWhereBySchema"
-import { mergeWhere } from "./queries/mergeWhere"
 
 type TableWithId<T extends MySqlTable> = T & { id: Column<any>; isDeleted: Column<any> }
 type RecordData = Record<string, unknown>
@@ -79,11 +78,7 @@ export function CommonRepo<
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
-                const where = mergeWhere(
-                    ...buildScope(table, ctx),
-                    ...dynamicWhere,
-                    ...extraWhere
-                )
+                const where = await buildScopedWhere(table, ctx, ...dynamicWhere, ...extraWhere)
                 return ctx.db
                     .select()
                     .from(table)
@@ -96,11 +91,7 @@ export function CommonRepo<
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, dto)
                     : []
-                const where = mergeWhere(
-                    ...buildScope(table, ctx),
-                    ...dynamicWhere,
-                    ...extraWhere
-                )
+                const where = await buildScopedWhere(table, ctx, ...dynamicWhere, ...extraWhere)
 
                 const totalResult = await ctx.db
                     .select({ total: count() })
@@ -128,10 +119,7 @@ export function CommonRepo<
                 const dynamicWhere = schema
                     ? buildWhereBySchema(schema, table, req)
                     : []
-                const where = mergeWhere(
-                    ...buildScope(table, ctx),
-                    ...dynamicWhere
-                )
+                const where = await buildScopedWhere(table, ctx, ...dynamicWhere)
                 const data = await ctx.db
                     .select()
                     .from(table)
@@ -146,10 +134,7 @@ export function CommonRepo<
                     .select()
                     .from(table)
                     .where(
-                        mergeWhere(
-                            ...buildScope(table, ctx),
-                            eq(table.id, id)
-                        )
+                        await buildScopedWhere(table, ctx, eq(table.id, id))
                     )
                     .limit(1)
 
@@ -166,7 +151,7 @@ export function CommonRepo<
                 return ctx.db
                     .update(table)
                     .set(withUpdateAudit(table, ctx, data as RecordData) as UpdateInput)
-                    .where(eq(table.id, id))
+                    .where(await buildScopedWhere(table, ctx, eq(table.id, id)))
             },
 
             async remove(id: any) {
@@ -174,7 +159,7 @@ export function CommonRepo<
                 return ctx.db
                     .update(table)
                     .set(withRemoveAudit(table, ctx) as any)
-                    .where(eq(table.id, id))
+                    .where(await buildScopedWhere(table, ctx, eq(table.id, id)))
             },
 
             async batchRemove(ids: any[]) {
@@ -185,7 +170,7 @@ export function CommonRepo<
                 return ctx.db
                     .update(table)
                     .set(withRemoveAudit(table, ctx) as any)
-                    .where(inArray(table.id, ids))
+                    .where(await buildScopedWhere(table, ctx, inArray(table.id, ids)))
             },
         }
     }

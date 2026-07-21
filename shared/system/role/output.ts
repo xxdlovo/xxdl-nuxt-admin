@@ -5,6 +5,7 @@ export const SysRoleRespSchema = z.object({
     id: SysRoleBaseSchema.shape.id,
     name: SysRoleBaseSchema.shape.name,
     code: SysRoleBaseSchema.shape.code,
+    dataScope: SysRoleBaseSchema.shape.dataScope,
     description: SysRoleBaseSchema.shape.description,
     sortOrder: SysRoleBaseSchema.shape.sortOrder,
     status: SysRoleBaseSchema.shape.status,

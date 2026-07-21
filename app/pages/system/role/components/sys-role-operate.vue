@@ -46,6 +46,7 @@ const state = ref<SysRoleAddDTO | SysRoleUpdateDTO>({
   id: '',
   name: '',
   code: '',
+  dataScope: '5',
   description: '',
   sortOrder: 0,
   status: 1,
@@ -53,7 +54,7 @@ const state = ref<SysRoleAddDTO | SysRoleUpdateDTO>({
 })
 
 const { schema, validate } = useZodValidation({
-  schema: () => props.operateType === 'add' ? SysRoleAddSchema : SysRoleUpdateSchema
+  schema: () => (props.operateType === 'add' ? SysRoleAddSchema : SysRoleUpdateSchema) as any
 })
 const statusItems = useTransformRecordToOption(enableStatusRecord)
 const permissionAssignVisible = ref(false)
@@ -86,6 +87,7 @@ const initFormData = () => {
       id: props.data.id,
       name: props.data.name || '',
       code: props.data.code || '',
+      dataScope: props.data.dataScope ?? '5',
       description: props.data.description || '',
       sortOrder: props.data.sortOrder ?? 0,
       status: props.data.status ?? 1,
@@ -97,6 +99,7 @@ const initFormData = () => {
       id: '',
       name: '',
       code: '',
+      dataScope: '5',
       description: '',
       sortOrder: 0,
       status: 1,

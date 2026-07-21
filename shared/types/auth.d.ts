@@ -7,6 +7,7 @@ declare module '#auth-utils' {
     avatar?: string | null
     phone?: string | null
     gender?: number | null
+    deptId?: string | null
     isAdmin?: number | null
   }
 

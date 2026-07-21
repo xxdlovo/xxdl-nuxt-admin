@@ -8,6 +8,27 @@ import { and, eq } from 'drizzle-orm'
 import { sysRole, sysUserRole } from '#server/drizzle/schema'
 import type { RbacRole } from '#shared/auth'
 
+type SysRoleDataScope = NonNullable<SysRoleDto['dataScope']>
+
+
+function normalizeDataScope(value: unknown): SysRoleDataScope {
+    const scope = String(value)
+    return ['1', '2', '3', '4', '5', '6'].includes(scope)
+        ? scope as SysRoleDataScope
+        : '5'
+}
+
+function toSysRoleDto(role: any): SysRoleDto | null {
+    if (!role) {
+        return null
+    }
+
+    return {
+        ...role,
+        dataScope: normalizeDataScope(role.dataScope)
+    } as SysRoleDto
+}
+
 export function sysRoleService(ctx: Context) {
     const repo = sysRoleRepo(ctx)
 
@@ -27,7 +48,11 @@ export function sysRoleService(ctx: Context) {
             return ids.length
         },
         async updateById(id: string, data: SysRoleUpdateDTO): Promise<boolean> {
-            await repo.updateById(id, data)
+            const current = await repo.getById(id)
+            await repo.updateById(id, {
+                ...data,
+                dataScope: data.dataScope ?? current?.dataScope ?? '5'
+            })
             return true
         },
         async getOne(req: SysRoleQueryDTO): Promise<SysRoleDto> {
@@ -56,7 +81,8 @@ export function sysRoleService(ctx: Context) {
                 .select({
                     id: sysRole.id,
                     name: sysRole.name,
-                    code: sysRole.code
+                    code: sysRole.code,
+                    dataScope: sysRole.dataScope
                 })
                 .from(sysUserRole)
                 .innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
