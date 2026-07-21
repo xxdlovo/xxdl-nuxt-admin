@@ -7,11 +7,14 @@ import {
   themePaletteNames
 } from '~/composables/themeColorUtils'
 import BaseThemeAppearanceTab from './BaseThemeAppearanceTab.vue'
+import BaseThemeLayoutTab from './BaseThemeLayoutTab.vue'
 import BaseThemeTabPlaceholder from './BaseThemeTabPlaceholder.vue'
+import type { LayoutMode } from '#shared/layout'
 
 const { $t } = useI18n()
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
+const { layoutMode, layoutModeOptions, setLayoutMode } = useLayoutMode()
 
 type ThemeColorKey = (typeof themeColorKeys)[number]
 
@@ -46,6 +49,15 @@ const mode = computed({
   set(option) {
     colorMode.preference = option
     window.localStorage.setItem('nuxt-ui-color-mode', option)
+  }
+})
+
+const currentLayoutMode = computed({
+  get() {
+    return layoutMode.value
+  },
+  set(option: LayoutMode) {
+    setLayoutMode(option)
   }
 })
 
@@ -200,11 +212,10 @@ onBeforeMount(() => {
             :primary-preview-hex="primaryPreviewHex"
           />
 
-          <BaseThemeTabPlaceholder
+          <BaseThemeLayoutTab
             v-else-if="activeTab === 'layout'"
-            icon="i-lucide-layout-dashboard"
-            :title="$t('theme.layout') as string"
-            :description="$t('common.lookForward') as string"
+            v-model:layout-mode="currentLayoutMode"
+            :options="layoutModeOptions"
           />
 
           <BaseThemeTabPlaceholder

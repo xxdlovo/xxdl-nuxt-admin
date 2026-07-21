@@ -26,6 +26,7 @@ const openBreadcrumbKey = ref<string | null>(null)
 
 const props = defineProps<{
   collapsed: boolean
+  showSidebarToggle?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -114,7 +115,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
 
 <template>
   <div class="flex h-10 items-center gap-3 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-gray-950">
-    <UTooltip :text="props.collapsed ? $ts('icon.expand') : $ts('icon.collapse')">
+    <UTooltip v-if="props.showSidebarToggle !== false" :text="props.collapsed ? $ts('icon.expand') : $ts('icon.collapse')">
       <UButton
         :icon="props.collapsed ? 'icon-park:menu-unfold' : 'icon-park:menu-fold'"
         color="neutral"

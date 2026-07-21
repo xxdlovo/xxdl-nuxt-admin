@@ -9,6 +9,7 @@ const { profile } = useRbacProfile()
 const tabsStore = useTabsStore()
 const { tabs, activePath } = storeToRefs(tabsStore)
 const {$ts} = useI18n()
+let lastSyncedPath = route.path
 type RouteMetaTab = {
   title?: string
 }
@@ -18,6 +19,11 @@ const routeMeta = computed(() => route.meta as RouteMetaTab)
 function syncRouteTab() {
   const meta = routeMeta.value
   const path = route.path
+  if (path !== lastSyncedPath) {
+    tabsStore.clearManuallyClosedPaths()
+    lastSyncedPath = path
+  }
+
   const navMeta = resolveNavigationMeta(profile.value?.menus ?? [], path, meta, path)
   const homeMeta = resolveNavigationMeta(profile.value?.menus ?? [], '/system/home', { title: '首页' }, '首页')
 
@@ -26,6 +32,10 @@ function syncRouteTab() {
     title: homeMeta.title,
     icon: homeMeta.icon
   })
+
+  if (tabsStore.isManuallyClosed(path)) {
+    return
+  }
 
   tabsStore.upsertTab({
     path,
@@ -58,13 +68,15 @@ async function closeCurrentTab(tab: AppTab) {
     return
   }
 
-  const shouldNavigate = route.path === tab.path
+  const shouldNavigate = route.path === tab.path || activePath.value === tab.path
+  const nextTab = shouldNavigate ? tabsStore.getAdjacentTab(tab.path) : null
   tabsStore.closeTab(tab.path)
 
-  if (shouldNavigate) {
-    const nextTab = tabsStore.getLastTab()
-    if (nextTab) {
-      await activateTab(nextTab)
+  if (shouldNavigate && nextTab) {
+    tabsStore.activate(nextTab.path)
+
+    if (route.path !== nextTab.path) {
+      await router.replace(nextTab.path)
     }
   }
 }
@@ -82,7 +94,11 @@ async function closeRight(tab: AppTab) {
   if (!tabs.value.some(item => item.path === currentPath)) {
     const nextTab = tabsStore.getLastTab()
     if (nextTab) {
-      await activateTab(nextTab)
+      tabsStore.activate(nextTab.path)
+
+      if (route.path !== nextTab.path) {
+        await router.replace(nextTab.path)
+      }
     }
   }
 }
@@ -152,7 +168,10 @@ function menuItems(tab: AppTab) {
             size="xs"
             square
             class="size-5 shrink-0 opacity-60 transition-opacity hover:opacity-100"
-            @click.stop="closeCurrentTab(tab)"
+            @pointerdown.stop
+            @mousedown.stop
+            @mouseup.stop
+            @click.stop.prevent="closeCurrentTab(tab)"
           />
         </div>
       </UContextMenu>

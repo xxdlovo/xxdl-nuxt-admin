@@ -1,4 +1,5 @@
 import type { RbacMenu } from '#shared/auth'
+import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui'
 
 export type NavigationMeta = {
   title?: string
@@ -7,6 +8,18 @@ export type NavigationMeta = {
 
 export function normalizeNavigationIcon(icon?: string | null) {
   return icon
+}
+
+export function normalizeMenuIcon(icon?: string | null) {
+  return normalizeNavigationIcon(icon) || 'i-lucide-circle'
+}
+
+export function isRenderableMenu(menu: RbacMenu) {
+  return menu.type !== 2
+}
+
+export function isClickableMenu(menu: RbacMenu) {
+  return menu.type !== 0 && Boolean(menu.path)
 }
 
 export function findMenuByPath(menus: RbacMenu[], path: string): RbacMenu | null {
@@ -37,6 +50,83 @@ export function findMenuTrail(menus: RbacMenu[], path: string): RbacMenu[] | nul
   }
 
   return null
+}
+
+export function getRenderableMenus(menus: RbacMenu[]) {
+  return menus.filter(isRenderableMenu)
+}
+
+export function findFirstPath(menu?: RbacMenu | null): string | undefined {
+  if (!menu) {
+    return undefined
+  }
+
+  if (isClickableMenu(menu)) {
+    return menu.path || undefined
+  }
+
+  for (const child of getRenderableMenus(menu.children)) {
+    const path = findFirstPath(child)
+    if (path) {
+      return path
+    }
+  }
+
+  return undefined
+}
+
+export function resolveActiveTrail(menus: RbacMenu[], path: string) {
+  const trail = findMenuTrail(menus, path)
+  if (trail) {
+    return trail
+  }
+
+  const first = getRenderableMenus(menus)[0]
+  return first ? [first] : []
+}
+
+export function toNavigationItem(menu: RbacMenu, onSelect?: (menu: RbacMenu) => void): NavigationMenuItem {
+  const children = getRenderableMenus(menu.children).map(child => toNavigationItem(child, onSelect))
+  const clickable = isClickableMenu(menu)
+  const item: NavigationMenuItem = {
+    label: menu.name,
+    icon: normalizeMenuIcon(menu.icon),
+    to: clickable ? menu.path || undefined : undefined,
+    exact: clickable,
+    children: children.length > 0 ? children : undefined
+  }
+
+  if (onSelect) {
+    item.onSelect = () => onSelect(menu)
+  }
+
+  return item
+}
+
+export function toNavigationItems(menus: RbacMenu[], onSelect?: (menu: RbacMenu) => void) {
+  return getRenderableMenus(menus).map(menu => toNavigationItem(menu, onSelect))
+}
+
+export function toDropdownMenuItem(menu: RbacMenu, onSelect?: (menu: RbacMenu) => void): DropdownMenuItem {
+  const children = getRenderableMenus(menu.children).map(child => toDropdownMenuItem(child, onSelect))
+  const clickable = isClickableMenu(menu)
+  const item: DropdownMenuItem = {
+    label: menu.name,
+    icon: normalizeMenuIcon(menu.icon),
+    to: clickable ? menu.path || undefined : undefined,
+    exact: clickable,
+    children: children.length > 0 ? children : undefined
+  }
+
+  if (onSelect && clickable) {
+    item.onSelect = () => onSelect(menu)
+  }
+
+  return item
+}
+
+export function toDropdownMenuItems(menus: RbacMenu[], onSelect?: (menu: RbacMenu) => void) {
+  return getRenderableMenus(menus).map(menu => toDropdownMenuItem(menu, onSelect))
 }
 
 export function resolveNavigationMeta(

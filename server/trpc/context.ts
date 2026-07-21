@@ -9,7 +9,17 @@ export type AuthUser = {
   avatar?: string | null
   phone?: string | null
   gender?: number | null
+  deptId?: string | null
   isAdmin?: number | null
+}
+
+export type DataPermission = {
+  loaded: boolean
+  isAll: boolean
+  hasDataScope: boolean
+  deptIds: string[]
+  customDeptIds: string[]
+  includeSelf: boolean
 }
 
 export async function createContext(event: H3Event) {
@@ -20,7 +30,8 @@ export async function createContext(event: H3Event) {
     event,
     session,
     user: session.user ?? null,
-    permissionCodes: null as string[] | null
+    permissionCodes: null as string[] | null,
+    dataPermission: null as DataPermission | null
   }
 }
 

@@ -13,6 +13,7 @@ export const useTabsStore = defineStore('tabs', () => {
   const tabs = ref<AppTab[]>([])
   const activePath = ref('')
   const refreshKey = ref(0)
+  const manuallyClosedPaths = ref<Set<string>>(new Set())
 
   const activeTab = computed(() => tabs.value.find(tab => tab.path === activePath.value) ?? null)
 
@@ -38,6 +39,8 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function upsertTab(tab: Omit<AppTab, 'closable'> & { closable?: boolean }) {
+    manuallyClosedPaths.value.delete(tab.path)
+
     const nextTab: AppTab = {
       ...tab,
       closable: tab.path !== HOME_PATH && (tab.closable ?? true)
@@ -67,6 +70,7 @@ export const useTabsStore = defineStore('tabs', () => {
       return
     }
 
+    manuallyClosedPaths.value.add(path)
     tabs.value = tabs.value.filter(tab => tab.path !== path)
   }
 
@@ -93,12 +97,30 @@ export const useTabsStore = defineStore('tabs', () => {
     tabs.value = tabs.value.filter(tab => !tab.closable)
   }
 
+  function getAdjacentTab(path: string) {
+    const targetIndex = tabs.value.findIndex(tab => tab.path === path)
+
+    if (targetIndex < 0) {
+      return getLastTab()
+    }
+
+    return tabs.value[targetIndex - 1] ?? tabs.value[targetIndex + 1] ?? tabs.value.find(tab => !tab.closable) ?? null
+  }
+
   function getLastTab() {
     return tabs.value[tabs.value.length - 1] ?? tabs.value[0] ?? null
   }
 
   function refreshActive() {
     refreshKey.value += 1
+  }
+
+  function isManuallyClosed(path: string) {
+    return manuallyClosedPaths.value.has(path)
+  }
+
+  function clearManuallyClosedPaths() {
+    manuallyClosedPaths.value.clear()
   }
 
   return {
@@ -113,7 +135,10 @@ export const useTabsStore = defineStore('tabs', () => {
     closeOthers,
     closeRight,
     closeAll,
+    getAdjacentTab,
     getLastTab,
-    refreshActive
+    refreshActive,
+    isManuallyClosed,
+    clearManuallyClosedPaths
   }
 })

@@ -35,7 +35,8 @@ const createTestContext = async (options: {
         event: {} as any,
         session: user ? { user } : {},
         user,
-        permissionCodes: options.permissionCodes ?? null
+        permissionCodes: options.permissionCodes ?? null,
+        dataPermission: null
     }
 }
 
