@@ -142,6 +142,7 @@
     },
     "fixedHeaderAndTab": "固定头部和标签栏",
     "header": {
+      "title": "头部设置",
       "height": "头部高度",
       "breadcrumb": {
         "visible": "显示面包屑",
@@ -155,9 +156,11 @@
       }
     },
     "tab": {
+      "title": "标签栏设置",
       "visible": "显示标签栏",
       "cache": "标签栏信息缓存",
       "height": "标签栏高度",
+      "middleClickClose": "鼠标中键关闭标签页",
       "mode": {
         "title": "标签栏风格",
         "chrome": "谷歌风格",
@@ -165,6 +168,7 @@
       }
     },
     "sider": {
+      "title": "侧边栏设置",
       "inverted": "深色侧边栏",
       "width": "侧边栏宽度",
       "collapsedWidth": "侧边栏折叠宽度",
@@ -173,10 +177,14 @@
       "mixChildMenuWidth": "混合布局子菜单宽度"
     },
     "footer": {
+      "title": "底部设置",
       "visible": "显示底部",
       "fixed": "固定底部",
       "height": "底部高度",
       "right": "底部局右"
+    },
+    "content": {
+      "title": "内容区域设置"
     },
     "watermark": {
       "visible": "显示全屏水印",

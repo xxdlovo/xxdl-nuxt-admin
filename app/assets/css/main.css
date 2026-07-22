@@ -26,3 +26,57 @@
     --color-green-900: #0A5331;
     --color-green-950: #052E16;
 }
+
+.fade-enter-active,
+.fade-leave-active,
+.fade-slide-enter-active,
+.fade-slide-leave-active,
+.fade-bottom-enter-active,
+.fade-bottom-leave-active,
+.fade-scale-enter-active,
+.fade-scale-leave-active,
+.zoom-fade-enter-active,
+.zoom-fade-leave-active,
+.zoom-out-enter-active,
+.zoom-out-leave-active {
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+.fade-slide-enter-from {
+    opacity: 0;
+    transform: translateX(12px);
+}
+
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-12px);
+}
+
+.fade-bottom-enter-from,
+.fade-bottom-leave-to {
+    opacity: 0;
+    transform: translateY(12px);
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+    opacity: 0;
+    transform: scale(0.98);
+}
+
+.zoom-fade-enter-from,
+.zoom-fade-leave-to {
+    opacity: 0;
+    transform: scale(1.02);
+}
+
+.zoom-out-enter-from,
+.zoom-out-leave-to {
+    opacity: 0;
+    transform: scale(0.92);
+}

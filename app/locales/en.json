@@ -124,8 +124,8 @@
     },
     "scrollMode": {
       "title": "Scroll Mode",
-      "wrapper": "Wrapper",
-      "content": "Content"
+      "wrapper": "Wrapper Scroll",
+      "content": "Content Scroll"
     },
     "page": {
       "animate": "Page Animate",
@@ -142,6 +142,7 @@
     },
     "fixedHeaderAndTab": "Fixed Header And Tab",
     "header": {
+      "title": "Header Settings",
       "height": "Header Height",
       "breadcrumb": {
         "visible": "Breadcrumb Visible",
@@ -155,9 +156,11 @@
       }
     },
     "tab": {
+      "title": "Tab Settings",
       "visible": "Tab Visible",
       "cache": "Tag Bar Info Cache",
       "height": "Tab Height",
+      "middleClickClose": "Middle-click to Close Tab",
       "mode": {
         "title": "Tab Mode",
         "chrome": "Chrome",
@@ -165,6 +168,7 @@
       }
     },
     "sider": {
+      "title": "Sidebar Settings",
       "inverted": "Dark Sider",
       "width": "Sider Width",
       "collapsedWidth": "Sider Collapsed Width",
@@ -173,10 +177,14 @@
       "mixChildMenuWidth": "Mix Child Menu Width"
     },
     "footer": {
+      "title": "Footer Settings",
       "visible": "Footer Visible",
       "fixed": "Fixed Footer",
       "height": "Footer Height",
       "right": "Right Footer"
+    },
+    "content": {
+      "title": "Content Area Settings"
     },
     "watermark": {
       "visible": "Watermark Full Screen Visible",

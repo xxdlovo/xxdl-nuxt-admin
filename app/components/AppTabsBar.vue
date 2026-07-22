@@ -7,6 +7,7 @@ const route = useRoute()
 const router = useRouter()
 const { profile } = useRbacProfile()
 const tabsStore = useTabsStore()
+const themeStore = useThemeStore()
 const { tabs, activePath } = storeToRefs(tabsStore)
 const {$ts} = useI18n()
 let lastSyncedPath = route.path
@@ -107,6 +108,14 @@ function refreshCurrent() {
   tabsStore.refreshActive()
 }
 
+function handleMiddleClick(tab: AppTab) {
+  if (!themeStore.tab.middleClickClose || !tab.closable) {
+    return
+  }
+
+  void closeCurrentTab(tab)
+}
+
 function menuItems(tab: AppTab) {
   return [[
     {
@@ -135,7 +144,10 @@ function menuItems(tab: AppTab) {
 </script>
 
 <template>
-  <div class="flex h-10 items-center border-b border-gray-200 bg-white px-2 dark:border-gray-800 dark:bg-gray-950">
+  <div
+    class="flex items-center border-b border-default bg-default px-2"
+    :style="{ height: `${themeStore.tab.height}px` }"
+  >
     <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden">
       <UContextMenu
         v-for="tab in tabs"
@@ -147,9 +159,10 @@ function menuItems(tab: AppTab) {
           tabindex="0"
           class="group flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30"
           :class="isActive(tab)
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted hover:bg-gray-100 hover:text-default dark:hover:bg-gray-800'"
+            ? themeStore.tab.mode === 'button' ? 'bg-primary text-inverted' : 'bg-primary/10 text-primary'
+            : themeStore.tab.mode === 'button' ? 'bg-elevated text-muted hover:text-default' : 'text-muted hover:bg-elevated hover:text-default'"
           @click="activateTab(tab)"
+          @auxclick.middle.prevent="handleMiddleClick(tab)"
           @keydown.enter.prevent="activateTab(tab)"
           @keydown.space.prevent="activateTab(tab)"
         >
@@ -157,7 +170,9 @@ function menuItems(tab: AppTab) {
             v-if="tab.icon"
             :name="tab.icon"
             class="size-4 shrink-0"
-            :class="isActive(tab) ? 'text-primary' : 'text-muted group-hover:text-default'"
+            :class="isActive(tab) && themeStore.tab.mode === 'button'
+              ? 'text-inverted'
+              : isActive(tab) ? 'text-primary' : 'text-muted group-hover:text-default'"
           />
           <span class="max-w-40 truncate">{{ tab.title }}</span>
           <UButton

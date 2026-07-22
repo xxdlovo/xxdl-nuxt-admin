@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { LayoutMode, LayoutModeOption } from '#shared/layout'
+import type { PageAnimateMode, ScrollMode, TabMode } from '~/stores/theme'
 import BaseThemeSettingsSection from './BaseThemeSettingsSection.vue'
+import LayoutModeSection from './layout/modules/layout-mode.vue'
 
 const layoutMode = defineModel<LayoutMode>('layoutMode', { required: true })
 
@@ -8,68 +10,194 @@ const props = defineProps<{
   options: LayoutModeOption[]
 }>()
 
-const isSmallScreen = ref(false)
-let smallScreenMedia: MediaQueryList | null = null
+const { $ts } = useI18n()
+const toast = useToast()
+const themeStore = useThemeStore()
 
-function syncSmallScreen(value: boolean) {
-  isSmallScreen.value = value
-}
+const tabModeItems = computed(() => [
+  { label: $ts('theme.tab.mode.chrome'), value: 'chrome' },
+  { label: $ts('theme.tab.mode.button'), value: 'button' }
+])
 
-function handleSmallScreenChange(event: MediaQueryListEvent) {
-  syncSmallScreen(event.matches)
-}
+const scrollModeItems = computed(() => [
+  { label: $ts('theme.scrollMode.wrapper'), value: 'wrapper' },
+  { label: $ts('theme.scrollMode.content'), value: 'content' }
+])
 
-onMounted(() => {
-  smallScreenMedia = window.matchMedia('(max-width: 1023px)')
-  syncSmallScreen(smallScreenMedia.matches)
-  smallScreenMedia.addEventListener('change', handleSmallScreenChange)
+const pageAnimateModeItems = computed(() => [
+  { label: $ts('theme.page.mode.fade-slide'), value: 'fade-slide' },
+  { label: $ts('theme.page.mode.fade'), value: 'fade' },
+  { label: $ts('theme.page.mode.fade-bottom'), value: 'fade-bottom' },
+  { label: $ts('theme.page.mode.fade-scale'), value: 'fade-scale' },
+  { label: $ts('theme.page.mode.zoom-fade'), value: 'zoom-fade' },
+  { label: $ts('theme.page.mode.zoom-out'), value: 'zoom-out' },
+  { label: $ts('theme.page.mode.none'), value: 'none' }
+])
+
+const currentTabMode = computed({
+  get() {
+    return themeStore.tab.mode
+  },
+  set(value: TabMode) {
+    themeStore.tab.mode = value
+  }
 })
 
-onBeforeUnmount(() => {
-  smallScreenMedia?.removeEventListener('change', handleSmallScreenChange)
+const currentScrollMode = computed({
+  get() {
+    return themeStore.content.scrollMode
+  },
+  set(value: ScrollMode) {
+    themeStore.content.scrollMode = value
+  }
 })
+
+const currentPageAnimateMode = computed({
+  get() {
+    return themeStore.content.pageAnimateMode
+  },
+  set(value: PageAnimateMode) {
+    themeStore.content.pageAnimateMode = value
+  }
+})
+
+async function copyConfig() {
+  const text = JSON.stringify(themeStore.getLayoutSettingsSnapshot(), null, 2)
+
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    toast.add({
+      title: $ts('common.copySuccess'),
+      color: 'success'
+    })
+  }
+}
+
+function resetConfig() {
+  themeStore.resetLayoutSettings()
+  toast.add({
+    title: $ts('theme.configOperation.resetSuccessMsg'),
+    color: 'success'
+  })
+}
 </script>
 
 <template>
-  <div class="space-y-4">
-    <BaseThemeSettingsSection :title="$t('theme.layoutMode.title') as string">
-      <UAlert
-        v-if="isSmallScreen"
-        color="warning"
-        variant="subtle"
-        icon="i-lucide-info"
-        :title="$t('theme.layoutMode.mobileDisabled') as string"
-      />
+  <div class="space-y-5">
+    <LayoutModeSection v-model:layout-mode="layoutMode" :options="props.options" />
 
-      <div class="grid gap-2">
-        <UButton
-          v-for="option in props.options"
-          :key="option.value"
-          color="neutral"
-          variant="outline"
-          class="min-h-16 justify-start rounded-sm px-3 py-2 text-left ring-default"
-          :class="layoutMode === option.value ? 'bg-elevated' : 'hover:bg-elevated/50'"
-          :disabled="isSmallScreen"
-          @click="layoutMode = option.value"
-        >
-          <template #leading>
-            <UIcon :name="option.icon" class="size-5 shrink-0 text-primary" />
-          </template>
+    <UDivider />
 
-          <div class="min-w-0">
-            <p class="truncate text-sm font-medium text-default">
-              {{ option.label }}
-            </p>
-            <p class="line-clamp-2 text-xs text-muted">
-              {{ option.description }}
-            </p>
-          </div>
+    <BaseThemeSettingsSection :title="$ts('theme.tab.title')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.tab.visible') }}</span>
+          <USwitch v-model="themeStore.tab.visible" />
+        </div>
 
-          <template v-if="layoutMode === option.value" #trailing>
-            <UIcon name="i-lucide-check" class="size-4 text-primary" />
-          </template>
-        </UButton>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.tab.height') }}</span>
+          <UInputNumber v-model="themeStore.tab.height" :min="32" :max="64" class="w-32" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.tab.mode.title') }}</span>
+          <USelect v-model="currentTabMode" :items="tabModeItems" class="w-36" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.tab.middleClickClose') }}</span>
+          <USwitch v-model="themeStore.tab.middleClickClose" />
+        </div>
       </div>
     </BaseThemeSettingsSection>
+
+    <UDivider />
+
+    <BaseThemeSettingsSection :title="$ts('theme.header.title')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.header.height') }}</span>
+          <UInputNumber v-model="themeStore.header.height" :min="48" :max="72" class="w-32" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.header.breadcrumb.visible') }}</span>
+          <USwitch v-model="themeStore.header.breadcrumbVisible" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.header.breadcrumb.showIcon') }}</span>
+          <USwitch v-model="themeStore.header.breadcrumbIconVisible" />
+        </div>
+      </div>
+    </BaseThemeSettingsSection>
+
+    <UDivider />
+
+    <BaseThemeSettingsSection :title="$ts('theme.sider.title')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.sider.width') }}</span>
+          <UInputNumber v-model="themeStore.sider.width" :min="160" :max="320" class="w-32" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.sider.collapsedWidth') }}</span>
+          <UInputNumber v-model="themeStore.sider.collapsedWidth" :min="48" :max="96" class="w-32" />
+        </div>
+      </div>
+    </BaseThemeSettingsSection>
+
+    <UDivider />
+
+    <BaseThemeSettingsSection :title="$ts('theme.footer.title')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.footer.visible') }}</span>
+          <USwitch v-model="themeStore.footer.visible" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.footer.height') }}</span>
+          <UInputNumber v-model="themeStore.footer.height" :min="32" :max="80" class="w-32" />
+        </div>
+      </div>
+    </BaseThemeSettingsSection>
+
+    <UDivider />
+
+    <BaseThemeSettingsSection :title="$ts('theme.content.title')">
+      <div class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.scrollMode.title') }}</span>
+          <USelect v-model="currentScrollMode" :items="scrollModeItems" class="w-36" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.page.animate') }}</span>
+          <USwitch v-model="themeStore.content.pageAnimate" />
+        </div>
+
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-sm text-default">{{ $ts('theme.page.mode.title') }}</span>
+          <USelect v-model="currentPageAnimateMode" :items="pageAnimateModeItems" class="w-36" />
+        </div>
+      </div>
+    </BaseThemeSettingsSection>
+
+    <div class="flex items-center justify-between border-t border-default pt-4">
+      <UButton
+        color="error"
+        variant="outline"
+        :label="$ts('theme.configOperation.resetConfig')"
+        @click="resetConfig"
+      />
+      <UButton
+        color="primary"
+        :label="$ts('theme.configOperation.copyConfig')"
+        @click="copyConfig"
+      />
+    </div>
   </div>
 </template>

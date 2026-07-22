@@ -10,6 +10,7 @@ import {
 const route = useRoute()
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
+const themeStore = useThemeStore()
 
 const resolvedThemeColors = computed<Record<(typeof themeColorKeys)[number], string>>(() => {
   return Object.fromEntries(
@@ -29,6 +30,16 @@ const themeColor = computed(() => {
   return colorMode.value === 'dark' ? neutralScale[900] : neutralScale[50]
 })
 const canonicalPath = computed(() => route.path.replace(/\/+$/, '') || '/')
+const pageTransition = computed(() => {
+  if (!themeStore.content.pageAnimate || themeStore.content.pageAnimateMode === 'none') {
+    return false
+  }
+
+  return {
+    name: themeStore.content.pageAnimateMode,
+    mode: 'out-in'
+  } as const
+})
 
 watchEffect(() => {
   if (import.meta.client) {
@@ -59,7 +70,7 @@ useHead({
 <template>
   <UApp :toaster="{ duration: appConfig.toaster.duration }">
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :transition="pageTransition" />
     </NuxtLayout>
   </UApp>
 </template>

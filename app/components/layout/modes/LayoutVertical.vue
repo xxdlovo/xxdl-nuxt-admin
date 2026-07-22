@@ -14,10 +14,12 @@ const props = defineProps<{
 
 const open = defineModel<boolean>('open', { required: true })
 const collapsed = defineModel<boolean>('collapsed', { required: true })
+const themeStore = useThemeStore()
 
 const items = computed(() => toNavigationItems(props.menus, () => {
   open.value = false
 }))
+const sidebarWidth = computed(() => collapsed.value ? themeStore.sider.collapsedWidth : themeStore.sider.width)
 
 function toggleMenu() {
   if (props.mobile) {
@@ -39,7 +41,8 @@ function toggleMenu() {
       class="hidden lg:flex"
       collapsible
       resizable
-      :ui="{ footer: 'lg:border-t lg:border-default' }"
+      :style="{ '--app-sider-width': `${sidebarWidth}px` }"
+      :ui="{ root: '!w-[var(--app-sider-width)]', footer: 'lg:border-t lg:border-default' }"
     >
       <template #header>
         <AppLogo :show-title="!collapsed" />

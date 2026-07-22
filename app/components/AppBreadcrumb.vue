@@ -22,6 +22,7 @@ type BreadcrumbChild = {
 const route = useRoute()
 const router = useRouter()
 const { profile } = useRbacProfile()
+const themeStore = useThemeStore()
 const openBreadcrumbKey = ref<string | null>(null)
 
 const props = defineProps<{
@@ -114,7 +115,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
 </script>
 
 <template>
-  <div class="flex h-10 items-center gap-3 border-b border-gray-200 bg-white px-3 dark:border-gray-800 dark:bg-gray-950">
+  <div class="flex h-10 items-center gap-3 border-b border-default bg-default px-3">
     <UTooltip v-if="props.showSidebarToggle !== false" :text="props.collapsed ? $ts('icon.expand') : $ts('icon.collapse')">
       <UButton
         :icon="props.collapsed ? 'icon-park:menu-unfold' : 'icon-park:menu-fold'"
@@ -126,6 +127,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
     </UTooltip>
 
     <UBreadcrumb
+      v-if="themeStore.header.breadcrumbVisible"
       :items="breadcrumbs"
       color="neutral"
       separator-icon="i-lucide-slash"
@@ -156,7 +158,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
             class="min-w-0 rounded-md px-1.5 py-1 text-sm font-medium"
             :class="active ? 'text-highlighted' : ''"
           >
-            <UIcon v-if="item.icon" :name="item.icon" class="size-4 shrink-0" />
+            <UIcon v-if="themeStore.header.breadcrumbIconVisible && item.icon" :name="item.icon" class="size-4 shrink-0" />
             <span class="truncate">{{ item.label }}</span>
           </UButton>
 
@@ -176,7 +178,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
                 :disabled="child.disabled"
                 @click="navigateToChild(child, close)"
               >
-                <UIcon v-if="child.icon" :name="child.icon" class="size-4 shrink-0 text-muted" />
+                <UIcon v-if="themeStore.header.breadcrumbIconVisible && child.icon" :name="child.icon" class="size-4 shrink-0 text-muted" />
                 <span class="truncate">{{ child.label }}</span>
               </UButton>
             </div>
@@ -188,7 +190,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => {
           class="flex min-w-0 items-center gap-1.5 text-sm"
           :class="active ? 'font-semibold text-highlighted' : 'font-medium text-muted'"
         >
-          <UIcon v-if="item.icon" :name="item.icon" class="size-4 shrink-0" />
+          <UIcon v-if="themeStore.header.breadcrumbIconVisible && item.icon" :name="item.icon" class="size-4 shrink-0" />
           <span class="truncate">{{ item.label }}</span>
         </span>
       </template>
