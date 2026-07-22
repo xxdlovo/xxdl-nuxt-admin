@@ -2,7 +2,7 @@ import { sysRoleRepo } from './SysRoleRepo'
 import type { Context } from '#server/trpc/context';
 import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
-import type { SysRoleAddDTO, SysRoleDto, SysRolePageQueryDTO, SysRoleQueryDTO, SysRoleUpdateDTO } from "#shared/system/role";
+import type { SysRoleAddDTO, SysRoleDataScopeUpdateDTO, SysRoleDto, SysRolePageQueryDTO, SysRoleQueryDTO, SysRoleUpdateDTO } from "#shared/system/role";
 import { randomUuid } from "#shared/utils/uuid";
 import { and, eq } from 'drizzle-orm'
 import { sysRole, sysUserRole } from '#server/drizzle/schema'
@@ -52,6 +52,12 @@ export function sysRoleService(ctx: Context) {
             await repo.updateById(id, {
                 ...data,
                 dataScope: data.dataScope ?? current?.dataScope ?? '5'
+            })
+            return true
+        },
+        async updateDataScope(data: SysRoleDataScopeUpdateDTO): Promise<boolean> {
+            await repo.updateById(data.id, {
+                dataScope: data.dataScope
             })
             return true
         },

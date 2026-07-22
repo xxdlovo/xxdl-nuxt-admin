@@ -75,6 +75,26 @@ export const ENABLE_STATUS_CONFIG = {
     '2': { i18nKey: enableStatusRecord['2'], color: 'warning' }
 } as const satisfies Record<string, BadgeConfig>
 
+export const dataScopeRecord = {
+    '1': 'module.system.role.dataScopeOptions.all',
+    '2': 'module.system.role.dataScopeOptions.custom',
+    '3': 'module.system.role.dataScopeOptions.dept',
+    '4': 'module.system.role.dataScopeOptions.deptAndChild',
+    '5': 'module.system.role.dataScopeOptions.self',
+    '6': 'module.system.role.dataScopeOptions.deptAndChildOrSelf'
+} as const satisfies Record<string, string>
+
+export const dataScopeOptions = transformRecordToOption(dataScopeRecord)
+
+export const DATA_SCOPE_CONFIG = {
+    '1': { i18nKey: dataScopeRecord['1'], color: 'error' },
+    '2': { i18nKey: dataScopeRecord['2'], color: 'warning' },
+    '3': { i18nKey: dataScopeRecord['3'], color: 'info' },
+    '4': { i18nKey: dataScopeRecord['4'], color: 'info' },
+    '5': { i18nKey: dataScopeRecord['5'], color: 'success' },
+    '6': { i18nKey: dataScopeRecord['6'], color: 'neutral' }
+} as const satisfies Record<string, BadgeConfig>
+
 export const successFailureRecord = {
     '1': 'page.manage.common.sysLogin.level.success',
     '2': 'page.manage.common.sysLogin.level.failure'

@@ -21,7 +21,7 @@
               @add="handleAdd"
               @delete="handleBatchDelete"
               @refresh="refresh"
-              :tableRef="tableRef.tableRef"
+              :tableRef="tableRef?.tableRef"
               :loading="loading"
               :disabledDelete="checkedRowKeys.length === 0 || loading"
               :selectedCount="checkedRowKeys.length"
@@ -42,6 +42,12 @@
               :close="closeVisible"
               :refresh="refresh"
           />
+          <RoleDataScopeModal
+              v-if="dataScopeVisible && dataScopeRole"
+              v-model:open="dataScopeVisible"
+              :role="dataScopeRole"
+              @saved="refresh"
+          />
         </template>
       </TableWithPagination>
     </UCard>
@@ -60,8 +66,9 @@ import { h } from 'vue'
 import type { SysRoleDto, SysRoleQueryDTO } from '#shared/system/role'
 import SysRoleSearch from './components/sys-role-search.vue'
 import SysRoleOperate from "./components/sys-role-operate.vue"
+import RoleDataScopeModal from './components/RoleDataScopeModal.vue'
 
-import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
+import { DATA_SCOPE_CONFIG, ENABLE_STATUS_CONFIG } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -69,6 +76,8 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const rolePermissions = useCrudPermissions('system:role')
+const dataScopeVisible = ref(false)
+const dataScopeRole = ref<SysRoleDto | null>(null)
 
 // 搜索参数
 const searchParams = ref<SysRoleQueryDTO>({})
@@ -119,6 +128,14 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
           size: 'xs',
           onClick: () => handleEdit(row.original.id as string)
         }, { default: () => $ts('common.edit') }))
+
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'info',
+          size: 'xs',
+          icon: 'i-lucide-database',
+          onClick: () => openDataScope(row.original)
+        }, { default: () => $ts('module.system.role.dataScope') }))
       }
 
       if (rolePermissions.canDel.value) {
@@ -168,9 +185,20 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
       ENABLE_STATUS_CONFIG,
       1
     ),
+    useBadgeColumn<SysRoleDto>(
+      'dataScope',
+      'module.system.role.dataScope',
+      DATA_SCOPE_CONFIG,
+      5
+    ),
     ...(rolePermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+const openDataScope = (role: SysRoleDto) => {
+  dataScopeRole.value = JSON.parse(JSON.stringify(role))
+  dataScopeVisible.value = true
+}
 
 /**
  * 处理删除

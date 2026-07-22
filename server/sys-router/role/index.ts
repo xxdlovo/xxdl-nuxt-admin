@@ -4,7 +4,7 @@ import { sysRoleService } from './SysRoleService'
 import { sysRoleMenuService } from '#server/sys-router/roleMenu/SysRoleMenuService'
 import { sysMenuService } from '#server/sys-router/menu/SysMenuService'
 import z from 'zod'
-import { SysRoleAddSchema, SysRoleUpdateSchema, SysRoleQuerySchema, SysRolePageQuerySchema } from "#shared/system/role";
+import { SysRoleAddSchema, SysRoleUpdateSchema, SysRoleQuerySchema, SysRolePageQuerySchema, SysRoleDataScopeUpdateSchema } from "#shared/system/role";
 import { SysRoleMenuAssignedIdsQuerySchema, SysRoleMenuAssignSchema } from '#shared/system/roleMenu'
 
 const p = crudPermissionProcedures('system:role')
@@ -25,6 +25,10 @@ export const sysRoleRouter = router({
     update: p.edit.input(SysRoleUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).updateById(input.id, input)
+        }),
+    updateDataScope: p.edit.input(SysRoleDataScopeUpdateSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysRoleService(ctx).updateDataScope(input)
         }),
     getOne: p.list.input(SysRoleQuerySchema)
         .query(async ({ ctx, input }) => {

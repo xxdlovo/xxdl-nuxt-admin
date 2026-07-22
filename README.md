@@ -1,187 +1,60 @@
-# 说明
+# xxdl-nuxt-admin
 
-本项目是一个 Nuxt 4 全栈管理系统，技术栈包含 Nuxt/Nuxt UI/Drizzle ORM 等，参考 [soybean-admin](https://docs.soybeanjs.cn/zh/guide/intro.html) 项目进行开发。[演示](https://naive.soybeanjs.cn/)
+一个基于 Nuxt 4 的全栈后台管理系统。项目把管理端界面、登录认证、RBAC 权限、系统管理 API 和 MySQL 数据访问放在同一个 Nuxt 应用里，适合作为中后台系统、管理平台或业务后台的基础模板。
 
-- **前端代码**：Nuxt 4 项目结构，使用 Nuxt UI（基于 Radix UI + Headless UI + Tailwind CSS），包含页面、组件、布局、composables 等
-- **后端代码**：使用 Nitro + tRPC 实现 API 服务（server/*），集成 nuxt-auth-utils 认证中间件、RBAC 权限校验、端到端类型安全
-- **数据库**：适配 MySQL 数据库（用户、角色、部门、菜单、字典、日志等），使用 Drizzle ORM 进行类型安全的数据库访问
+## 系统做了什么
 
-## 目标
+- 提供后台管理系统的基础框架：登录、会话、布局、菜单、标签页、面包屑、主题配置和国际化。
+- 提供 RBAC 权限能力：用户、角色、菜单、用户角色、角色菜单、按钮权限和路由权限控制。
+- 提供常见系统管理模块：用户管理、角色管理、菜单管理、部门管理、字典管理、登录日志、系统日志、OSS 配置和文件管理。
+- 提供仪表盘页面：统计卡片、折线图、饼图、项目动态等后台首页内容。
+- 提供类型安全的前后端调用：前端通过 tRPC 调用服务端路由，共享 Zod DTO 和 TypeScript 类型。
+- 提供数据库访问层：使用 Drizzle ORM 连接 MySQL，维护系统表结构和通用查询能力。
 
-首要目标是快速迭代出一个可运行/可部署的全栈管理系统，后续进行进一步的优化和扩展。
+## 支持什么
 
-**Goals:**
-- 构建基于 Nuxt 4 的全栈管理系统（前端 + 后端 API 统一在 Nuxt 项目中）
-- 实现完整的 RBAC 权限体系（用户、角色、部门、菜单、字典、日志）
-- 使用 tRPC 实现端到端类型安全的 API 调用
-- 提供参考 soybean-admin 的清新优雅 UI 设计
-- 支持国际化（中英文）和主题切换（亮色/暗色）
-- 实现可扩展的数据库架构（使用 Drizzle ORM）
-- 提供完整的日志管理和仪表盘统计
+- 单体全栈后台：前端页面和服务端 API 共用一个 Nuxt 项目。
+- 用户名密码登录和服务端会话。
+- 基于角色和菜单的权限控制。
+- 中英文国际化。
+- 明暗主题、主题色、布局模式、圆角、水印等界面配置。
+- 表格分页、搜索、批量操作、列设置和常见 CRUD 页面。
+- OSS 配置校验和文件上传管理。
+- Vitest 测试、Nuxt 类型检查和 Drizzle 数据库同步。
 
-**Non-Goals:**
-- 不实现复杂的权限继承规则（仅使用基于角色的直接授权）
-- 不实现多租户支持（单系统单租户）
-- 不实现第三方登录集成（仅用户名密码登录）
-- 不实现工作流引擎（仅基础的 CRUD 操作）
-- 不实现报表生成器（仅基础导出功能）
+## 用了什么
 
-## 目录结构
-
-```
-xxdl-nuxt-admin/
-├── soybean-admin/              # 参考项目代码（UI 样式参考）
-│
-├── server/                     # 后端代码（Nitro + tRPC）
-│   ├── api/
-│   │   └── trpc/[trpc].ts  # tRPC API 端点
-│   ├── drizzle/               # 数据库配置
-│   │   ├── db.ts            # Drizzle DB 实例（连接池）
-│   │   ├── schema/         # Drizzle Schema 定义
-│   │   └── drizzle.config.ts # Drizzle 配置（push/pull）
-│   │   └── CommonRepo.ts    # 通用repo, 放基础的crud
-│   ├── trpc/                # tRPC 核心配置
-│   │   ├── init.ts          # tRPC 初始化、Procedure 定义
-│   │   ├── context.ts       # 请求上下文
-│   │   ├── routers.ts       # 路由聚合、AppRouter 类型导出
-│   │   ├── errorFormatter.ts     # 统一的错误处理
-│   │   └── middlewares/    # tRPC 中间件
-│   └── sys-router/          # 系统业务路由（按模块划分）
-│       ├── user/            # 用户管理
-│       │   ├── index.ts     # 路由定义,controller层
-│       │   ├── SysUserRepo.ts     # dao层, 放sql
-│       │   └── SysUserService.ts # server层放业务逻辑
-│       └── role/            # 角色管理
-│
-├── shared/                     # 前后端共享代码
-│   ├── system/              # 系统相关模块
-│   │   └── user/          # 用户相关
-│   │       ├── common.ts    # 用户基础 Schema（通用属性）
-│   │       ├── input.ts     # 输入 DTO（新增、更新、查询等）
-│   │       └── output.ts    # 输出 DTO
-│   ├── types/               # 共享类型定义
-│   └── utils/               # 共享工具函数
-│
-├── pages/                     # 页面（Nuxt 4 自动路由）
-│   └── system/              # 后台管理页面
-│
-├── app/                       # Nuxt 4 核心目录
-│   ├── app.vue
-│   ├── plugins/
-│   ├── composables/
-│   └── assets/
-│
-├── doc/                       # 项目文档
-│   └── mysql_init.sql       # MySQL 初始化脚本
-│
-├── tests/                     # 测试文件
-│   ├── sysUser.spec.ts
-│
-├── .env                      # 环境变量配置
-├── nuxt.config.ts            # Nuxt 配置
-├── package.json
-└── README.md
-```
-
-## 开发规范
-
-### 命名约定
-
-| 类型 | 命名规则 | 示例 |
-|------|----------|------|
-| Vue 组件文件 | 大驼峰 | `UserProfile.vue`, `UserTable.vue` |
-| Schema、DTO | 大驼峰 | `SysUserBaseSchema`, `SysUserAddDTO` |
-| Vue 文件、路由、目录 | kebab-case | `pages/user-profile.vue`, `api/user-controller.ts` |
-| 数据库实体 | 小驼峰 | `sysUser`, `sysRole`, `sysLog` |
-| Service 层 | 实体名 + Service | `SysUserService`, `SysRoleService` |
-| Repository 层 | 实体名 + Repo | `SysUserRepo`, `SysRoleRepo` |
-| DTO 类型 | 实体名 + 动作 + DTO | `SysUserAddDTO`, `SysUserUpdateDTO`, `SysUserUpdatePwdDTO` |
-
-### 代码分层规则
-
-**后端三层架构**：
-
-```
-Router (Controller) 层
-    ↓ 只做调用，不处理数据
-Service 层
-    ↓ 处理业务逻辑,返回 DTO
-Repository (DAO) 层
-    ↓ 返回 Drizzle ORM 类型
-数据库
-```
-
-- **Router 层**：位于 `server/sys-router/*/index.ts`，只调用 Service，不处理业务逻辑
-- **Service 层**：处理业务逻辑，返回 DTO 类型（存放在 `shared/功能模块/`）
-- **Repository 层**：返回 Drizzle ORM 类型（由 ORM 自动生成，存放在 `server/drizzle/schema`）
-
-### Schema/DTO 定义规则
-
-每个实体模块(shared\system\user)下有 `common.ts`，存放通用属性：
-BaseSchema作为通用属性, 各属性必须加.nullish()
-这里不定义错误信息, 只定义字段+meta. 目前的meta有query, 用来定义查询方式
-
-```ts
-// shared/system/user/common.ts
-export const SysUserBaseSchema = z.object({
-  id: z.string().nullish().meta({foo:'bar'}),         
-  username: z.string().min(3).max(50).nullish(),
-      email: z.string().nullish().meta(
-        {
-            query: 'like'
-        }
-    ),    
-  nickname: z.string().nullish(),         
-  // ...
-})
-```
-
-**业务类型定义规则**：
-- 相关业务类型定义到shared/模块名/业务名/input.ts或output.ts中
-- input.ts/output.ts不建议直接继承BaseSchema的规则, 应该SysUserBaseSchema.shape.id这样用
-- 用工厂函数自定义错误信息, 方便i18n翻译
-- 宁多勿少
-
-### 导入规范
-
-- `shared/` 目录中的工具类、类型定义必须**显式导入**
-- 避免自动导入，方便代码追踪和调试
-
-```ts
-// ✅ 正确
-import { randomUuid } from '~/shared/utils/uuid'
-import { SysUserAddDTO } from '~/shared/system/user'
-
-// ❌ 错误（自动导入，难以追踪）
-const uuid = randomUuid()  // IDE 自动导入，来源不明确
-```
-
-### 模块相关命名
-
-系统模块统一使用 `sys` 前缀：
-- 表名：`sysUser`, `sysRole`
-- trpc路径：`server/sys-router/user` sys-router代表系统模块, 下面的user代表业务名
+- Nuxt 4 / Vue 3 / TypeScript
+- Nuxt UI 4 / Tailwind CSS 4
+- Pinia / Vue Router
+- tRPC / trpc-nuxt
+- Zod
+- Drizzle ORM / MySQL
+- nuxt-auth-utils
+- nuxt-i18n-micro
+- nuxt-echarts
+- Vitest
 
 ## 常用命令
 
-### 路径别名
-- `~~` 或 `@@` → 项目根目录
-- `~` 或 `@` → `app/` (Nuxt 4 的核心逻辑目录)
-- `#server` → `server/` (根目录下的 server 目录)
-
-### 开发命令
 ```bash
-# 开发
-pnpm dev          # 启动开发服务器
-
-# 构建
-pnpm build        # 构建生产版本
-pnpm generate     # 生成静态站点
-pnpm preview      # 预览生产构建
-
-# 数据库迁移
-pnpm db:pull      # 从数据库拉取最新数据
-
-# 测试
-pnpm test              # 运行测试
+pnpm install
+pnpm dev
+pnpm build
+pnpm preview
+pnpm typecheck
+pnpm test
+pnpm db:push
+pnpm db:pull
+pnpm seed:admin
 ```
+
+## GitHub 描述
+
+中文：
+
+基于 Nuxt 4、Nuxt UI、tRPC、Drizzle ORM 和 MySQL 的全栈后台管理系统，内置登录认证、RBAC 权限、用户/角色/菜单/部门/字典/日志/OSS 管理、国际化和主题配置。
+
+English:
+
+A full-stack Nuxt 4 admin system built with Nuxt UI, tRPC, Drizzle ORM, and MySQL, featuring authentication, RBAC permissions, user/role/menu/department/dictionary/log/OSS management, i18n, and theme customization.

@@ -27,6 +27,12 @@ export const SysRoleUpdateSchema = SysRoleAddSchema.extend({
 })
 export type SysRoleUpdateDTO = z.infer<typeof SysRoleUpdateSchema>;
 
+export const SysRoleDataScopeUpdateSchema = z.object({
+    id: z.string().nonempty('form.id.required'),
+    dataScope: z.enum(['1', '2', '3', '4', '5', '6'])
+})
+export type SysRoleDataScopeUpdateDTO = z.infer<typeof SysRoleDataScopeUpdateSchema>;
+
 // query
 export const SysRoleQuerySchema = SysRoleBaseSchema.pick({
     id: true,

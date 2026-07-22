@@ -316,6 +316,15 @@
         "remark": "Remark",
         "menuAuth": "Menu Auth",
         "buttonAuth": "Button Auth",
+        "dataScope": "Data Scope",
+        "dataScopeOptions": {
+          "all": "All data",
+          "custom": "Custom data",
+          "dept": "Current department",
+          "deptAndChild": "Current department and sub-departments",
+          "self": "Own data only",
+          "deptAndChildOrSelf": "Department/sub-departments or own data"
+        },
         "selectedCount": "Selected {count} items",
         "selectAll": "Select All",
         "clearSelection": "Clear Selection",
