@@ -2,12 +2,12 @@
 import { storeToRefs } from 'pinia'
 import type { Component } from 'vue'
 import type { LayoutMode } from '#shared/layout'
-import LayoutHorizontal from '~/components/layout/modes/LayoutHorizontal.vue'
-import LayoutTopHybridHeaderFirst from '~/components/layout/modes/LayoutTopHybridHeaderFirst.vue'
-import LayoutTopHybridSidebarFirst from '~/components/layout/modes/LayoutTopHybridSidebarFirst.vue'
-import LayoutVertical from '~/components/layout/modes/LayoutVertical.vue'
-import LayoutVerticalHybridHeaderFirst from '~/components/layout/modes/LayoutVerticalHybridHeaderFirst.vue'
-import LayoutVerticalMix from '~/components/layout/modes/LayoutVerticalMix.vue'
+import LayoutHorizontal from './modules/global-menu/modules/horizontal-menu.vue'
+import LayoutTopHybridHeaderFirst from './modules/global-menu/modules/top-hybrid-header-first.vue'
+import LayoutTopHybridSidebarFirst from './modules/global-menu/modules/top-hybrid-sidebar-first.vue'
+import LayoutVertical from './modules/global-menu/modules/vertical-menu.vue'
+import LayoutVerticalHybridHeaderFirst from './modules/global-menu/modules/vertical-hybrid-header-first.vue'
+import LayoutVerticalMix from './modules/global-menu/modules/vertical-mix-menu.vue'
 
 const toast = useToast()
 const { profile, loading: menuLoading, loadProfile } = useRbacProfile()
@@ -62,24 +62,6 @@ onMounted(async () => {
   if (cookie.value === 'accepted') {
     return
   }
-
-  toast.add({
-    title: 'We use first-party cookies to enhance your experience on our website.',
-    duration: 0,
-    close: false,
-    actions: [{
-      label: 'Accept',
-      color: 'neutral',
-      variant: 'outline',
-      onClick: () => {
-        cookie.value = 'accepted'
-      }
-    }, {
-      label: 'Opt out',
-      color: 'neutral',
-      variant: 'ghost'
-    }]
-  })
 })
 
 onBeforeUnmount(() => {

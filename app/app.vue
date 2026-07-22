@@ -72,5 +72,8 @@ useHead({
     <NuxtLayout>
       <NuxtPage :transition="pageTransition" />
     </NuxtLayout>
+    <ClientOnly>
+      <BaseWatermark />
+    </ClientOnly>
   </UApp>
 </template>

@@ -3,6 +3,16 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: { enabled: true },
     ssr: false,
+    // 忽略/app/layouts/modules/的文件导入但保留hmr. 更推荐的方法是放到components目录中
+    hooks: {
+        'app:resolve'(app) {
+            for (const [name, layout] of Object.entries(app.layouts)) {
+                if (layout.file.replace(/\\/g, '/').includes('/app/layouts/modules/')) {
+                    delete app.layouts[name]
+                }
+            }
+        }
+    },
     modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt'],
     devServer: {
         host: '0.0.0.0',

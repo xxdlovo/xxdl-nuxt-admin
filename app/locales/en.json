@@ -80,6 +80,7 @@
     "appearance": "Appearance",
     "layout": "Layout",
     "general": "General",
+    "preset": "preset",
     "recommended": "Recommended Colors",
     "recommendedDesc": "Quick presets you can pick from.",
     "radius": "Radius",
@@ -187,9 +188,12 @@
       "title": "Content Area Settings"
     },
     "watermark": {
+      "title": "Watermark Settings",
       "visible": "Watermark Full Screen Visible",
       "text": "Watermark Text",
-      "enableUserName": "Enable User Name Watermark"
+      "enableUserName": "Enable User Name Watermark",
+      "currentTime": "Display Current Time",
+      "timeFormat": "Time Format"
     },
     "themeDrawerTitle": "Theme Configuration",
     "pageFunTitle": "Page Function",

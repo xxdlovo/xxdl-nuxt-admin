@@ -80,6 +80,7 @@
     "appearance": "外观",
     "layout": "布局",
     "general": "通用",
+    "preset": "预设",
     "recommended": "推荐颜色",
     "recommendedDesc": "下面这些是可直接选择的快捷颜色。",
     "radius": "圆角",
@@ -187,9 +188,12 @@
       "title": "内容区域设置"
     },
     "watermark": {
+      "title": "水印设置",
       "visible": "显示全屏水印",
       "text": "水印文本",
-      "enableUserName": "启用用户名水印"
+      "enableUserName": "启用用户名水印",
+      "currentTime": "显示当前时间",
+      "timeFormat": "时间格式"
     },
     "themeDrawerTitle": "主题配置",
     "pageFunTitle": "页面功能",
