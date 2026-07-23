@@ -19,7 +19,7 @@ import type {
 import { randomUuid } from '#shared/utils/uuid'
 import { hashUserPassword } from '#server/utils/password'
 import { and, eq } from 'drizzle-orm'
-import { sysUser } from '#server/drizzle/schema'
+import { sysDepartment, sysUser } from '#server/drizzle/schema'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
   if (!user) {
@@ -28,6 +28,10 @@ function omitPassword<T extends { password?: unknown } | null>(user: T) {
 
   const { password, ...safeUser } = user
   return safeUser
+}
+
+function normalizeDeptId(value: unknown) {
+  return typeof value === 'string' && value ? value : null
 }
 
 export function sysUserService(ctx: Context) {
@@ -57,7 +61,40 @@ export function sysUserService(ctx: Context) {
     },
 
     async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
-      await repo.updateById(id, data)
+      const { id: _inputId, ...values } = data
+      const deptId = normalizeDeptId(data.deptId)
+      const current = await repo.getById(id)
+
+      if (!current) {
+        throw new AppError('common.notExist')
+      }
+
+      if (deptId) {
+        const deptRows = await ctx.db
+          .select({ id: sysDepartment.id })
+          .from(sysDepartment)
+          .where(and(eq(sysDepartment.id, deptId), eq(sysDepartment.isDeleted, 0)))
+          .limit(1)
+
+        if (!deptRows[0]) {
+          throw new AppError('common.notExist')
+        }
+      }
+
+      await repo.updateById(id, {
+        ...values,
+        deptId
+      })
+      const updatedRows = await ctx.db
+        .select({ deptId: sysUser.deptId })
+        .from(sysUser)
+        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      if (!updatedRows[0] || (updatedRows[0].deptId ?? null) !== deptId) {
+        throw new AppError('common.notExist')
+      }
+
       return true
     },
 
@@ -71,7 +108,7 @@ export function sysUserService(ctx: Context) {
     },
 
     async getOne(req: SysUserQueryDTO): Promise<SysUserDto> {
-      const pojo = await repo.getOne(req)
+      const pojo = await repo.getOneWithDept(req)
       if (!pojo) {
         throw new AppError('common.notExist')
       }
@@ -79,13 +116,13 @@ export function sysUserService(ctx: Context) {
     },
 
     async getById(id: string): Promise<SysUserDto | null> {
-      const pojo = await repo.getById(id)
+      const pojo = await repo.getByIdWithDept(id)
       return omitPassword(pojo) as SysUserDto | null
     },
 
     async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {
       const { page, pageSize, ...dto } = req
-      const result = await repo.page(page, pageSize, dto)
+      const result = await repo.pageWithDept(page, pageSize, dto)
       return {
         ...result,
         list: result.list.map(omitPassword)
@@ -93,7 +130,7 @@ export function sysUserService(ctx: Context) {
     },
 
     async list(dto: any): Promise<SysUserDto[]> {
-      const result = await repo.list(dto)
+      const result = await repo.listWithDept(dto)
       return result.map(omitPassword) as SysUserDto[]
     },
 

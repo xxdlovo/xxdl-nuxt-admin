@@ -254,8 +254,10 @@ onUnmounted(() => {
         />
 
         <div class="mx-3 mb-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-md border border-(--ui-border) bg-(--ui-bg)">
+          <slot name="sidebar" :query="searchQuery" />
+
           <!-- List area -->
-          <UScrollArea class="flex-1">
+          <UScrollArea v-if="!$slots.sidebar" class="flex-1">
             <template #default>
               <template v-if="loading">
                 <div class="space-y-2 p-3">
@@ -452,7 +454,10 @@ onUnmounted(() => {
             </div>
           </template>
 
-          <UScrollArea class="flex-1 h-full">
+          <slot v-if="$slots['mobile-sidebar']" name="mobile-sidebar" :query="searchQuery" />
+          <slot v-else name="sidebar" :query="searchQuery" />
+
+          <UScrollArea v-if="!$slots['mobile-sidebar'] && !$slots.sidebar" class="flex-1 h-full">
             <template #default>
               <template v-if="loading">
                 <div class="space-y-2 p-3">

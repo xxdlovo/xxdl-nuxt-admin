@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { SysRoleDto } from '#shared/system/role'
+import type { SysDeptDto } from '#shared/system/department'
 import { SysUserAddSchema, SysUserUpdateSchema, type SysUserAddDTO, type SysUserDto, type SysUserUpdateDTO } from '#shared/system/user'
 import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
 import { enableStatusRecord, userGenderRecord } from '#shared/constants/business'
@@ -13,6 +14,7 @@ const props = defineProps<{
   visible: boolean
   operateType: string
   data?: SysUserDto
+  defaultDeptId?: string | null
   close?: () => void
   refresh?: () => void
 }>()
@@ -39,6 +41,7 @@ const state = ref({
   nickname: '',
   email: '',
   phone: '',
+  deptId: '',
   gender: 0,
   status: 1,
   remark: ''
@@ -47,6 +50,8 @@ const state = ref({
 const selectedRoleIds = ref<string[]>([])
 const roleItems = ref<Array<{ label: string, value: string }>>([])
 const loadingRoles = ref(false)
+const deptItems = ref<Array<{ label: string, value: string }>>([])
+const loadingDepts = ref(false)
 
 const genderItems = useTransformRecordToOption(userGenderRecord)
 const statusItems = useTransformRecordToOption(enableStatusRecord)
@@ -69,6 +74,31 @@ const statusValue = computed({
   }
 })
 
+function normalizeDeptId(value: unknown) {
+  if (typeof value === 'string' || typeof value === 'number') {
+    const deptId = String(value).trim()
+    return deptId || null
+  }
+
+  if (value && typeof value === 'object' && 'value' in value) {
+    const deptId = (value as { value?: unknown }).value
+    return normalizeDeptId(deptId)
+  }
+
+  return null
+}
+
+const deptIdValue = computed({
+  get: () => state.value.deptId || undefined,
+  set: value => {
+    state.value.deptId = normalizeDeptId(value) || ''
+  }
+})
+
+function handleDeptIdChange(value: unknown) {
+  deptIdValue.value = normalizeDeptId(value) || undefined
+}
+
 const title = computed(() => {
   const titles: Record<string, string> = {
     add: $ts('module.system.user.addUser'),
@@ -89,6 +119,7 @@ function resetFormState() {
     nickname: '',
     email: '',
     phone: '',
+    deptId: props.defaultDeptId || '',
     gender: 0,
     status: 1,
     remark: ''
@@ -106,6 +137,7 @@ function fillFormData() {
       nickname: props.data.nickname || '',
       email: props.data.email || '',
       phone: props.data.phone || '',
+      deptId: normalizeDeptId(props.data.deptId) || '',
       gender: props.data.gender ?? 0,
       status: props.data.status ?? 1,
       remark: props.data.remark || ''
@@ -129,6 +161,56 @@ async function loadRoleOptions() {
   }
 }
 
+function buildDeptOptions(depts: SysDeptDto[]) {
+  const map = new Map<string, SysDeptDto[]>()
+  const roots: SysDeptDto[] = []
+
+  depts
+    .filter(dept => Boolean(dept.id))
+    .forEach((dept) => {
+      const parentId = dept.parentId || '0'
+      if (parentId === '0') {
+        roots.push(dept)
+        return
+      }
+
+      const siblings = map.get(parentId) || []
+      siblings.push(dept)
+      map.set(parentId, siblings)
+    })
+
+  const sortDepts = (items: SysDeptDto[]) => {
+    return [...items].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.name || a.code || '').localeCompare(String(b.name || b.code || '')))
+  }
+
+  const options: Array<{ label: string, value: string }> = []
+  const walk = (items: SysDeptDto[], depth = 0) => {
+    sortDepts(items).forEach((dept) => {
+      if (!dept.id) {
+        return
+      }
+
+      options.push({
+        label: `${'  '.repeat(depth)}${dept.name || dept.code || dept.id}`,
+        value: String(dept.id)
+      })
+      walk(map.get(dept.id) || [], depth + 1)
+    })
+  }
+
+  walk(roots)
+  return options
+}
+
+async function loadDeptOptions() {
+  loadingDepts.value = true
+  try {
+    deptItems.value = buildDeptOptions(await $trpc.sysDept.list.query({}) as SysDeptDto[])
+  } finally {
+    loadingDepts.value = false
+  }
+}
+
 async function loadAssignedRoles() {
   if (!props.data?.id) {
     selectedRoleIds.value = []
@@ -146,10 +228,12 @@ async function initFormData() {
   if (props.operateType === 'edit' && props.data?.id) {
     await Promise.all([
       loadRoleOptions(),
+      loadDeptOptions(),
       loadAssignedRoles()
     ])
   } else {
     roleItems.value = []
+    deptItems.value = []
   }
 }
 
@@ -165,7 +249,12 @@ async function handleSubmit(_event: FormSubmitEvent<SysUserAddDTO>) {
 }
 
 async function handleEdit() {
-  await $trpc.sysUser.update.mutate(state.value as SysUserUpdateDTO)
+  const payload = {
+    ...state.value,
+    deptId: normalizeDeptId(state.value.deptId)
+  } as SysUserUpdateDTO
+
+  await $trpc.sysUser.update.mutate(payload)
   await $trpc.sysUser.assignRoles.mutate({
     userId: state.value.id,
     roleIds: selectedRoleIds.value
@@ -253,6 +342,26 @@ watch(visible, (newVal) => {
             :ui="formItemUi"
           >
             <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear" />
+          </UFormField>
+
+          <UFormField
+            v-if="props.operateType === 'edit'"
+            name="deptId"
+            :label="$ts('module.system.user.userDept')"
+            orientation="horizontal"
+            :ui="formItemUi"
+          >
+            <USelect
+              v-model="deptIdValue"
+              value-key="value"
+              label-key="label"
+              :items="deptItems"
+              :loading="loadingDepts"
+              :disabled="loadingDepts"
+              :placeholder="$ts('module.system.user.form.userDept')"
+              class="w-full"
+              @update:model-value="handleDeptIdChange"
+            />
           </UFormField>
 
           <UFormField

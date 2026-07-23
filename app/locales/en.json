@@ -397,6 +397,7 @@
         "userEmail": "Email",
         "userStatus": "User Status",
         "userRole": "User Role",
+        "userDept": "Department",
         "remark": "Remark",
         "form": {
           "userName": "Please enter user name",
@@ -407,6 +408,7 @@
           "userEmail": "Please enter email",
           "userStatus": "Please select user status",
           "userRole": "Please select user role",
+          "userDept": "Please select department",
           "remark": "Please enter remark",
           "newPassword": "Please enter new password",
           "confirmPassword": "Please enter new password again"
@@ -474,7 +476,10 @@
           "deptStatus": "Please select department status"
         },
         "addDept": "Add Department",
-        "editDept": "Edit Department"
+        "addChildDept": "Add Child Department",
+        "editDept": "Edit Department",
+        "parentCannotSelf": "Parent department cannot be itself",
+        "rootDept": "Root Department"
       },
       "dictData": {
         "title": "Dict Data List",

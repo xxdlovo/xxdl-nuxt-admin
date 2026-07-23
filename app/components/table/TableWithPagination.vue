@@ -4,7 +4,10 @@
     <slot name="header" />
 
     <!-- 表格容器 -->
-    <div class="flex-1 overflow-auto px-4 min-h-0 relative">
+    <div
+        class="flex-1 overflow-auto px-4 min-h-0 relative"
+        :class="{ 'hide-expanded-slot-row': hideExpandedSlotRow }"
+    >
       <!-- Loading 遮罩 -->
       <div
           v-if="loading"
@@ -22,6 +25,10 @@
           :columns="columns"
           :loading="loading"
           :ui="ui"
+          :get-sub-rows="getSubRows"
+          :get-row-id="getRowId"
+          :expanded-options="expandedOptions"
+          v-model:expanded="expanded"
           sticky
           class="min-w-full h-full"
       >
@@ -62,8 +69,9 @@
   </div>
 </template>
 
-<script setup lang="ts" generic="T extends { id?: string | null }">
-import type { TableColumn } from '@nuxt/ui'
+<script setup lang="ts" generic="T">
+import type { TableColumn, TableRow } from '@nuxt/ui'
+import type { ExpandedOptions, ExpandedState } from '@tanstack/vue-table'
 
 interface Pagination {
   page: number
@@ -78,13 +86,21 @@ interface Props {
   pagination: Pagination
   pageSizeOptions?: number[]
   ui?: Record<string, unknown>
+  getSubRows?: (originalRow: T, index: number) => T[] | undefined
+  getRowId?: (originalRow: T, index: number, parent?: TableRow<T>) => string
+  expandedOptions?: Omit<ExpandedOptions<T>, 'getExpandedRowModel' | 'onExpandedChange'>
+  hideExpandedSlotRow?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
-  pageSizeOptions: () => [10, 20, 50, 100]
+  pageSizeOptions: () => [10, 20, 50, 100],
+  hideExpandedSlotRow: false
 })
 
+const expanded = defineModel<ExpandedState>('expanded', {
+  default: () => ({})
+})
 const tableRef = useTemplateRef('tableRef')
 const { $ts } = useI18n()
 const slots = useSlots()
@@ -98,3 +114,9 @@ defineExpose({
   tableRef
 })
 </script>
+
+<style scoped>
+.hide-expanded-slot-row :deep(tr[data-slot="tr"]:has(> td[colspan]:empty)) {
+  display: none;
+}
+</style>

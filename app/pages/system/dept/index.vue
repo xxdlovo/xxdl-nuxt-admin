@@ -1,228 +1,248 @@
-<template>
-  <div class="h-full flex flex-col p-3 gap-3">
-    <!-- 搜索表单 -->
-    <div class="flex-shrink-0">
-      <SysDeptSearch v-model:model="searchParams" @search="getDataByPage(1, searchParams)"/>
-    </div>
-
-    <!-- 表格卡片 -->
-    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{body: 'flex flex-col h-full p-0 sm:p-0' }">
-      <TableWithPagination
-          ref="table"
-          :data="data"
-          :columns="columns"
-          :loading="loading"
-          :pagination="pagination"
-          :page-size-options="pageSizeOptions"
-      >
-        <template #header>
-          <TableHeaderOperation
-              v-if="tableRef?.tableRef"
-              @add="handleAdd"
-              @delete="handleBatchDelete"
-              @refresh="refresh"
-              :tableRef="tableRef.tableRef"
-              :loading="loading"
-              :disabledDelete="checkedRowKeys.length === 0 || loading"
-              :selectedCount="checkedRowKeys.length"
-              :add-permission="deptPermissions.codes.add"
-              :delete-permission="deptPermissions.codes.del"
-              class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
-          >
-          <template #prefix>
-            <span>{{ $ts('module.system.department.title') }}</span>
-          </template>
-        </TableHeaderOperation>
-
-          <!-- 操作弹窗 -->
-          <SysDeptOperate
-              v-model:visible="drawerVisible"
-              :operate-type="operateType"
-              :data="editingData ?? undefined"
-              :close="closeVisible"
-              :refresh="refresh"
-          />
-        </template>
-      </TableWithPagination>
-    </UCard>
-  </div>
-</template>
-
 <script setup lang="ts">
+import type { SysDeptDto, SysDeptQueryDTO } from '#shared/system/department'
+import { useToastSuccess } from '~/utils/toast'
+import SysDeptSearch from './components/sys-dept-search.vue'
+import SysDeptOperate from './components/sys-dept-operate.vue'
+import DeptTreeTable, { type DeptTreeNode } from './components/DeptTreeTable.vue'
+
 definePageMeta({
   layout: 'system',
   title: '部门管理',
   icon: 'i-lucide-building-2'
 })
 
-import type { TableColumn } from '@nuxt/ui'
-import { h } from 'vue'
-import type { SysDeptDto, SysDeptQueryDTO } from "#shared/system/department"
-import SysDeptSearch from './components/sys-dept-search.vue'
-import SysDeptOperate from "./components/sys-dept-operate.vue"
-
-import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
-import TableWithPagination from '~/components/table/TableWithPagination.vue'
+type DeptOperateType = 'add' | 'edit'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
-const tableRef = useTemplateRef('table')
 const deptPermissions = useCrudPermissions('system:dept')
+const ROOT_PARENT_ID = '0'
+const CHILD_PAGE_SIZE = 100
 
-// 搜索参数
+const loading = ref(false)
+const depts = ref<SysDeptDto[]>([])
 const searchParams = ref<SysDeptQueryDTO>({})
-
-// 表格 hook
-const {
-  data,
-  loading,
-  pagination,
-  pageSizeOptions,
-  search,
-  refresh,
-  getDataByPage
-} = usePaginatedTable<SysDeptDto>({
-  query: (params) => $trpc.sysDept.page.query(params),
-  pageSizeOptions: [10, 20, 50, 100]
+const loadedChildIds = ref(new Set<string>())
+const childLoadingIds = ref(new Set<string>())
+const pageSizeOptions = [10, 20, 50, 100]
+const pagination = reactive({
+  page: 1,
+  pageSize: 20,
+  total: 0
 })
+const drawerVisible = ref(false)
+const operateType = ref<DeptOperateType>('add')
+const editingData = ref<SysDeptDto | null>(null)
+const operateParentId = ref<string | null>(ROOT_PARENT_ID)
 
-// 表格操作 hook
-const { operateType, editingData, drawerVisible, checkedRowKeys, handleAdd, handleEdit, onDeleted, onBatchDeleted, closeVisible } = useTableOperate<SysDeptDto>({
-  data,
-  idKey: 'id',
-  refresh
-})
+const deptTree = computed<DeptTreeNode[]>(() => {
+  const map = new Map<string, DeptTreeNode>()
+  const roots: DeptTreeNode[] = []
 
-// 选择列
-const UCheckbox = resolveComponent('UCheckbox')
-const { selectionColumn } = useSelectionColumn<SysDeptDto>({
-  data,
-  checkedRowKeys,
-  checkboxComponent: UCheckbox as Component
-})
-
-// 定义列配置（包含选择列）
-const columns = computed<TableColumn<SysDeptDto>[]>(() => {
-  const actionColumn: TableColumn<SysDeptDto> = {
-    id: 'actions',
-    header: () => $ts('common.operate'),
-    cell: ({ row }) => {
-      const UButton = resolveComponent('UButton')
-      const Popconfirm = resolveComponent('Popconfirm')
-      const actions = []
-
-      if (deptPermissions.canEdit.value) {
-        actions.push(h(UButton, {
-          variant: 'outline',
-          color: 'primary',
-          size: 'xs',
-          onClick: () => handleEdit(row.original.id as string)
-        }, { default: () => $ts('common.edit') }))
-      }
-
-      if (deptPermissions.canDel.value) {
-        actions.push(h(Popconfirm, {
-          onConfirm: () => handleDelete(row.original.id as string)
-        }, {
-          trigger: () => h(UButton, {
-            variant: 'outline',
-            color: 'error',
-            size: 'xs'
-          }, { default: () => $ts('common.delete') })
-        }))
-      }
-
-      return h('div', { class: 'flex gap-2' }, actions)
+  depts.value.forEach((item) => {
+    if (!item.id) {
+      return
     }
-  }
-  return [
-    // 选择列
-    ...(deptPermissions.canDel.value ? [selectionColumn] : []),
-    // 序号列
-    {
-      id: 'index',
-      header: () => $ts('common.index'),
-      cell: ({ row }) => {
-        const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
-        return h('span', { class: 'text-gray-500 dark:text-gray-400' }, index)
-      }
-    },
-    // 数据列
-    {
-      accessorKey: 'name',
-      header: () => $ts('module.system.department.deptName')
-    },
-    {
-      accessorKey: 'code',
-      header: () => $ts('module.system.department.deptCode')
-    },
-    {
-      accessorKey: 'leader',
-      header: () => $ts('module.system.department.leader')
-    },
-    {
-      accessorKey: 'phone',
-      header: () => $ts('module.system.department.phone')
-    },
-    {
-      accessorKey: 'email',
-      header: () => $ts('module.system.department.email')
-    },
-    useBadgeColumn<SysDeptDto>(
-      'status',
-      'module.system.department.deptStatus',
-      ENABLE_STATUS_CONFIG,
-      1
-    ),
-    useBadgeColumn<SysDeptDto>(
-      'sortOrder',
-      'module.system.department.sortOrder',
-      ENABLE_STATUS_CONFIG,
-      0
-    ),
-    ...(deptPermissions.canOperate.value ? [actionColumn] : [])
-  ]
+
+    map.set(item.id, {
+      ...item,
+      children: [],
+      level: item.level ?? 0
+    })
+  })
+
+  map.forEach((item) => {
+    if (item.parentId && item.parentId !== ROOT_PARENT_ID && map.has(item.parentId)) {
+      const parent = map.get(item.parentId)!
+      item.level = parent.level + 1
+      parent.children.push(item)
+      return
+    }
+
+    roots.push(item)
+  })
+
+  return roots
 })
 
+const parentOptions = computed(() => {
+  const options: Array<{ label: string, value: string }> = [
+    { label: $ts('module.system.department.rootDept'), value: ROOT_PARENT_ID }
+  ]
 
+  const walk = (nodes: DeptTreeNode[]) => {
+    nodes.forEach((node) => {
+      if (node.id) {
+        options.push({
+          label: `${'  '.repeat(node.level)}${node.name || node.code}`,
+          value: node.id
+        })
+        walk(node.children)
+      }
+    })
+  }
 
-/**
- * 处理删除
- */
-const handleDelete = async (id: string) => {
-  if (loading.value) return
-  await $trpc.sysDept.remove.mutate(id)
-  await onDeleted()
+  walk(deptTree.value)
+  return options
+})
+
+const setChildLoading = (id: string, loadingValue: boolean) => {
+  const ids = new Set(childLoadingIds.value)
+  if (loadingValue) {
+    ids.add(id)
+  } else {
+    ids.delete(id)
+  }
+  childLoadingIds.value = ids
 }
 
-/**
- * 处理批量删除
- */
-const handleBatchDelete = async () => {
-  if (loading.value || checkedRowKeys.value.length === 0) {
+const setChildLoaded = (id: string) => {
+  loadedChildIds.value = new Set([...loadedChildIds.value, id])
+}
+
+const mergeDeptChildren = (children: SysDeptDto[]) => {
+  const childIds = new Set(children.map(item => item.id).filter(Boolean))
+  depts.value = [
+    ...depts.value.filter(item => !item.id || !childIds.has(item.id)),
+    ...children
+  ]
+}
+
+const loadDepts = async () => {
+  loading.value = true
+  try {
+    const result = await $trpc.sysDept.page.query({
+      ...searchParams.value,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      parentId: ROOT_PARENT_ID
+    })
+    depts.value = result.list
+    loadedChildIds.value = new Set()
+    childLoadingIds.value = new Set()
+    pagination.page = result.page
+    pagination.pageSize = result.pageSize
+    pagination.total = result.total
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadDeptChildren = async (row: SysDeptDto) => {
+  if (!row.id || loadedChildIds.value.has(row.id) || childLoadingIds.value.has(row.id)) {
     return
   }
-  await $trpc.sysDept.batchDelete.mutate(checkedRowKeys.value)
-  await onBatchDeleted()
-}
 
-// 初始化加载
-onMounted(async () => {
-  await search()
-})
-</script>
-
-<style scoped>
-:deep(.overflow-auto) {
-  -webkit-overflow-scrolling: touch;
-}
-
-@media (max-width: 640px) {
-  :deep(table) {
-    display: table;
-    width: 100%;
-    min-width: 600px;
+  setChildLoading(row.id, true)
+  try {
+    const result = await $trpc.sysDept.page.query({
+      page: 1,
+      pageSize: CHILD_PAGE_SIZE,
+      parentId: row.id
+    })
+    mergeDeptChildren(result.list)
+    setChildLoaded(row.id)
+  } finally {
+    setChildLoading(row.id, false)
   }
 }
-</style>
+
+const openAdd = (parentId: string | null = ROOT_PARENT_ID) => {
+  operateType.value = 'add'
+  editingData.value = null
+  operateParentId.value = parentId || ROOT_PARENT_ID
+  drawerVisible.value = true
+}
+
+const openEdit = (row: SysDeptDto) => {
+  operateType.value = 'edit'
+  editingData.value = row
+  operateParentId.value = row.parentId || ROOT_PARENT_ID
+  drawerVisible.value = true
+}
+
+const handleSearch = async (params: SysDeptQueryDTO) => {
+  searchParams.value = params
+  pagination.page = 1
+  await loadDepts()
+}
+
+const handleRemove = async (row: SysDeptDto) => {
+  if (!row.id || loading.value) {
+    return
+  }
+
+  await $trpc.sysDept.remove.mutate(row.id)
+  useToastSuccess($ts('common.deleteSuccess'))
+  await loadDepts()
+}
+
+const handleBatchDelete = async (ids: string[]) => {
+  if (loading.value || ids.length === 0) {
+    return
+  }
+
+  await $trpc.sysDept.batchDelete.mutate(ids)
+  useToastSuccess($ts('common.deleteSuccess'))
+  await loadDepts()
+}
+
+const closeVisible = () => {
+  drawerVisible.value = false
+}
+
+onMounted(() => {
+  loadDepts()
+})
+
+watch(
+  () => ({ page: pagination.page, pageSize: pagination.pageSize }),
+  async (value, oldValue) => {
+    if (oldValue && (value.page !== oldValue.page || value.pageSize !== oldValue.pageSize)) {
+      await loadDepts()
+    }
+  }
+)
+</script>
+
+<template>
+  <main class="h-full flex flex-col p-3 gap-3">
+    <div class="flex-shrink-0">
+      <SysDeptSearch v-model:model="searchParams" @search="handleSearch" />
+    </div>
+
+    <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0 sm:p-0' }">
+      <DeptTreeTable
+        :items="deptTree"
+        :loading="loading"
+        :pagination="pagination"
+        :page-size-options="pageSizeOptions"
+        :can-add="deptPermissions.canAdd.value"
+        :can-edit="deptPermissions.canEdit.value"
+        :can-del="deptPermissions.canDel.value"
+        :add-permission="deptPermissions.codes.add"
+        :delete-permission="deptPermissions.codes.del"
+        :loaded-child-ids="loadedChildIds"
+        :child-loading-ids="childLoadingIds"
+        @add="openAdd(ROOT_PARENT_ID)"
+        @add-child="row => openAdd(row.id || ROOT_PARENT_ID)"
+        @batch-delete="handleBatchDelete"
+        @edit="openEdit"
+        @load-children="loadDeptChildren"
+        @remove="handleRemove"
+        @refresh="loadDepts()"
+      />
+    </UCard>
+
+    <SysDeptOperate
+      v-if="drawerVisible"
+      v-model:visible="drawerVisible"
+      :operate-type="operateType"
+      :data="editingData ?? undefined"
+      :parent-id="operateParentId"
+      :parent-options="parentOptions"
+      :close="closeVisible"
+      :refresh="loadDepts"
+    />
+  </main>
+</template>

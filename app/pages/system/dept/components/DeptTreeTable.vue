@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { h, type Component } from 'vue'
 import type { TableColumn, TableRow } from '@nuxt/ui'
-import type { MenuTreeNode, SysMenuDto } from '#shared/system/menu'
-import { ENABLE_STATUS_CONFIG, YES_NO_CONFIG, menuTypeConfig } from '#shared/constants/business'
+import type { SysDeptDto } from '#shared/system/department'
+import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
 import { useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
-import { displayOrDash, isPresent } from '~/utils/common'
+import { displayOrDash } from '~/utils/common'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
+
+export type DeptTreeNode = SysDeptDto & {
+  children: DeptTreeNode[]
+  level: number
+}
 
 const { $ts } = useI18n()
 
 const props = defineProps<{
-  items: MenuTreeNode[]
+  items: DeptTreeNode[]
   loading?: boolean
   pagination: { page: number, pageSize: number, total: number }
   pageSizeOptions?: number[]
@@ -25,11 +30,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   add: []
-  addChild: [row: SysMenuDto]
+  addChild: [row: SysDeptDto]
   batchDelete: [ids: string[]]
-  edit: [row: SysMenuDto]
-  loadChildren: [row: SysMenuDto]
-  remove: [row: SysMenuDto]
+  edit: [row: SysDeptDto]
+  loadChildren: [row: SysDeptDto]
+  remove: [row: SysDeptDto]
   refresh: []
 }>()
 
@@ -64,9 +69,9 @@ const minWidthColumn = (width: number) => ({
 })
 
 const visibleRows = computed(() => {
-  const rows: MenuTreeNode[] = []
+  const rows: DeptTreeNode[] = []
 
-  const walk = (nodes: MenuTreeNode[]) => {
+  const walk = (nodes: DeptTreeNode[]) => {
     nodes.forEach((node) => {
       rows.push(node)
 
@@ -80,37 +85,33 @@ const visibleRows = computed(() => {
   return rows
 })
 
-const { selectionColumn } = useSelectionColumn<MenuTreeNode>({
+const { selectionColumn } = useSelectionColumn<DeptTreeNode>({
   data: visibleRows,
   checkedRowKeys,
   checkboxComponent: UCheckbox as Component
 })
 
-const menuSelectionColumn = computed<TableColumn<MenuTreeNode>>(() => ({
+const deptSelectionColumn = computed<TableColumn<DeptTreeNode>>(() => ({
   ...selectionColumn,
   ...stableColumn(48)
 }))
 
 const isLoadingChildren = (id?: string | null) => Boolean(id && props.childLoadingIds?.has(id))
 const isLoadedChildren = (id?: string | null) => Boolean(id && props.loadedChildIds?.has(id))
-const getSubRows = (row: MenuTreeNode) => row.children?.length ? row.children : undefined
-const getRowId = (row: MenuTreeNode) => row.id ?? ''
+const getSubRows = (row: DeptTreeNode) => row.children?.length ? row.children : undefined
+const getRowId = (row: DeptTreeNode) => row.id ?? ''
 const expandedOptions = {
-  getRowCanExpand: (row: { original: MenuTreeNode }) => {
+  getRowCanExpand: (row: { original: DeptTreeNode }) => {
     const id = row.original.id
     if (!id) {
       return false
     }
 
-    if (row.original.children.length > 0) {
-      return true
-    }
-
-    return row.original.type === 0 && !isLoadedChildren(id)
+    return !isLoadedChildren(id) || row.original.children.length > 0
   }
 }
 
-const handleToggleExpanded = (row: TableRow<MenuTreeNode>) => {
+const handleToggleExpanded = (row: TableRow<DeptTreeNode>) => {
   if (!row.original.id || !row.getCanExpand()) {
     return
   }
@@ -134,88 +135,81 @@ const renderTextCell = (value: unknown, className = 'text-muted') => {
   return h('span', { class: `inline-block w-full truncate ${className}` }, displayOrDash(value))
 }
 
-const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
-  ...(props.canDel ? [menuSelectionColumn.value] : []),
+const columns = computed<TableColumn<DeptTreeNode>[]>(() => [
+  ...(props.canDel ? [deptSelectionColumn.value] : []),
   {
     accessorKey: 'sortOrder',
-    header: $ts('module.system.menu.order'),
+    header: $ts('module.system.department.sortOrder'),
     cell: ({ row }) => h('div', {
       class: 'flex min-w-0 items-center gap-2',
       style: { paddingLeft: `${row.depth * 16}px` }
     }, [
-      row.getCanExpand()
-        ? h(UButton, {
-            color: 'neutral',
-            variant: 'outline',
-            size: 'xs',
-            icon: row.getIsExpanded() ? 'i-lucide-minus' : 'i-lucide-plus',
-            loading: isLoadingChildren(row.original.id),
-            class: !row.getCanExpand() && 'invisible',
-            ui: {
-              base: 'p-0 rounded-sm',
-              leadingIcon: 'size-4'
-            },
-            onClick: () => handleToggleExpanded(row)
-          })
-        : h('span', { class: 'inline-block size-7 flex-none' }),
+      h(UButton, {
+        color: 'neutral',
+        variant: 'outline',
+        size: 'xs',
+        icon: row.getIsExpanded() ? 'i-lucide-minus' : 'i-lucide-plus',
+        loading: isLoadingChildren(row.original.id),
+        class: !row.getCanExpand() && 'invisible',
+        ui: {
+          base: 'p-0 rounded-sm',
+          leadingIcon: 'size-4'
+        },
+        onClick: () => handleToggleExpanded(row)
+      }),
       h('span', { class: 'inline-block min-w-0 flex-1 truncate text-muted' }, displayOrDash(row.original.sortOrder ?? 0))
     ]),
     ...stableColumn(132)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('type', 'module.system.menu.menuType', menuTypeConfig, 1),
-    ...stableColumn(88)
-  },
-  {
     accessorKey: 'name',
-    header: $ts('module.system.menu.menuName'),
+    header: $ts('module.system.department.deptName'),
     cell: ({ row }) => h('div', { class: 'flex min-w-0 items-center gap-2' }, [
+      h(UIcon, { name: 'i-lucide-building-2', class: 'size-4 flex-none text-muted' }),
       h('span', { class: 'truncate font-medium text-default' }, displayOrDash(row.original.name))
     ]),
-    ...minWidthColumn(160)
-  },
-  {
-    accessorKey: 'icon',
-    header: $ts('module.system.menu.icon'),
-    cell: ({ row }) => h('div', { class: 'flex justify-center' }, [
-      isPresent(row.original.icon)
-        ? h(UIcon, { name: row.original.icon, class: 'size-4 flex-none text-muted' })
-        : h('span', { class: 'text-muted' }, '-')
-    ]),
-    ...stableColumn(64)
+    ...minWidthColumn(180)
   },
   {
     accessorKey: 'code',
-    header: $ts('module.system.menu.routeName'),
+    header: $ts('module.system.department.deptCode'),
     cell: ({ row }) => renderTextCell(row.original.code, 'font-mono text-xs text-default'),
     ...minWidthColumn(140)
   },
   {
-    accessorKey: 'path',
-    header: $ts('module.system.menu.routePath'),
-    cell: ({ row }) => renderTextCell(row.original.path),
-    ...minWidthColumn(160)
+    accessorKey: 'leader',
+    header: $ts('module.system.department.leader'),
+    cell: ({ row }) => renderTextCell(row.original.leader, 'text-default'),
+    ...stableColumn(120)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('visible', 'module.system.menu.hideInMenu', YES_NO_CONFIG, 1),
-    ...stableColumn(88)
+    accessorKey: 'phone',
+    header: $ts('module.system.department.phone'),
+    cell: ({ row }) => renderTextCell(row.original.phone),
+    ...stableColumn(140)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('status', 'module.system.menu.menuStatus', ENABLE_STATUS_CONFIG, 1),
+    accessorKey: 'email',
+    header: $ts('module.system.department.email'),
+    cell: ({ row }) => renderTextCell(row.original.email),
+    ...minWidthColumn(180)
+  },
+  {
+    ...useBadgeColumn<DeptTreeNode>('status', 'module.system.department.deptStatus', ENABLE_STATUS_CONFIG, 1),
     ...stableColumn(88)
   },
   {
     id: 'actions',
     header: $ts('common.operate'),
     cell: ({ row }) => h('div', { class: 'flex justify-end gap-1 whitespace-nowrap' }, [
-      props.canAdd && row.original.type === 0
-        ? h(UTooltip, { text: $ts('module.system.menu.addChildMenu') }, {
+      props.canAdd
+        ? h(UTooltip, { text: $ts('module.system.department.addChildDept') }, {
             default: () => h(UButton, {
               icon: 'i-lucide-plus',
               variant: 'outline',
               size: 'xs',
               onClick: () => emit('addChild', row.original)
-            }, { default: () => $ts('module.system.menu.addChildMenu') })
+            }, { default: () => $ts('common.add') })
           })
         : null,
       props.canEdit
@@ -239,7 +233,7 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
           })
         : null
     ]),
-    ...stableColumn(260)
+    ...stableColumn(238)
   }
 ])
 
@@ -277,7 +271,7 @@ watch([() => props.items, visibleRows], () => {
         @refresh="emit('refresh')"
       >
         <template #prefix>
-          <span>{{ $ts('module.system.menu.title') }}</span>
+          <span>{{ $ts('module.system.department.title') }}</span>
         </template>
       </TableHeaderOperation>
     </template>

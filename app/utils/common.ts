@@ -20,6 +20,14 @@ export function translateOptions<T>(options: SelectOption<T>[]): SelectOption<nu
   }));
 }
 
+export function isPresent(value: unknown) {
+    return value !== undefined && value !== null && value !== ''
+}
+
+export function displayOrDash(value: unknown) {
+    return isPresent(value) ? String(value) : '-'
+}
+
 
 // export function translateOptions<T>(options: SelectOption<T>[]): ComputedRef<SelectOption<number>[]> {
 //     const { $ts } = useNuxtApp()

@@ -18,6 +18,8 @@ const props = defineProps<{
   visible: boolean;
   operateType: string;
   data?: SysDeptDto;
+  parentId?: string | null;
+  parentOptions?: Array<{ label: string, value: string }>;
   close?: () => void;
   refresh?: () => void;
 }>();
@@ -41,6 +43,10 @@ const statusValue = computed({
   get: () => String(state.value.status || 0),
   set: (val) => state.value.status = Number(val)
 });
+const parentIdValue = computed({
+  get: () => state.value.parentId || '0',
+  set: (val: string) => state.value.parentId = val
+});
 const state = ref<SysDeptAddDTO | SysDeptUpdateDTO>({
   id: '',
   name: '',
@@ -60,6 +66,13 @@ const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysDeptAddSchema : SysDeptUpdateSchema
 })
 const statusItems = useTransformRecordToOption(enableStatusRecord)
+const availableParentOptions = computed(() => {
+  if (props.operateType !== 'edit' || !props.data?.id) {
+    return props.parentOptions || []
+  }
+
+  return (props.parentOptions || []).filter(item => item.value !== props.data?.id)
+})
 const closeDrawer = () => {
   props.close?.()
 }
@@ -73,7 +86,7 @@ const initFormData = () => {
       id: props.data.id,
       name: props.data.name || '',
       code: props.data.code || '',
-      parentId: props.data.parentId || '',
+      parentId: props.data.parentId || '0',
       path: props.data.path || '',
       level: props.data.level ?? 0,
       sortOrder: props.data.sortOrder ?? 0,
@@ -89,7 +102,7 @@ const initFormData = () => {
       id: '',
       name: '',
       code: '',
-      parentId: '',
+      parentId: props.parentId || '0',
       path: '',
       level: 0,
       sortOrder: 0,
@@ -103,11 +116,30 @@ const initFormData = () => {
 }
 
 // 每次打开时重新初始化
-watch(visible, (newVal) => {
-  if (newVal) {
+watch(
+  () => [visible.value, props.operateType, props.data?.id, props.parentId] as const,
+  ([isVisible]) => {
+    if (!isVisible) {
+      return
+    }
+
     initFormData()
+  },
+  { immediate: true }
+)
+
+const validateDeptForm = async (formState: unknown) => {
+  const errors = await validate(formState)
+
+  if (props.operateType === 'edit' && state.value.id && state.value.parentId === state.value.id) {
+    errors.push({
+      name: 'parentId',
+      message: $ts('module.system.department.parentCannotSelf')
+    })
   }
-})
+
+  return errors
+}
 
 const handleSubmit = async (event: FormSubmitEvent<SysDeptAddDTO>) => {
   
@@ -147,7 +179,7 @@ const title = computed(() => {
   }">
 
     <template #body>
-      <UForm id="sys-dept-form" ref="form" :validate="validate" :state="state" class="max-h-[min(70vh,560px)] overflow-y-auto p-1" @submit="handleSubmit">
+      <UForm id="sys-dept-form" ref="form" :validate="validateDeptForm" :state="state" class="max-h-[min(70vh,560px)] overflow-y-auto p-1" @submit="handleSubmit">
         <div class="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-2">
           <UFormField name="name" required :label="$ts('module.system.department.deptName')" orientation="horizontal"
             :ui="formItemUi">
@@ -159,7 +191,12 @@ const title = computed(() => {
           </UFormField>
           <UFormField name="parentId" :label="$ts('module.system.department.parentDept')" orientation="horizontal"
             :ui="formItemUi">
-            <UBaseInput v-model="state.parentId" :placeholder="$ts('module.system.department.form.parentDept')" trailing="clear" class="w-full" />
+            <USelect
+              v-model="parentIdValue"
+              :items="availableParentOptions"
+              :placeholder="$ts('module.system.department.form.parentDept')"
+              class="w-full"
+            />
           </UFormField>
           <UFormField name="leader" :label="$ts('module.system.department.leader')" orientation="horizontal"
             :ui="formItemUi">

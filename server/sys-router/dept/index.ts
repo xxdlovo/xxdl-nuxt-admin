@@ -34,5 +34,9 @@ export const sysDeptRouter = router({
     page: p.list.input(SysDeptPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDeptService(ctx).page(input)
+        }),
+    list: p.list.input(SysDeptQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysDeptService(ctx).list(input)
         })
 })

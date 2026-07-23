@@ -91,6 +91,7 @@ export const SysUserQuerySchema = SysUserBaseSchema.pick({
   email: true,
   nickname: true,
   phone: true,
+  deptId: true,
   gender: true,
   status: true,
   remark: true
@@ -104,6 +105,7 @@ export const SysUserPageQuerySchema = SysUserBaseSchema.pick({
   email: true,
   nickname: true,
   phone: true,
+  deptId: true,
   gender: true,
   status: true,
   remark: true
