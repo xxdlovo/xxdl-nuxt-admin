@@ -22,7 +22,7 @@ const drawerVisible = ref(false)
 const drawerActivated = ref(false)
 const siderVisible = ref(false)
 const hybridSiderCollapsed = ref(false)
-let idleTimer: ReturnType<typeof setTimeout> | null = null
+let idleTimer: number | null = null
 
 const {
   firstLevelMenus,

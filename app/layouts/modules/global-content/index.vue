@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import AppTabsBar from '../global-tab/index.vue'
 
+const route = useRoute()
 const themeStore = useThemeStore()
+const tabsStore = useTabsStore()
+const { refreshKey } = storeToRefs(tabsStore)
 
 defineProps<{
   refreshKey: number
 }>()
+
+const pageKey = computed(() => `${route.fullPath}:${refreshKey.value}`)
 
 const panelUi = computed(() => ({
   body: themeStore.content.scrollMode === 'wrapper'
@@ -26,7 +32,7 @@ const contentClass = computed(() => themeStore.content.scrollMode === 'wrapper'
     </template>
 
     <template #body>
-      <div :key="refreshKey" :class="contentClass">
+      <div :key="pageKey" :class="contentClass">
         <slot />
       </div>
     </template>

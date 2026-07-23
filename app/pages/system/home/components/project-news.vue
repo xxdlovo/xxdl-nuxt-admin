@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const {  $t } = useI18n()
+const { $t } = useI18n()
 
 interface NewsItem {
-  id: number;
-  content: string;
-  time: string;
+  id: number
+  content: string
+  time: string
 }
 
 const newses = computed<NewsItem[]>(() => [
@@ -18,54 +18,61 @@ const newses = computed<NewsItem[]>(() => [
   { id: 8, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
   { id: 9, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
   { id: 10, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' }
-]);
-const moreNewsHandle = ()=>{
+])
+
+function moreNewsHandle() {
   console.log('moreNewsHandle')
 }
 </script>
 
 <template>
-  <UCard 
-    :title="String($t('page.home.creativity'))" 
-    borderless  
-    size="sm"  
-    class="h-[500px] w-full"
+  <UCard
+    :title="String($t('page.home.creativity'))"
+    borderless
+    size="sm"
+    class="flex min-h-[500px] w-full flex-col"
+    :ui="{ body: 'flex min-h-0 flex-1 p-0 sm:p-0' }"
   >
     <template #header>
-      <div class="flex justify-between items-center">
-        <span>{{$t('page.home.projectNews.title')}}</span>
-        <ULink @click="moreNewsHandle"  class="hover:text-primary text-primary" >{{ $t('page.home.projectNews.moreNews') }}</ULink>
+      <div class="flex items-center justify-between">
+        <span>{{ $t('page.home.projectNews.title') }}</span>
+        <ULink class="text-primary hover:text-primary" @click="moreNewsHandle">
+          {{ $t('page.home.projectNews.moreNews') }}
+        </ULink>
       </div>
     </template>
-    <div class="h-[calc(500px-60px)] overflow-y-scroll [scrollbar-width:thin] [scrollbar-color:transparent_transparent] hover:[scrollbar-color:rgb(0_0_0/0.2)_transparent] custom-scrollbar">
-      <UTimeline
-        :items="newses"
+
+    <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
+      <div
+        v-for="item in newses"
+        :key="item.id"
+        class="flex gap-3 border-b border-default py-4 first:pt-3 last:border-b-0"
       >
-        <template #indicator="{item}">
-          <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-            <img 
-              src="@/assets/imgs/soybean.jpg" 
-              alt="用户头像" 
-              class="w-full h-full object-cover"
-            >
-          </div>
-        </template>
-        <template #title="{ item }">
-          <div class="flex flex-col">
-            <span class="font-medium text-base">&nbsp;{{ item.content }}</span>
-          </div>
-        </template>
-        <template #description="{ item }">
-          <span class="text-black font-medium text-sm">{{ item.time }}</span>
-          <USeparator />
-        </template>
-      </UTimeline>
+        <img
+          src="@/assets/imgs/soybean.jpg"
+          alt="用户头像"
+          class="size-12 shrink-0 rounded-full object-cover"
+        >
+
+        <div class="min-w-0 flex-1 pt-1">
+          <div class="text-base font-medium leading-6 text-highlighted">{{ item.content }}</div>
+          <div class="mt-1 text-sm font-medium leading-5 text-default">{{ item.time }}</div>
+        </div>
+      </div>
     </div>
   </UCard>
 </template>
 
 <style scoped>
-/* Webkit滚动条样式（必须使用CSS，无法内联） */
+.custom-scrollbar {
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+
+.custom-scrollbar:hover {
+  scrollbar-color: rgb(0 0 0 / 0.2) transparent;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }

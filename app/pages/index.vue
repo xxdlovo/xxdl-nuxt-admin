@@ -3,7 +3,6 @@
   <UContainer>
     <Placeholder class="h-82" />
     <UButton @click="gotoUrl">后台</UButton>
-    <UBanner title="This is a banner with an important message." />
     <UColorModeSwitch >前后</UColorModeSwitch>
   </UContainer>
 

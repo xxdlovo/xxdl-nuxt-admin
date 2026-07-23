@@ -339,6 +339,39 @@
         "addRole": "新增角色",
         "editRole": "编辑角色"
       },
+      "notice": {
+        "title": "通知公告列表",
+        "noticeTitle": "公告标题",
+        "summary": "公告摘要",
+        "content": "公告内容",
+        "contentFormat": "内容格式",
+        "noticeType": "公告类型",
+        "topFlag": "置顶",
+        "status": "发布状态",
+        "publishTime": "发布时间",
+        "sortOrder": "排序",
+        "remark": "备注",
+        "type": {
+          "notice": "通知",
+          "announcement": "公告"
+        },
+        "publishStatus": {
+          "published": "已发布",
+          "draft": "草稿"
+        },
+        "form": {
+          "noticeTitle": "请输入公告标题",
+          "summary": "请输入公告摘要",
+          "content": "请输入公告内容，默认保存为 HTML，后续可切换 Markdown",
+          "noticeType": "请选择公告类型",
+          "status": "请选择发布状态",
+          "remark": "请输入备注"
+        },
+        "publish": "发布",
+        "withdraw": "撤回",
+        "addNotice": "新增通知公告",
+        "editNotice": "编辑通知公告"
+      },
       "roleMenu": {
         "title": "角色菜单列表",
         "roleId": "角色ID",
@@ -843,6 +876,7 @@
       "projectNews": {
         "title": "项目动态",
         "moreNews": "更多动态",
+        "detailTitle": "动态详情",
         "desc1": "Soybean 在2021年5月28日创建了开源项目 soybean-admin!",
         "desc2": "Yanbowe 向 soybean-admin 提交了一个bug，多标签栏不会自适应。",
         "desc3": "Soybean 准备为 soybean-admin 的发布做充分的准备工作!",

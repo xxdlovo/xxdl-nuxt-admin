@@ -75,6 +75,42 @@ export const ENABLE_STATUS_CONFIG = {
     '2': { i18nKey: enableStatusRecord['2'], color: 'warning' }
 } as const satisfies Record<string, BadgeConfig>
 
+export const noticeTypeRecord = {
+    '1': 'module.system.notice.type.notice',
+    '2': 'module.system.notice.type.announcement'
+} as const satisfies Record<string, string>
+
+export const noticeTypeOptions = transformRecordToOption(noticeTypeRecord)
+
+export const NOTICE_TYPE_CONFIG = {
+    '1': { i18nKey: noticeTypeRecord['1'], color: 'primary' },
+    '2': { i18nKey: noticeTypeRecord['2'], color: 'info' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const noticePublishStatusRecord = {
+    '1': 'module.system.notice.publishStatus.published',
+    '2': 'module.system.notice.publishStatus.draft'
+} as const satisfies Record<string, string>
+
+export const noticePublishStatusOptions = transformRecordToOption(noticePublishStatusRecord)
+
+export const NOTICE_PUBLISH_STATUS_CONFIG = {
+    '1': { i18nKey: noticePublishStatusRecord['1'], color: 'primary' },
+    '2': { i18nKey: noticePublishStatusRecord['2'], color: 'neutral' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const topFlagRecord = {
+    '0': 'common.yesOrNo.no',
+    '1': 'common.yesOrNo.yes'
+} as const satisfies Record<string, string>
+
+export const topFlagOptions = transformRecordToOption(topFlagRecord)
+
+export const TOP_FLAG_CONFIG = {
+    '0': { i18nKey: topFlagRecord['0'], color: 'neutral' },
+    '1': { i18nKey: topFlagRecord['1'], color: 'warning' }
+} as const satisfies Record<string, BadgeConfig>
+
 export const dataScopeRecord = {
     '1': 'module.system.role.dataScopeOptions.all',
     '2': 'module.system.role.dataScopeOptions.custom',
