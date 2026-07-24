@@ -20,10 +20,10 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         db: {
-            host: process.env.DB_HOST!,
-            user: process.env.DB_USER!,
-            password: process.env.DB_PASSWORD!,
-            database: process.env.DB_DATABASE!,
+            host: '',
+            user: '',
+            password: '',
+            database: '',
         },
         // 客户端可访问的环境变量
         public: {

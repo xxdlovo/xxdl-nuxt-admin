@@ -17,11 +17,22 @@ export const useDb = () => {
     const config = useRuntimeConfig();
 
     // 4. 创建物理连接池
+    const dbConfig = {
+        host: process.env.DB_HOST || config.db.host,
+        user: process.env.DB_USER || config.db.user,
+        password: process.env.DB_PASSWORD || config.db.password,
+        database: process.env.DB_DATABASE || config.db.database,
+    }
+
+    if (!dbConfig.host || !dbConfig.user || !dbConfig.database) {
+        throw new Error('Database config is missing. Set DB_HOST/DB_USER/DB_DATABASE or NUXT_DB_HOST/NUXT_DB_USER/NUXT_DB_DATABASE.')
+    }
+
     const poolConnection = mysql.createPool({
-        host: config.db.host,
-        user: config.db.user,
-        password: config.db.password,
-        database: config.db.database,
+        host: dbConfig.host,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        database: dbConfig.database,
         waitForConnections: true,
         connectionLimit: 10, // 根据你的并发需求调整
         queueLimit: 0,
