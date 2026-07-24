@@ -126,3 +126,81 @@ jobs:
               ${{ env.IMAGE_NAME }}
 
             sudo rm -f ~/.docker/config.json
+
+  notify:
+    name: Send Deploy Notification
+    if: always() && (needs.deploy-gate.outputs.enabled == 'true' || contains(github.event.head_commit.message, '部署'))
+    needs:
+      - deploy-gate
+      - check-env
+      - build-push
+      - deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build notification content
+        id: message
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          check_env_result="${{ needs.check-env.result }}"
+          build_result="${{ needs.build-push.result }}"
+          deploy_result="${{ needs.deploy.result }}"
+
+          label_result() {
+            case "$1" in
+              success) echo "成功" ;;
+              failure) echo "失败" ;;
+              cancelled) echo "已取消" ;;
+              skipped) echo "未执行" ;;
+              *) echo "$1" ;;
+            esac
+          }
+
+          check_env_label="$(label_result "$check_env_result")"
+          build_label="$(label_result "$build_result")"
+          deploy_label="$(label_result "$deploy_result")"
+
+          if [ "$check_env_result" = "failure" ]; then
+            title="${{ github.event.repository.name }} 部署失败"
+            status="失败"
+            reason="服务器环境检查未通过，请确认服务器上 .env 文件已创建。"
+          elif [ "$build_result" = "success" ] && [ "$deploy_result" = "success" ]; then
+            title="${{ github.event.repository.name }} 部署成功"
+            status="成功"
+            reason="应用构建、镜像推送和服务器部署均已完成。"
+          elif [ "$build_result" = "cancelled" ] || [ "$deploy_result" = "cancelled" ]; then
+            title="${{ github.event.repository.name }} 部署已取消"
+            status="已取消"
+            reason="工作流被取消，未完成部署。"
+          elif [ "$build_result" != "success" ]; then
+            title="${{ github.event.repository.name }} 部署失败"
+            status="失败"
+            reason="应用构建或镜像推送未成功，服务器部署未执行。"
+          else
+            title="${{ github.event.repository.name }} 部署失败"
+            status="失败"
+            reason="镜像构建成功，但服务器部署未成功。"
+          fi
+
+          {
+            echo "title=$title"
+            echo "desp<<EOF"
+            echo "部署状态：$status"
+            echo "状态说明：$reason"
+            echo "环境检查：$check_env_label ($check_env_result)"
+            echo "构建推送：$build_label ($build_result)"
+            echo "服务器部署：$deploy_label ($deploy_result)"
+            echo "分支：${{ github.ref_name }}"
+            echo "提交：${{ github.sha }}"
+            echo "提交信息：$COMMIT_MESSAGE"
+            echo "触发人：${{ github.actor }}"
+            echo "查看详情：${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send notification
+        uses: easychen/github-action-server-chan@v1.0.0
+        with:
+          sendkey: ${{ secrets.SENDKEY }}
+          title: ${{ steps.message.outputs.title }}
+          desp: ${{ steps.message.outputs.desp }}
