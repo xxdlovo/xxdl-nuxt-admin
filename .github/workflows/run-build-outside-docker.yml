@@ -61,7 +61,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22.20.0
+          node-version: 25.5.0
 
       - name: Install pnpm
         run: npm install -g pnpm
@@ -86,7 +86,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.runtime
+          file: ./Dockerfile
           push: true
           tags: ${{ env.IMAGE_NAME }}
           cache-from: type=gha
