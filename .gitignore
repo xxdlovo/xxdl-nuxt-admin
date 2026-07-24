@@ -31,3 +31,8 @@ logs
 
 # drizzle orm
 server/drizzle/out
+
+# ai
+.agents
+.codex
+.trae
