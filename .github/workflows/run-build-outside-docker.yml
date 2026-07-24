@@ -1,0 +1,125 @@
+name: Build Outside Docker Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: registry.cn-beijing.aliyuncs.com/${{ vars.ali_name_space }}/${{ github.event.repository.name }}:latest
+  CONTAINER_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  deploy-gate:
+    name: Check Deploy Gate
+    runs-on: ubuntu-latest
+    outputs:
+      enabled: ${{ steps.check.outputs.enabled }}
+    steps:
+      - name: Check commit message
+        id: check
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          if [[ "$COMMIT_MESSAGE" == *"部署"* ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  check-env:
+    name: Check Server Env
+    needs: deploy-gate
+    if: needs.deploy-gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check .env file exists on server
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SERVER_HOST_TWO }}
+          username: ${{ secrets.SERVER_TWO_USERNAME }}
+          password: ${{ secrets.SERVER_TWO_PASSWORD }}
+          script: |
+            set -e
+            if [ ! -f /opt/docker/${{ env.CONTAINER_NAME }}/.env ]; then
+              echo "Missing /opt/docker/${{ env.CONTAINER_NAME }}/.env on server" >&2
+              exit 1
+            fi
+            echo ".env exists"
+
+  build-push:
+    name: Build App And Push Image
+    needs:
+      - deploy-gate
+      - check-env
+    if: needs.deploy-gate.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.20.2
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts --legacy-peer-deps
+
+      - name: Build app
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Aliyun Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cn-beijing.aliyuncs.com
+          username: ${{ secrets.ALIYUN_USERNAME }}
+          password: ${{ secrets.ALIYUN_PASSWORD }}
+
+      - name: Build and push runtime image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.runtime
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy To Server
+    needs:
+      - deploy-gate
+      - build-push
+    if: needs.deploy-gate.outputs.enabled == 'true' && needs.build-push.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy by SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SERVER_HOST_TWO }}
+          username: ${{ secrets.SERVER_TWO_USERNAME }}
+          password: ${{ secrets.SERVER_TWO_PASSWORD }}
+          script: |
+            set -e
+
+            echo "${{ secrets.ALIYUN_PASSWORD }}" | sudo docker login registry.cn-beijing.aliyuncs.com \
+              -u "${{ secrets.ALIYUN_USERNAME }}" \
+              --password-stdin
+
+            sudo docker pull ${{ env.IMAGE_NAME }}
+            sudo docker stop ${{ env.CONTAINER_NAME }} || true
+            sudo docker rm ${{ env.CONTAINER_NAME }} || true
+
+            sudo docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --restart unless-stopped \
+              -p ${{ vars.EXT_PORT }}:3000 \
+              --env-file /opt/docker/${{ env.CONTAINER_NAME }}/.env \
+              -v /opt/docker/${{ env.CONTAINER_NAME }}/data:/app/data \
+              ${{ env.IMAGE_NAME }}
+
+            sudo rm -f ~/.docker/config.json
