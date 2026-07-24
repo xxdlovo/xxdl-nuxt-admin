@@ -1,0 +1,11 @@
+node_modules
+.nuxt
+.output
+.pnpm-store
+.git
+.github
+.idea
+.vscode
+*.log
+.env
+.env.*
