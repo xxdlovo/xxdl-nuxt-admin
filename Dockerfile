@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 
-FROM node:25-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN corepack enable
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm build
 
-FROM node:25-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -24,4 +24,4 @@ COPY --from=builder /app/.output ./.output
 
 EXPOSE 3000
 
-CMD ["pm2-runtime", "start", ".output/server/index.mjs", "--name", "nuxt-admin"]
+CMD ["pm2-runtime", "start", ".output/server/index.mjs", "--name", "xxdl-nuxt-admin"]
