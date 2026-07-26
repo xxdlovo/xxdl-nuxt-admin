@@ -40,6 +40,7 @@
     "delete": "Delete",
     "deleteSuccess": "Delete Success",
     "confirmDelete": "Are you sure you want to delete {count} items?",
+    "default": "Default",
     "edit": "Edit",
     "warning": "Warning",
     "error": "Error",

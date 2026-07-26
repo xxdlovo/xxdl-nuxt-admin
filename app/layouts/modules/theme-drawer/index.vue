@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { themeColorKeys } from '~/composables/themeColorUtils'
 import ThemeAppearance from './modules/appearance/index.vue'
 import ThemeGeneral from './modules/general/index.vue'
 import ThemeLayout from './modules/layout/index.vue'
@@ -14,6 +13,7 @@ const appConfig = useAppConfig()
 const colorMode = useColorMode()
 const toast = useToast()
 const themeStore = useThemeStore()
+const { resetBlackAsPrimary, resetThemeColors } = useThemeColors()
 const activeTab = ref<'appearance' | 'layout' | 'general' | 'preset'>('appearance')
 const open = defineModel<boolean>('open', {required: true})
 
@@ -64,18 +64,13 @@ function resetConfig() {
   themeStore.resetLayoutSettings()
 
   appConfig.theme.radius = 0.25
-  appConfig.theme.blackAsPrimary = false
-  appConfig.theme.colors = {}
+  resetBlackAsPrimary()
+  resetThemeColors()
   colorMode.preference = 'system'
 
   if (import.meta.client) {
     window.localStorage.removeItem('nuxt-ui-radius')
-    window.localStorage.removeItem('nuxt-ui-black-as-primary')
     window.localStorage.removeItem('nuxt-ui-color-mode')
-    for (const key of themeColorKeys) {
-      window.localStorage.removeItem(`nuxt-ui-theme-${key}`)
-      window.localStorage.removeItem(`nuxt-ui-${key}`)
-    }
   }
 
   toast.add({

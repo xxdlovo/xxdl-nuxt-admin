@@ -5,14 +5,14 @@ import SettingItem from '../../../components/setting-item.vue'
 const { $ts } = useI18n()
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
+const { setBlackAsPrimary } = useThemeColors()
 
 const blackAsPrimary = computed({
   get() {
     return appConfig.theme.blackAsPrimary
   },
   set(value) {
-    appConfig.theme.blackAsPrimary = value
-    window.localStorage.setItem('nuxt-ui-black-as-primary', String(value))
+    setBlackAsPrimary(value)
   }
 })
 

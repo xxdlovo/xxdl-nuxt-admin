@@ -25,6 +25,32 @@
     --color-green-800: #016538;
     --color-green-900: #0A5331;
     --color-green-950: #052E16;
+
+}
+
+.landing-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    color: var(--ui-primary);
+    text-transform: uppercase;
+    text-align: center;
+}
+
+.landing-shimmer {
+    background-size: 200% auto;
+    animation: landing-shimmer 10s ease-in-out infinite alternate;
+}
+
+@keyframes landing-shimmer {
+    from {
+        background-position: 0% center;
+    }
+
+    to {
+        background-position: 200% center;
+    }
 }
 
 .fade-enter-active,

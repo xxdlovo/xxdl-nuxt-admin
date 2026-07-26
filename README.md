@@ -1,5 +1,6 @@
 # xxdl-nuxt-admin
 建议node: 22.20.2
+前端来源: https://soybeanjs.cn/
 
 一个基于 Nuxt 4 的全栈后台管理系统。项目把管理端界面、登录认证、RBAC 权限、系统管理 API 和 MySQL 数据访问放在同一个 Nuxt 应用里，适合作为中后台系统、管理平台或业务后台的基础模板。
 

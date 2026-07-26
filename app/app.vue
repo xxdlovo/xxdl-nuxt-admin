@@ -11,6 +11,9 @@ const route = useRoute()
 const appConfig = useAppConfig()
 const colorMode = useColorMode()
 const themeStore = useThemeStore()
+const { initializeThemeColors } = useThemeColors()
+
+initializeThemeColors()
 
 const resolvedThemeColors = computed<Record<(typeof themeColorKeys)[number], string>>(() => {
   return Object.fromEntries(

@@ -7,9 +7,13 @@ const props = defineProps<{
   label: string
   recommendations: string[]
   previewHex?: string
+  defaultLabel: string
 }>()
 
 const color = defineModel<string>({ required: true })
+const emit = defineEmits<{
+  reset: []
+}>()
 
 const open = ref(false)
 const pickerValue = ref('#FFFFFF')
@@ -133,6 +137,14 @@ function selectRecommendation(hex: string) {
           </div>
 
           <div class="flex flex-wrap gap-1.5">
+            <UButton
+              :label="defaultLabel"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              icon="i-lucide-rotate-ccw"
+              @click="emit('reset')"
+            />
             <button
               v-for="hex in recommendations"
               :key="hex"
