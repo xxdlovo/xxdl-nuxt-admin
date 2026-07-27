@@ -142,11 +142,11 @@ export const landingContentEn = {
     items: [
       {
         id: 'group',
-        icon: 'i-lucide-users-round',
+        icon: 'i-selfhst:reddit',
         title: 'Community group',
-        description: 'Join the developer group for project discussion, feedback, and implementation ideas.',
+        description: 'Join the reddit group for project discussion, feedback, and implementation ideas.',
         type: 'link',
-        to: '#'
+        to: 'https://www.reddit.com/r/xxdl/'
       },
       {
         id: 'twitter',

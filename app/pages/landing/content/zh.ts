@@ -142,11 +142,11 @@ export const landingContentZh = {
     items: [
       {
         id: 'group',
-        icon: 'i-lucide-users-round',
+        icon: 'i-selfhst:reddit',
         title: '交流群组',
         description: '加入开发者群组，交流项目使用、问题反馈与实现思路。',
         type: 'link',
-        to: '#'
+        to: 'https://www.reddit.com/r/xxdl/'
       },
       {
         id: 'twitter',
