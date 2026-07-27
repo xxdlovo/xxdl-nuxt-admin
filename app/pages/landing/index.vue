@@ -9,12 +9,23 @@ import LandingShowcaseSection from './modules/LandingShowcaseSection.vue'
 import LandingStackSection from './modules/LandingStackSection.vue'
 import { useLandingLocale } from './useLandingLocale'
 
+declare global {
+  interface Window {
+    LA?: {
+      init?: (options: { id: string, ck: string }) => void
+    }
+    __NUXTADMIN_LA_INITIALIZED__?: boolean
+  }
+}
+
 definePageMeta({
   alias: '/',
   layout: 'landing'
 })
 
 const { content: page, locale } = useLandingLocale()
+const laConfig = { id: '3QgZUAv8LBLeVflg', ck: '3QgZUAv8LBLeVflg' }
+const laRetryTimer = ref<number>()
 
 useSeoMeta({
   title: () => page.value.seo.title,
@@ -33,12 +44,43 @@ useHead({
       key: 'la-collect',
       id: 'LA_COLLECT',
       src: 'https://sdk.51.la/js-sdk-pro.min.js'
-    },
-    {
-      key: 'la-init',
-      innerHTML: 'window.LA && window.LA.init({ id: "3QgZUAv8LBLeVflg", ck: "3QgZUAv8LBLeVflg" })'
     }
   ]
+})
+
+function initLaCollect() {
+  if (window.__NUXTADMIN_LA_INITIALIZED__ || typeof window.LA?.init !== 'function') {
+    return false
+  }
+
+  window.LA.init(laConfig)
+  window.__NUXTADMIN_LA_INITIALIZED__ = true
+
+  return true
+}
+
+onMounted(() => {
+  if (initLaCollect()) {
+    return
+  }
+
+  document.getElementById('LA_COLLECT')?.addEventListener('load', initLaCollect, { once: true })
+
+  let attempts = 0
+  laRetryTimer.value = window.setInterval(() => {
+    attempts += 1
+
+    if (initLaCollect() || attempts >= 30) {
+      window.clearInterval(laRetryTimer.value)
+      laRetryTimer.value = undefined
+    }
+  }, 300)
+})
+
+onBeforeUnmount(() => {
+  if (laRetryTimer.value) {
+    window.clearInterval(laRetryTimer.value)
+  }
 })
 </script>
 
