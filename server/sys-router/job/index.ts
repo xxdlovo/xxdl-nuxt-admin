@@ -8,6 +8,7 @@ import {
     SysJobUpdateSchema
 } from '#shared/system/job'
 import {sysJobService} from './SysJobService'
+import {demoReadonlyMiddleware} from "#server/trpc/middlewares/demo";
 
 const p = crudPermissionProcedures('system:job')
 
@@ -23,7 +24,7 @@ export const sysJobRouter = router({
     list: p.list.input(SysJobQuerySchema).query(({ctx, input}) => sysJobService(ctx).list(input)),
     page: p.list.input(SysJobPageQuerySchema).query(({ctx, input}) => sysJobService(ctx).page(input)),
     availableHandlers: p.list.query(({ctx}) => sysJobService(ctx).availableHandlers()),
-    runNow: permissionProcedure('system:job:run')
+    runNow: permissionProcedure('system:job:run').use(demoReadonlyMiddleware)
         .input(z.string().nonempty('form.id.required'))
         .mutation(async ({input}) => {
             return runTask('sys-job:run', {

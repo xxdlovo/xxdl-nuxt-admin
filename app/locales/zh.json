@@ -7,7 +7,8 @@
     "updateCancel": "稍后再说",
     "dbError": "数据库错误",
     "zodError": "校验错误",
-    "serverError": "服务端错误"
+    "serverError": "服务端错误",
+    "demoReadonly": "演示环境不允许操作"
   },
   "auth": {
     "invalidCredentials": "用户名或密码错误",

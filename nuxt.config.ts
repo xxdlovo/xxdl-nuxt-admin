@@ -19,6 +19,7 @@ export default defineNuxtConfig({
         port: 3001
     },
     runtimeConfig: {
+        demoMode: process.env.NUXT_DEMO_MODE === 'true',
         db: {
             host: '',
             user: '',
@@ -35,7 +36,7 @@ export default defineNuxtConfig({
             tasks: true
         },
         scheduledTasks: {
-            '* * * * *': ['sys-job:dispatch']
+            // '* * * * *': ['sys-job:dispatch']
         }
     },
     ui: {

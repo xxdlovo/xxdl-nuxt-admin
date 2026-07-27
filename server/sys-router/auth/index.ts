@@ -6,6 +6,7 @@ import { AppError } from '#server/utils/appError'
 import { SysUserChangePasswordSchema, SysUserProfileUpdateSchema } from '#shared/system/user'
 import { authService } from './AuthService'
 import { logRecorder } from '#server/sys-router/systemLog/LogRecorderService'
+import {demoReadonlyMiddleware} from '#server/trpc/middlewares/demo'
 
 const LoginSchema = z.object({
   username: z.string().min(1, 'form.userName.required'),
@@ -80,7 +81,7 @@ export const authRouter = router({
     return sysUserService(ctx).getById(ctx.user.id)
   }),
 
-  updateProfile: protectedProcedure.input(SysUserProfileUpdateSchema).mutation(async ({ ctx, input }) => {
+  updateProfile: protectedProcedure.use(demoReadonlyMiddleware).input(SysUserProfileUpdateSchema).mutation(async ({ ctx, input }) => {
     if (!ctx.user) {
       throw new AppError('auth.unauthorized')
     }
@@ -124,7 +125,7 @@ export const authRouter = router({
     return nextUser
   }),
 
-  changePassword: protectedProcedure.input(SysUserChangePasswordSchema).mutation(async ({ ctx, input }) => {
+  changePassword: protectedProcedure.use(demoReadonlyMiddleware).input(SysUserChangePasswordSchema).mutation(async ({ ctx, input }) => {
     if (!ctx.user) {
       throw new AppError('auth.unauthorized')
     }

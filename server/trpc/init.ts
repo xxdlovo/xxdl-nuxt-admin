@@ -4,6 +4,7 @@ import { errorFormatter } from './errorFormatter'
 import { loggerMiddleware } from './middlewares/logger'
 import { authMiddleware } from './middlewares/auth'
 import { permissionMiddleware } from './middlewares/permission'
+import { demoReadonlyMiddleware } from './middlewares/demo'
 import { crudPermissionCodes, type CrudPermissionProcedures } from '#shared/auth'
 
 export const t = initTRPC.context<Context>().create({
@@ -45,8 +46,8 @@ export const crudPermissionProcedures = (
   return {
     list: permissionProcedure(permissions.list),
     add: permissionProcedure(permissions.add),
-    edit: permissionProcedure(permissions.edit),
-    del: permissionProcedure(permissions.del)
+    edit: permissionProcedure(permissions.edit).use(demoReadonlyMiddleware),
+    del: permissionProcedure(permissions.del).use(demoReadonlyMiddleware)
   }
 }
 

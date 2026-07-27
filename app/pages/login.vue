@@ -6,8 +6,8 @@ const { fetch: fetchUserSession } = useUserSession()
 
 const loading = ref(false)
 const form = reactive({
-  username: '',
-  password: ''
+  username: 'admin',
+  password: 'adminadmin'
 })
 
 async function handleLogin() {
