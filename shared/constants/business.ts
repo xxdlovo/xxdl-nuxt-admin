@@ -75,6 +75,51 @@ export const ENABLE_STATUS_CONFIG = {
     '2': { i18nKey: enableStatusRecord['2'], color: 'warning' }
 } as const satisfies Record<string, BadgeConfig>
 
+export const jobStatusRecord = {
+    '0': 'page.manage.common.status.disable',
+    '1': 'page.manage.common.status.enable'
+} as const satisfies Record<string, string>
+
+export const jobStatusOptions = transformRecordToOption(jobStatusRecord)
+
+export const JOB_STATUS_CONFIG = {
+    '0': { i18nKey: jobStatusRecord['0'], color: 'warning' },
+    '1': { i18nKey: jobStatusRecord['1'], color: 'primary' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const jobRunningStatusRecord = {
+    '0': 'module.system.job.runningStatus.idle',
+    '1': 'module.system.job.runningStatus.running'
+} as const satisfies Record<string, string>
+
+export const JOB_RUNNING_STATUS_CONFIG = {
+    '0': { i18nKey: jobRunningStatusRecord['0'], color: 'neutral' },
+    '1': { i18nKey: jobRunningStatusRecord['1'], color: 'warning' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const jobLogStatusRecord = {
+    '0': 'module.system.jobLog.status.running',
+    '1': 'module.system.jobLog.status.success',
+    '2': 'module.system.jobLog.status.failed',
+    '3': 'module.system.jobLog.status.skipped'
+} as const satisfies Record<string, string>
+
+export const jobLogStatusOptions = transformRecordToOption(jobLogStatusRecord)
+
+export const JOB_LOG_STATUS_CONFIG = {
+    '0': { i18nKey: jobLogStatusRecord['0'], color: 'warning' },
+    '1': { i18nKey: jobLogStatusRecord['1'], color: 'success' },
+    '2': { i18nKey: jobLogStatusRecord['2'], color: 'error' },
+    '3': { i18nKey: jobLogStatusRecord['3'], color: 'neutral' }
+} as const satisfies Record<string, BadgeConfig>
+
+export const jobTriggerTypeRecord = {
+    schedule: 'module.system.jobLog.triggerType.schedule',
+    manual: 'module.system.jobLog.triggerType.manual'
+} as const satisfies Record<string, string>
+
+export const jobTriggerTypeOptions = transformRecordToOption(jobTriggerTypeRecord)
+
 export const noticeTypeRecord = {
     '1': 'module.system.notice.type.notice',
     '2': 'module.system.notice.type.announcement'

@@ -15,10 +15,14 @@ import { sysOssConfigRouter } from '#server/sys-router/ossConfig'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
 import { authRouter } from '#server/sys-router/auth'
+import { sysJobRouter } from '#server/sys-router/job'
+import { sysJobLogRouter } from '#server/sys-router/jobLog'
 
 // 收集相关路由
 export const appRouter = router({
     auth: authRouter,
+    sysJob: sysJobRouter,
+    sysJobLog: sysJobLogRouter,
     sysUser: sysUserRouter,
     sysDept: sysDeptRouter,
     demo: demoRouter,

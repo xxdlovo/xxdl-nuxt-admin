@@ -373,6 +373,70 @@
         "addNotice": "Add Notice",
         "editNotice": "Edit Notice"
       },
+      "job": {
+        "title": "Job List",
+        "jobName": "Job Name",
+        "jobCode": "Job Code",
+        "handlerCode": "Handler",
+        "cronExpression": "Cron",
+        "status": "Status",
+        "sortOrder": "Sort Order",
+        "remark": "Remark",
+        "nextRunAt": "Next Run",
+        "lastRunAt": "Last Run",
+        "runNow": "Run",
+        "viewLogs": "Logs",
+        "runSuccess": "Job executed",
+        "enable": "Enable",
+        "disable": "Disable",
+        "addJob": "Add Job",
+        "editJob": "Edit Job",
+        "handlerMissing": "Job handler does not exist",
+        "cronInvalid": "Cron expression is invalid",
+        "timezoneUnsupported": "Only Asia/Shanghai timezone is supported",
+        "runningStatus": {
+          "title": "Running",
+          "idle": "Idle",
+          "running": "Running"
+        },
+        "form": {
+          "jobName": "Please enter job name",
+          "jobCode": "Please enter job code",
+          "status": "Please select status",
+          "remark": "Please enter remark"
+        }
+      },
+      "jobLog": {
+        "title": "Job Log",
+        "detailTitle": "Job Log Detail",
+        "jobName": "Job Name",
+        "jobCode": "Job Code",
+        "handlerCode": "Handler",
+        "cronExpression": "Cron",
+        "logStatus": "Status",
+        "startedAt": "Started At",
+        "finishedAt": "Finished At",
+        "durationMs": "Duration",
+        "result": "Result",
+        "errorMessage": "Error Message",
+        "errorStack": "Error Stack",
+        "triggerType": {
+          "title": "Trigger",
+          "schedule": "Schedule",
+          "manual": "Manual"
+        },
+        "status": {
+          "running": "Running",
+          "success": "Success",
+          "failed": "Failed",
+          "skipped": "Skipped"
+        },
+        "form": {
+          "jobName": "Please enter job name",
+          "jobCode": "Please enter job code",
+          "status": "Please select status"
+        }
+      },
       "roleMenu": {
         "title": "Role Menu List",
         "roleId": "Role ID",

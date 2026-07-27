@@ -21,6 +21,7 @@ const loading = ref(false)
 const menus = ref<SysMenuDto[]>([])
 const loadedChildIds = ref(new Set<string>())
 const childLoadingIds = ref(new Set<string>())
+const treeResetKey = ref(0)
 const pageSizeOptions = [10, 20, 50, 100]
 const pagination = reactive({
   page: 1,
@@ -88,6 +89,7 @@ const loadMenus = async () => {
     menus.value = result.list
     loadedChildIds.value = new Set()
     childLoadingIds.value = new Set()
+    treeResetKey.value += 1
     pagination.page = result.page
     pagination.pageSize = result.pageSize
     pagination.total = result.total
@@ -198,6 +200,7 @@ watch(
         :delete-permission="menuPermissions.codes.del"
         :loaded-child-ids="loadedChildIds"
         :child-loading-ids="childLoadingIds"
+        :reset-key="treeResetKey"
         @add="openOperate({ type: 'add', parentId: ROOT_PARENT_ID, menuType: 0 })"
         @add-child="row => openOperate({ type: 'add', parentId: row.id, menuType: 1 })"
         @batch-delete="handleBatchDelete"

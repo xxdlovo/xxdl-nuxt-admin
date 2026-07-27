@@ -16,6 +16,7 @@ const props = defineProps<{
   pageSizeOptions?: number[]
   loadedChildIds?: Set<string>
   childLoadingIds?: Set<string>
+  resetKey?: number
   canAdd?: boolean
   canEdit?: boolean
   canDel?: boolean
@@ -106,7 +107,7 @@ const expandedOptions = {
       return true
     }
 
-    return row.original.type === 0 && !isLoadedChildren(id)
+    return !isLoadedChildren(id)
   }
 }
 
@@ -246,6 +247,10 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
 watch([() => props.items, visibleRows], () => {
   checkedRowKeys.value = checkedRowKeys.value.filter(id => visibleRows.value.some(row => row.id === id))
 }, { immediate: true })
+
+watch(() => props.resetKey, () => {
+  expanded.value = {}
+})
 </script>
 
 <template>

@@ -373,6 +373,70 @@
         "addNotice": "新增通知公告",
         "editNotice": "编辑通知公告"
       },
+      "job": {
+        "title": "任务列表",
+        "jobName": "任务名称",
+        "jobCode": "任务编码",
+        "handlerCode": "处理器",
+        "cronExpression": "Cron表达式",
+        "status": "状态",
+        "sortOrder": "排序",
+        "remark": "备注",
+        "nextRunAt": "下次执行",
+        "lastRunAt": "上次执行",
+        "runNow": "执行",
+        "viewLogs": "执行日志",
+        "runSuccess": "任务已执行",
+        "enable": "启用",
+        "disable": "停用",
+        "addJob": "新增任务",
+        "editJob": "编辑任务",
+        "handlerMissing": "任务处理器不存在",
+        "cronInvalid": "Cron表达式不正确",
+        "timezoneUnsupported": "暂时只支持Asia/Shanghai时区",
+        "runningStatus": {
+          "title": "运行状态",
+          "idle": "空闲",
+          "running": "运行中"
+        },
+        "form": {
+          "jobName": "请输入任务名称",
+          "jobCode": "请输入任务编码",
+          "status": "请选择状态",
+          "remark": "请输入备注"
+        }
+      },
+      "jobLog": {
+        "title": "任务日志",
+        "detailTitle": "任务日志详情",
+        "jobName": "任务名称",
+        "jobCode": "任务编码",
+        "handlerCode": "处理器",
+        "cronExpression": "Cron表达式",
+        "logStatus": "状态",
+        "startedAt": "开始时间",
+        "finishedAt": "结束时间",
+        "durationMs": "耗时",
+        "result": "执行结果",
+        "errorMessage": "错误信息",
+        "errorStack": "错误堆栈",
+        "triggerType": {
+          "title": "触发方式",
+          "schedule": "定时",
+          "manual": "手动"
+        },
+        "status": {
+          "running": "运行中",
+          "success": "成功",
+          "failed": "失败",
+          "skipped": "跳过"
+        },
+        "form": {
+          "jobName": "请输入任务名称",
+          "jobCode": "请输入任务编码",
+          "status": "请选择状态"
+        }
+      },
       "roleMenu": {
         "title": "角色菜单列表",
         "roleId": "角色ID",

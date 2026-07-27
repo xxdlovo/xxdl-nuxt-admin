@@ -3,6 +3,8 @@
 import { sysDepartment } from "./system/department"
 import { sysDictData } from "./system/dictData"
 import { sysDictType } from "./system/dictType"
+import { sysJob } from "./system/job"
+import { sysJobLog } from "./system/jobLog"
 import { sysLoginLog } from "./system/loginLog"
 import { sysMenu } from "./system/menu"
 import { sysNotice } from "./system/notice"
@@ -21,6 +23,8 @@ export {
   sysDepartment,
   sysDictData,
   sysDictType,
+  sysJob,
+  sysJobLog,
   sysLoginLog,
   sysMenu,
   sysNotice,

@@ -1,0 +1,31 @@
+import { index, int, mysqlTable, primaryKey, text, timestamp, tinyint, unique, varchar } from "drizzle-orm/mysql-core"
+
+export const sysJob = mysqlTable("sys_job", {
+  id: varchar({ length: 36 }).notNull(),
+  jobName: varchar("job_name", { length: 100 }).notNull(),
+  jobCode: varchar("job_code", { length: 100 }).notNull(),
+  handlerCode: varchar("handler_code", { length: 100 }).notNull(),
+  cronExpression: varchar("cron_expression", { length: 100 }).notNull(),
+  cronTimezone: varchar("cron_timezone", { length: 50 }).default("Asia/Shanghai").notNull(),
+  status: tinyint().default(1).notNull(),
+  runningStatus: tinyint("running_status").default(0).notNull(),
+  lastRunAt: timestamp("last_run_at", { mode: "string" }),
+  nextRunAt: timestamp("next_run_at", { mode: "string" }),
+  lastSuccessAt: timestamp("last_success_at", { mode: "string" }),
+  lastFailAt: timestamp("last_fail_at", { mode: "string" }),
+  lastDurationMs: int("last_duration_ms"),
+  lastError: text("last_error"),
+  sortOrder: int("sort_order").default(0),
+  remark: varchar({ length: 255 }),
+  createdBy: varchar("created_by", { length: 36 }),
+  createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+  updatedBy: varchar("updated_by", { length: 36 }),
+  updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  isDeleted: tinyint("is_deleted").default(0),
+},
+(table) => [
+  primaryKey({ columns: [table.id], name: "sys_job_id" }),
+  unique("uk_sys_job_code").on(table.jobCode),
+  index("idx_sys_job_dispatch").on(table.status, table.isDeleted, table.nextRunAt),
+  index("idx_sys_job_handler").on(table.handlerCode),
+])

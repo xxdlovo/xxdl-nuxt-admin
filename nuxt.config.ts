@@ -30,6 +30,14 @@ export default defineNuxtConfig({
             appName: 'Nuxt Admin System'
         }
     },
+    nitro: {
+        experimental: {
+            tasks: true
+        },
+        scheduledTasks: {
+            '* * * * *': ['sys-job:dispatch']
+        }
+    },
     ui: {
         // 关闭谷歌字体
         fonts: false
