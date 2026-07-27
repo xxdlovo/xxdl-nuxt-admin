@@ -179,7 +179,7 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
     header: $ts('module.system.menu.icon'),
     cell: ({ row }) => h('div', { class: 'flex justify-center' }, [
       isPresent(row.original.icon)
-        ? h(UIcon, { name: row.original.icon, class: 'size-4 flex-none text-muted' })
+        ? h(UIcon, { name: normalizeNavigationIcon(row.original.icon), class: 'size-4 flex-none text-muted' })
         : h('span', { class: 'text-muted' }, '-')
     ]),
     ...stableColumn(64)

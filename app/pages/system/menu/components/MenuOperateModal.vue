@@ -152,7 +152,7 @@ const remarkValue = computed({
   set: val => { state.value.remark = val }
 })
 
-const previewIcon = computed(() => (state.value.icon || '').trim())
+const previewIcon = computed(() => normalizeNavigationIcon(state.value.icon))
 
 const title = computed(() => props.operateType === 'add'
   ? $ts('module.system.menu.addMenu')

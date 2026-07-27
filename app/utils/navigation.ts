@@ -7,7 +7,22 @@ export type NavigationMeta = {
 }
 
 export function normalizeNavigationIcon(icon?: string | null) {
-  return icon
+  const normalizedIcon = icon?.trim()
+
+  if (!normalizedIcon) {
+    return undefined
+  }
+
+  if (normalizedIcon.startsWith('i-') && !normalizedIcon.includes(':')) {
+    return normalizedIcon
+  }
+
+  const iconifyMatch = normalizedIcon.match(/^(?:i-)?([\w-]+):([\w-]+)$/)
+  if (iconifyMatch) {
+    return `i-${iconifyMatch[1]}-${iconifyMatch[2]}`
+  }
+
+  return normalizedIcon
 }
 
 export function normalizeMenuIcon(icon?: string | null) {
