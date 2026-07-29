@@ -55,7 +55,7 @@ definePageMeta({
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysNoticeDto, SysNoticeQueryDTO } from '#shared/system/notice'
-import { NOTICE_PUBLISH_STATUS_CONFIG, NOTICE_TYPE_CONFIG, TOP_FLAG_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import SysNoticeSearch from './components/sys-notice-search.vue'
@@ -67,6 +67,9 @@ const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const noticePermissions = useCrudPermissions('system:notice')
 const searchParams = ref<SysNoticeQueryDTO>({})
+const noticeTypeConfig = useDictBadgeConfig(businessDictCode.noticeType)
+const publishStatusConfig = useDictBadgeConfig(businessDictCode.noticePublishStatus)
+const topFlagConfig = useDictBadgeConfig(businessDictCode.noYes)
 
 const {
   data,
@@ -147,9 +150,9 @@ const columns = computed<TableColumn<SysNoticeDto>[]>(() => {
       accessorKey: 'title',
       header: () => $ts('module.system.notice.noticeTitle')
     },
-    useBadgeColumn<SysNoticeDto>('noticeType', 'module.system.notice.noticeType', NOTICE_TYPE_CONFIG, 1),
-    useBadgeColumn<SysNoticeDto>('publishStatus', 'module.system.notice.status', NOTICE_PUBLISH_STATUS_CONFIG, 1),
-    useBadgeColumn<SysNoticeDto>('topFlag', 'module.system.notice.topFlag', TOP_FLAG_CONFIG, 0),
+    useBadgeColumn<SysNoticeDto>('noticeType', 'module.system.notice.noticeType', noticeTypeConfig.value, 1),
+    useBadgeColumn<SysNoticeDto>('publishStatus', 'module.system.notice.status', publishStatusConfig.value, 1),
+    useBadgeColumn<SysNoticeDto>('topFlag', 'module.system.notice.topFlag', topFlagConfig.value, 0),
     {
       accessorKey: 'publishTime',
       header: () => $ts('module.system.notice.publishTime')

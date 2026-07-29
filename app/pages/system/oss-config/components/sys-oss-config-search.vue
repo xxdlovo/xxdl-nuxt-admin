@@ -20,7 +20,7 @@
               <USelect v-model="serviceValue" :placeholder="$ts('module.system.ossConfig.form.service')" class="w-full" :items="serviceItems" clearable />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.ossConfig.configStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.ossConfig.form.configStatus')" class="w-full" :items="translateOptions(enableStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.ossConfig.form.configStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
@@ -38,9 +38,7 @@
 
 <script setup lang="ts">
 import { type SysOssConfigQueryDTO, SysOssConfigQuerySchema } from '#shared/system/ossConfig'
-import { enableStatusOptions, ossServiceRecord } from '#shared/constants/business'
-import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
-import { translateOptions } from '~/utils/common'
+import { businessDictCode } from '#shared/constants/business'
 
 const { $ts } = useI18n()
 const formItemUi = {
@@ -60,7 +58,8 @@ const serviceValue = computed({
   get: () => state.value.service ?? undefined,
   set: value => state.value.service = value || undefined
 })
-const serviceItems = useTransformRecordToOption(ossServiceRecord)
+const serviceItems = useDictOptions(businessDictCode.ossService)
+const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
 const items = computed(() => [
   {
     label: $ts('common.search'),

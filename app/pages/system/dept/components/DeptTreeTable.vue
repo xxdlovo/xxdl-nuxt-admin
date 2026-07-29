@@ -2,7 +2,7 @@
 import { h, type Component } from 'vue'
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { SysDeptDto } from '#shared/system/department'
-import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { displayOrDash } from '~/utils/common'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
@@ -13,6 +13,7 @@ export type DeptTreeNode = SysDeptDto & {
 }
 
 const { $ts } = useI18n()
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 const props = defineProps<{
   items: DeptTreeNode[]
@@ -195,7 +196,7 @@ const columns = computed<TableColumn<DeptTreeNode>[]>(() => [
     ...minWidthColumn(180)
   },
   {
-    ...useBadgeColumn<DeptTreeNode>('status', 'module.system.department.deptStatus', ENABLE_STATUS_CONFIG, 1),
+    ...useBadgeColumn<DeptTreeNode>('status', 'module.system.department.deptStatus', enableStatusConfig.value, 1),
     ...stableColumn(88)
   },
   {

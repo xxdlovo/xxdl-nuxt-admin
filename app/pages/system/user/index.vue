@@ -6,7 +6,7 @@ import type { SysUserDto } from '#shared/system/user/common'
 import SysUserSearch from './components/sys-user-search.vue'
 import SysUserOperate from './components/sys-user-operate.vue'
 import DeptSideTree, { type DeptTreeItem } from '../dept/components/DeptSideTree.vue'
-import { ENABLE_STATUS_CONFIG, USER_GENDER_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { useToastSuccess } from '~/utils/toast'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
@@ -24,8 +24,11 @@ definePageMeta({
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
+const dictStore = useDictStore()
 const tableRef = useTemplateRef('table')
 const userPermissions = useCrudPermissions('system:user')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const userGenderConfig = useDictBadgeConfig(businessDictCode.userGender)
 
 const deptKeyword = ref('')
 const selectedDeptId = ref<string | null>(null)
@@ -142,7 +145,7 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     useBadgeColumn<SysUserTableRow>(
       'gender',
       'module.system.user.userGender',
-      USER_GENDER_CONFIG,
+      userGenderConfig.value,
       0
     ),
     {
@@ -152,7 +155,7 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     useBadgeColumn<SysUserTableRow>(
       'status',
       'module.system.user.userStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(userPermissions.canOperate.value ? [actionColumn] : [])
@@ -210,6 +213,10 @@ const handleResetPassword = async (event: FormSubmitEvent<SysUserResetPasswordDT
 }
 
 onMounted(async () => {
+  await Promise.all([
+    dictStore.loadDict(businessDictCode.enableStatus),
+    dictStore.loadDict(businessDictCode.userGender)
+  ])
   await search()
 })
 </script>
@@ -245,7 +252,7 @@ onMounted(async () => {
               <template #header>
                 <TableHeaderOperation
                   v-if="tableRef?.tableRef"
-                  :table-ref="tableRef.tableRef"
+                  :table-ref="tableRef?.tableRef"
                   :loading="loading"
                   :disabled-delete="checkedRowKeys.length === 0 || loading"
                   :selected-count="checkedRowKeys.length"

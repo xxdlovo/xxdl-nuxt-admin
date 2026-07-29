@@ -17,7 +17,7 @@
               <UBaseInput v-model="state.code" :placeholder="$ts('module.system.dictType.form.code')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.dictType.dictStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.dictType.form.dictStatus')" class="w-full" :items="translateOptions(enableStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.dictType.form.dictStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -38,8 +38,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 const { $ts } = useI18n()
-import { enableStatusOptions } from "#shared/constants/business";
-import { translateOptions } from "~/utils/common";
+import { businessDictCode } from "#shared/constants/business";
 // set 0: default open search panel
 import { type SysDictTypeQueryDTO, SysDictTypeQuerySchema } from '#shared/system/dictType';
 const formItemUi = {
@@ -55,6 +54,7 @@ const schema = SysDictTypeQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
 const state = defineModel<SysDictTypeQueryDTO>('model', { required: true });
+const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
 const items = computed(() => [
   {
     label: $ts('common.search'),

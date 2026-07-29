@@ -9,8 +9,7 @@ import {
 } from "#shared/system/userRole";
 
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { enableStatusRecord } from "#shared/constants/business";
+import { businessDictCode } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -52,7 +51,7 @@ const state = ref<SysUserRoleAddDTO | SysUserRoleUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysUserRoleAddSchema : SysUserRoleUpdateSchema
 })
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
 const closeDrawer = () => {
   props.close?.()
 }

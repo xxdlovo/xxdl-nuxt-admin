@@ -19,7 +19,7 @@ function toRbacFlatMenu(menu: typeof sysMenu.$inferSelect): RbacFlatMenu {
         component: menu.component ?? null,
         icon: menu.icon ?? null,
         sortOrder: menu.sortOrder ?? 0,
-        visible: menu.visible ?? 1
+        visible: menu.visible ?? 0
     }
 }
 

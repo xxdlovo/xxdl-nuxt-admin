@@ -2,12 +2,15 @@
 import { h, type Component } from 'vue'
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { MenuTreeNode, SysMenuDto } from '#shared/system/menu'
-import { ENABLE_STATUS_CONFIG, YES_NO_CONFIG, menuTypeConfig } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { displayOrDash, isPresent } from '~/utils/common'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
 const { $ts } = useI18n()
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const menuTypeConfig = useDictBadgeConfig(businessDictCode.menuType)
+const noYesConfig = useDictBadgeConfig(businessDictCode.noYes)
 
 const props = defineProps<{
   items: MenuTreeNode[]
@@ -164,7 +167,7 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
     ...stableColumn(132)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('type', 'module.system.menu.menuType', menuTypeConfig, 1),
+    ...useBadgeColumn<MenuTreeNode>('type', 'module.system.menu.menuType', menuTypeConfig.value, 1),
     ...stableColumn(88)
   },
   {
@@ -198,11 +201,11 @@ const columns = computed<TableColumn<MenuTreeNode>[]>(() => [
     ...minWidthColumn(160)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('visible', 'module.system.menu.hideInMenu', YES_NO_CONFIG, 1),
+    ...useBadgeColumn<MenuTreeNode>('visible', 'module.system.menu.hideInMenu', noYesConfig.value, 0),
     ...stableColumn(88)
   },
   {
-    ...useBadgeColumn<MenuTreeNode>('status', 'module.system.menu.menuStatus', ENABLE_STATUS_CONFIG, 1),
+    ...useBadgeColumn<MenuTreeNode>('status', 'module.system.menu.menuStatus', enableStatusConfig.value, 1),
     ...stableColumn(88)
   },
   {

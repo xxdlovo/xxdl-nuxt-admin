@@ -60,7 +60,7 @@ import { h } from 'vue'
 import type { SysOssDto, SysOssQueryDTO } from '#shared/system/oss'
 import SysOssSearch from './components/sys-oss-search.vue'
 import SysOssOperate from './components/sys-oss-operate.vue'
-import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import { useToastSuccess, useToastWarning } from '~/utils/toast'
@@ -69,6 +69,7 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const ossPermissions = useCrudPermissions('system:oss')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 const searchParams = ref<SysOssQueryDTO>({})
 
@@ -226,7 +227,7 @@ const columns = computed<TableColumn<SysOssDto>[]>(() => {
     useBadgeColumn<SysOssDto>(
       'status',
       'module.system.oss.ossStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(ossPermissions.canOperate.value ? [actionColumn] : [])

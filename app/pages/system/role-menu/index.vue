@@ -61,7 +61,7 @@ import type { SysRoleMenuDto, SysRoleMenuQueryDTO } from '#shared/system/roleMen
 import SysRoleMenuSearch from './components/sys-role-menu-search.vue'
 import SysRoleMenuOperate from "./components/sys-role-menu-operate.vue"
 
-import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
+import { businessDictCode } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -69,6 +69,7 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const roleMenuPermissions = useCrudPermissions('system:roleMenu')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 // 搜索参数
 const searchParams = ref<SysRoleMenuQueryDTO>({})
@@ -157,7 +158,7 @@ const columns = computed<TableColumn<SysRoleMenuDto>[]>(() => {
     useBadgeColumn<SysRoleMenuDto>(
       'status',
       'module.system.roleMenu.roleMenuStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     {

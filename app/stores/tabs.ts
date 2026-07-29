@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { localStoragePersist } from './persistedStorage'
 
 export type AppTab = {
   path: string
@@ -140,5 +141,11 @@ export const useTabsStore = defineStore('tabs', () => {
     refreshActive,
     isManuallyClosed,
     clearManuallyClosedPaths
+  }
+}, {
+  persist: {
+    key: 'tabs',
+    storage: localStoragePersist,
+    pick: ['tabs', 'activePath']
   }
 })

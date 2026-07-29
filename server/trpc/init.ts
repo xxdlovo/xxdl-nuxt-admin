@@ -18,6 +18,7 @@ export const publicProcedure = t.procedure
 /**
  * Requires a valid user session, but does not check business permissions.
  * Use this for APIs that only need login state, such as auth.profile.
+ * 只需登录, 无需权限
  */
 export const protectedProcedure = publicProcedure.use(loggerMiddleware).use(authMiddleware)
 

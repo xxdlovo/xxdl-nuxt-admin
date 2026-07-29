@@ -56,7 +56,7 @@ definePageMeta({
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysJobDto, SysJobHandlerDTO, SysJobQueryDTO } from '#shared/system/job'
-import { JOB_RUNNING_STATUS_CONFIG, JOB_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { customPermissionCode } from '#shared/auth'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
@@ -75,6 +75,8 @@ const runPermissionCode = customPermissionCode('system:job', 'run')
 const canRun = computed(() => isAdmin.value || hasPermission(runPermissionCode))
 const searchParams = ref<SysJobQueryDTO>({})
 const handlers = ref<SysJobHandlerDTO[]>([])
+const jobStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const jobRunningStatusConfig = useDictBadgeConfig(businessDictCode.jobRunningStatus)
 
 const {
   data,
@@ -193,8 +195,8 @@ const columns = computed<TableColumn<SysJobDto>[]>(() => {
       accessorKey: 'cronExpression',
       header: () => $ts('module.system.job.cronExpression')
     },
-    useBadgeColumn<SysJobDto>('status', 'module.system.job.status', JOB_STATUS_CONFIG, 1),
-    useBadgeColumn<SysJobDto>('runningStatus', 'module.system.job.runningStatus.title', JOB_RUNNING_STATUS_CONFIG, 0),
+    useBadgeColumn<SysJobDto>('status', 'module.system.job.status', jobStatusConfig.value, 1),
+    useBadgeColumn<SysJobDto>('runningStatus', 'module.system.job.runningStatus.title', jobRunningStatusConfig.value, 0),
     {
       accessorKey: 'nextRunAt',
       header: () => $ts('module.system.job.nextRunAt')

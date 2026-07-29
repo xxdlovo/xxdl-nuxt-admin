@@ -7,8 +7,7 @@ import {
   type SysOssConfigDto
 } from '#shared/system/ossConfig'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
-import { enableStatusRecord, ossAccessPolicyRecord, ossBooleanRecord, ossServiceRecord } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
@@ -58,14 +57,14 @@ const state = ref<SysOssConfigAddDTO | SysOssConfigUpdateDTO>({
 const { validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysOssConfigAddSchema : SysOssConfigUpdateSchema
 })
-const statusItems = useTransformRecordToOption(enableStatusRecord)
-const serviceItems = useTransformRecordToOption(ossServiceRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
+const serviceItems = useDictOptions(businessDictCode.ossService)
 const serviceValue = computed({
   get: () => state.value.service ?? undefined,
   set: value => state.value.service = value || ''
 })
-const booleanItems = useTransformRecordToOption(ossBooleanRecord)
-const accessPolicyItems = useTransformRecordToOption(ossAccessPolicyRecord)
+const booleanItems = useDictOptions(businessDictCode.noYes)
+const accessPolicyItems = useDictOptions(businessDictCode.ossAccessPolicy)
 
 const httpsValue = computed({
   get: () => String(state.value.isHttps ?? 1),

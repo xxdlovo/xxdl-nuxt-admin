@@ -9,9 +9,9 @@ import {
 } from "#shared/system/dictData";
 
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { enableStatusRecord } from "#shared/constants/business";
+import { businessDictCode } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
+import {useDictStore} from "~/stores/dict";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const props = defineProps<{
@@ -19,6 +19,7 @@ const props = defineProps<{
   operateType: string;
   data?: SysDictDataDto;
   defaultTypeId?: string;
+  defaultTypeCode?: string;
   disableTypeId?: boolean;
   close?: () => void;
   refresh?: () => void;
@@ -47,6 +48,8 @@ const state = ref<SysDictDataAddDTO | SysDictDataUpdateDTO>({
   id: '',
   typeId: '',
   label: '',
+  i18nKey: '',
+  listClass: 'neutral',
   value: '',
   sortOrder: 0,
   status: 1,
@@ -56,7 +59,33 @@ const state = ref<SysDictDataAddDTO | SysDictDataUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysDictDataAddSchema : SysDictDataUpdateSchema
 })
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
+type BadgeColor = 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' | 'neutral'
+interface ListClassItem {
+  label: string
+  value: BadgeColor
+  color: BadgeColor
+}
+const badgeColors = new Set<BadgeColor>(['primary', 'secondary', 'success', 'warning', 'error', 'info', 'neutral'])
+const listClassItems: ListClassItem[] = [
+  { label: 'Primary', value: 'primary', color: 'primary' },
+  { label: 'Secondary', value: 'secondary', color: 'secondary' },
+  { label: 'Success', value: 'success', color: 'success' },
+  { label: 'Warning', value: 'warning', color: 'warning' },
+  { label: 'Error', value: 'error', color: 'error' },
+  { label: 'Info', value: 'info', color: 'info' },
+  { label: 'Neutral', value: 'neutral', color: 'neutral' }
+]
+const listClassValue = computed<BadgeColor>({
+  get: () => {
+    const value = state.value.listClass
+    return badgeColors.has(value as BadgeColor) ? value as BadgeColor : 'neutral'
+  },
+  set: value => state.value.listClass = value
+})
+const selectedListClass = computed(() =>
+  listClassItems.find(item => item.value === listClassValue.value) ?? listClassItems.at(-1)!
+)
 const closeDrawer = () => {
   props.close?.()
 }
@@ -70,6 +99,8 @@ const initFormData = () => {
       id: props.data.id,
       typeId: props.data.typeId || '',
       label: props.data.label || '',
+      i18nKey: props.data.i18nKey || '',
+      listClass: props.data.listClass || 'neutral',
       value: props.data.value || '',
       sortOrder: props.data.sortOrder ?? 0,
       status: props.data.status ?? 1,
@@ -81,6 +112,8 @@ const initFormData = () => {
       id: '',
       typeId: props.defaultTypeId || '',
       label: '',
+      i18nKey: '',
+      listClass: 'neutral',
       value: '',
       sortOrder: 0,
       status: 1,
@@ -111,6 +144,8 @@ const handleSubmit = async (event: FormSubmitEvent<SysDictDataAddDTO>) => {
 const handleEdit = async () => {
   await $trpc.sysDictData.update.mutate(state.value as SysDictDataUpdateDTO)
   useToastSuccess($ts('common.modifySuccess'))
+  const dictStore = useDictStore()
+  dictStore.clearDict(props.defaultTypeCode)
 }
 // 保存数据
 const handleSave = async () => {
@@ -135,11 +170,11 @@ const title = computed(() => {
     <template #body class="w-[50%]">
       <UForm ref="form" :validate="validate" :state="state" class="p-2" @submit="handleSubmit">
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
-          <UFormField name="typeId" required :label="$ts('module.system.dictData.typeId')" orientation="horizontal"
+          <UFormField name="typeId" required :label="$ts('module.system.dictType.code')" orientation="horizontal"
             :ui="formItemUi">
             <UBaseInput
-              v-model="state.typeId"
-              :placeholder="$ts('module.system.dictData.form.typeId')"
+              v-model="props.defaultTypeCode"
+              :placeholder="$ts('module.system.dictType.form.code')"
               :variant="disableTypeId ? 'subtle' : 'outline'"
               :disabled="disableTypeId"
               :trailing="disableTypeId ? 'other' : 'clear'"
@@ -149,9 +184,23 @@ const title = computed(() => {
             :ui="formItemUi">
             <UBaseInput v-model="state.label" :placeholder="$ts('module.system.dictData.form.label')" trailing="clear" />
           </UFormField>
+          <UFormField name="i18nKey" label="I18n Key" orientation="horizontal"
+            :ui="formItemUi">
+            <UBaseInput v-model="state.i18nKey" placeholder="module.xxx.xxx" trailing="clear" />
+          </UFormField>
           <UFormField name="value" required :label="$ts('module.system.dictData.value')" orientation="horizontal"
             :ui="formItemUi">
             <UBaseInput v-model="state.value" :placeholder="$ts('module.system.dictData.form.value')" trailing="clear" />
+          </UFormField>
+          <UFormField name="listClass" label="List Class" orientation="horizontal"
+            :ui="formItemUi">
+            <div class="flex items-center gap-2">
+              <USelect v-model="listClassValue" :items="listClassItems" class="min-w-36">
+              </USelect>
+              <UBadge :color="selectedListClass.color" variant="subtle">
+                {{ selectedListClass.label }}
+              </UBadge>
+            </div>
           </UFormField>
           <UFormField name="sortOrder" :label="$ts('module.system.dictData.sortOrder')" orientation="horizontal"
             :ui="formItemUi">

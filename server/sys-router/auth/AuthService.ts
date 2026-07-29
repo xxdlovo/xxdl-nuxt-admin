@@ -48,7 +48,7 @@ export function authService(ctx: Context) {
         : await sysMenuService(ctx).listEnabledByRoleIds(roleItems.map(role => role.id))
 
       const flatMenus = uniqById(menus)
-      const menuTreeItems = flatMenus.filter(menu => menu.visible === 1 && menu.type !== 2)
+      const menuTreeItems = flatMenus.filter(menu => menu.visible === 0 && menu.type !== 2)
 
       return {
         user,

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { layoutModes, type LayoutMode } from '#shared/layout'
+import { localStoragePersist } from './persistedStorage'
 
 const layoutModeStorageKey = 'theme:layoutMode'
 const layoutSettingsStorageKey = 'theme:layoutSettings'
@@ -251,5 +252,21 @@ export const useThemeStore = defineStore('theme', () => {
     toggleMixSiderFixed,
     resetLayoutSettings,
     getLayoutSettingsSnapshot
+  }
+}, {
+  persist: {
+    key: 'theme',
+    storage: localStoragePersist,
+    pick: [
+      'layoutMode',
+      'siderCollapse',
+      'mixSiderFixed',
+      'header',
+      'tab',
+      'sider',
+      'footer',
+      'content',
+      'general'
+    ]
   }
 })

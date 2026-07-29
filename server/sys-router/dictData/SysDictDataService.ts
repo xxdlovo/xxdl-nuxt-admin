@@ -44,5 +44,8 @@ export function sysDictDataService(ctx: Context) {
         async list(dto: any): Promise<SysDictDataDto[]> {
             return await repo.list(dto)
         },
+        async listByTypeCode(code: string): Promise<SysDictDataDto[]> {
+            return await repo.listByTypeCode(code)
+        },
     }
 }

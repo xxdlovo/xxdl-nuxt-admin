@@ -8,8 +8,7 @@ import {
   SysJobUpdateSchema
 } from '#shared/system/job'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { jobStatusOptions } from '#shared/constants/business'
-import { translateOptions } from '~/utils/common'
+import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
@@ -58,7 +57,7 @@ const handlerItems = computed(() => props.handlers.map(handler => ({
   label: `${handler.name} (${handler.code})`,
   value: handler.code
 })))
-const statusItems = computed(() => translateOptions(jobStatusOptions))
+const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
 const statusValue = computed({
   get: () => Number(state.value.status ?? 1),
   set: val => state.value.status = Number(val)

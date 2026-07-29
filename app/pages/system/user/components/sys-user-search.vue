@@ -14,7 +14,7 @@
               <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.gender" :placeholder="$ts('module.system.user.form.userGender')" class="w-full" :items="translateOptions(userGenderOptions)" clearable />
+              <USelect v-model.nullable="state.gender" :placeholder="$ts('module.system.user.form.userGender')" class="w-full" :items="genderItems" clearable />
             </UFormField>
             <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal" class="w-full" :ui="formItemUi">
               <UBaseInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')" trailing="clear" class="w-full" />
@@ -26,7 +26,7 @@
               <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.user.userStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.user.form.userStatus')" class="w-full" :items="translateOptions(enableStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.user.form.userStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -47,9 +47,8 @@
 <script setup lang="ts">
 import * as z from 'zod'
 const { $ts } = useI18n()
-import { userGenderOptions,enableStatusOptions } from "#shared/constants/business";
+import { businessDictCode } from "#shared/constants/business";
 import type{ Form } from '@nuxt/ui';
-import { translateOptions } from "~/utils/common";
 // set 0: default open search panel
 import {type SysUserQueryDTO, SysUserQuerySchema} from "#shared/system/user";
 const formItemUi = {
@@ -60,32 +59,8 @@ const formItemUi = {
 const emit = defineEmits<{
   search: [data: SysUserQueryDTO]
 }>()
-const genderItems = [
-    {
-      label: '未知',
-      value: 0
-    },
-    {
-      label: '男',
-      value: 1
-    },
-    {
-      label: '女',
-      value: 2
-    }]
-const statusItems = [
-    {
-      label: '未知',
-      value: 0
-    },
-    {
-      label: '正常',
-      value: 1
-    },
-    {
-      label: '停用',
-      value: 2
-    }]
+const genderItems = useDictNumberOptions(businessDictCode.userGender)
+const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
 const schema = SysUserQuerySchema
 const form = useTemplateRef('form')
 // const Schema = z.output<typeof SysUserQuerySchema>
@@ -111,3 +86,4 @@ const reset =()=> {
 }
 
 </script>
+

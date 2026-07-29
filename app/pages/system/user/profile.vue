@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { userGenderRecord } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import {
   SysUserChangePasswordSchema,
   SysUserProfileUpdateSchema,
@@ -52,7 +52,7 @@ const tabs = computed(() => [{
   slot: 'password' as const
 }])
 
-const genderItems = useTransformRecordToOption(userGenderRecord)
+const genderItems = useDictOptions(businessDictCode.userGender)
 const roleNames = computed(() => profile.value?.roles.map(role => role.name || role.code).filter(Boolean) ?? [])
 const displayName = computed(() => user.value?.nickname || user.value?.username || $ts('module.system.profile.userFallback'))
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())

@@ -4,6 +4,8 @@ export const SysDictDataBaseSchema = z.object({
     id: z.string().nullish(),
     typeId: z.string().nullish(),
     label: z.string().nullish().meta({ query: 'like' }),
+    i18nKey: z.string().nullish().meta({ query: 'like' }),
+    listClass: z.string().nullish(),
     value: z.string().nullish().meta({ query: 'like' }),
     sortOrder: z.number().nullish(),
     status: z.number().nullish(),

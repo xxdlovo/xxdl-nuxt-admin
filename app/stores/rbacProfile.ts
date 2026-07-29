@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { RbacProfile } from '#shared/auth'
+import { localStoragePersist } from './persistedStorage'
 
 /**
  * Stores the current user's RBAC read model for menus and permission checks.
@@ -74,5 +75,11 @@ export const useRbacProfileStore = defineStore('rbacProfile', () => {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions
+  }
+}, {
+  persist: {
+    key: 'rbacProfile',
+    storage: localStoragePersist,
+    pick: ['profile']
   }
 })

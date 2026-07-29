@@ -8,8 +8,7 @@ import {
 } from '#shared/system/notice'
 import { parseDate, parseTime, type DateValue, type Time } from '@internationalized/date'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { noticePublishStatusRecord, noticeTypeRecord, topFlagRecord } from '#shared/constants/business'
-import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
+import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 import NoticeRichTextEditor from './NoticeRichTextEditor.vue'
 
@@ -58,9 +57,9 @@ const { validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysNoticeAddSchema : SysNoticeUpdateSchema
 })
 
-const noticeTypeItems = useTransformRecordToOption(noticeTypeRecord)
-const publishStatusItems = useTransformRecordToOption(noticePublishStatusRecord)
-const topFlagItems = useTransformRecordToOption(topFlagRecord)
+const noticeTypeItems = useDictOptions(businessDictCode.noticeType)
+const publishStatusItems = useDictOptions(businessDictCode.noticePublishStatus)
+const topFlagItems = useDictOptions(businessDictCode.noYes)
 const contentFormatItems = computed(() => [
   { label: 'HTML', value: 'html' },
   { label: 'Markdown', value: 'md' }

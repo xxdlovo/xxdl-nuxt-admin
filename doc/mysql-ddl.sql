@@ -113,7 +113,7 @@ CREATE TABLE `sys_menu` (
                             `component` varchar(255) DEFAULT NULL COMMENT '组件路径',
                             `icon` varchar(50) DEFAULT NULL COMMENT '菜单图标',
                             `sort_order` int DEFAULT '0' COMMENT '显示顺序',
-                            `visible` tinyint DEFAULT '1' COMMENT '显示状态: 0-隐藏, 1-显示',
+                            `visible` tinyint DEFAULT '1' COMMENT '显示状态: 0-显示, 1-隐藏',
                             `status` tinyint DEFAULT '1' COMMENT '菜单状态: 0-禁用, 1-启用',
                             `remark` varchar(255) DEFAULT NULL COMMENT '备注',
                             `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',

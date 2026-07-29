@@ -4,6 +4,8 @@ export const sysDictData = mysqlTable("sys_dict_data", {
 	id: varchar({ length: 36 }).notNull(),
 	typeId: varchar("type_id", { length: 36 }).notNull(),
 	label: varchar({ length: 50 }).notNull(),
+	i18nKey: varchar("i18n_key", { length: 150 }),
+	listClass: varchar("list_class", { length: 30 }),
 	value: varchar({ length: 100 }).notNull(),
 	sortOrder: int("sort_order").default(0),
 	status: tinyint().default(1),

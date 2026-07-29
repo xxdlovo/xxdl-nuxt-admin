@@ -58,7 +58,7 @@ import { h } from 'vue'
 import type { SysOssConfigDto, SysOssConfigQueryDTO } from '#shared/system/ossConfig'
 import SysOssConfigSearch from './components/sys-oss-config-search.vue'
 import SysOssConfigOperate from './components/sys-oss-config-operate.vue'
-import { ENABLE_STATUS_CONFIG, ossAccessPolicyConfig, ossBooleanConfig, ossVerifyStatusConfig } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
@@ -67,6 +67,10 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const ossConfigPermissions = useCrudPermissions('system:ossConfig')
+const accessPolicyConfig = useDictBadgeConfig(businessDictCode.ossAccessPolicy)
+const noYesConfig = useDictBadgeConfig(businessDictCode.noYes)
+const verifyStatusConfig = useDictBadgeConfig(businessDictCode.ossVerifyStatus)
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 const searchParams = ref<SysOssConfigQueryDTO>({})
 const verifyingId = ref<string | null>(null)
@@ -184,25 +188,25 @@ const columns = computed<TableColumn<SysOssConfigDto>[]>(() => {
     useBadgeColumn<SysOssConfigDto>(
       'accessPolicy',
       'module.system.ossConfig.accessPolicy',
-      ossAccessPolicyConfig,
+      accessPolicyConfig.value,
       1
     ),
     useBadgeColumn<SysOssConfigDto>(
       'isDefault',
       'module.system.ossConfig.isDefault',
-      ossBooleanConfig,
+      noYesConfig.value,
       0
     ),
     useBadgeColumn<SysOssConfigDto>(
       'verifyStatus',
       'module.system.ossConfig.verifyStatus',
-      ossVerifyStatusConfig,
+      verifyStatusConfig.value,
       0
     ),
     useBadgeColumn<SysOssConfigDto>(
       'status',
       'module.system.ossConfig.configStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(ossConfigPermissions.canOperate.value ? [actionColumn] : [])

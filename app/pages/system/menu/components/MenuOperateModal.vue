@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { enableStatusRecord, menuTypeRecord } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import {
   type MenuButtonDraft,
   SysMenuAddSchema,
@@ -9,7 +9,6 @@ import {
   type SysMenuUpdateDTO
 } from '#shared/system/menu'
 import type { FormSubmitEvent, TableColumn } from '@nuxt/ui'
-import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
 import { useToastSuccess } from '~/utils/toast'
 import type { MenuOperateType } from '#shared/system/menu'
 
@@ -49,7 +48,7 @@ const emptyState = (): SysMenuAddDTO | SysMenuUpdateDTO => ({
   component: '',
   icon: '',
   sortOrder: 0,
-  visible: 1,
+  visible: 0,
   status: 1,
   remark: ''
 })
@@ -60,9 +59,9 @@ const { validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysMenuAddSchema : SysMenuUpdateSchema
 })
 
-const typeItems = useTransformRecordToOption(menuTypeRecord)
+const typeItems = useDictOptions(businessDictCode.menuType)
 const menuTypeItems = computed(() => typeItems.value.filter(item => item.value !== '2'))
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
 const iconTypeValue = ref('iconify')
 const iconTypeItems = computed(() => [
   { label: $ts('module.system.menu.iconType.iconify'), value: 'iconify' }
@@ -138,8 +137,8 @@ const parentValue = computed({
 })
 
 const visibleValue = computed({
-  get: () => Boolean(state.value.visible ?? 1),
-  set: val => state.value.visible = val ? 1 : 0
+  get: () => Number(state.value.visible ?? 0) === 0,
+  set: val => state.value.visible = val ? 0 : 1
 })
 
 const hiddenValue = computed({
@@ -170,7 +169,7 @@ const toMenuFormState = (menu?: SysMenuDto | null): SysMenuAddDTO | SysMenuUpdat
   component: menu?.component || '',
   icon: menu?.icon || '',
   sortOrder: menu?.sortOrder ?? 0,
-  visible: menu?.visible ?? 1,
+  visible: menu?.visible ?? 0,
   status: menu?.status ?? 1,
   remark: menu?.remark || ''
 })
@@ -180,7 +179,7 @@ const buildSubmitPayload = (): SysMenuAddDTO | SysMenuUpdateDTO => ({
   parentId: state.value.parentId || null,
   type: Number(state.value.type ?? 1),
   sortOrder: state.value.sortOrder ?? 0,
-  visible: state.value.visible ?? 1,
+  visible: state.value.visible ?? 0,
   status: state.value.status ?? 1
 })
 
@@ -221,7 +220,7 @@ const initFormData = () => {
     ...toMenuFormState(),
     parentId: props.parentId || ROOT_PARENT_VALUE,
     type: Number(props.defaultType ?? 1),
-    visible: 1
+    visible: 0
   }
   buttonRows.value = []
 }
@@ -288,7 +287,7 @@ const syncButtonRows = async (menuId: string) => {
       component: '',
       icon: '',
       sortOrder: row.sortOrder ?? 0,
-      visible: 0,
+      visible: 1,
       status: row.status ?? 1,
       remark: row.remark || ''
     }

@@ -61,7 +61,7 @@ import type { DemoDto, DemoQueryDTO } from "#shared/demo"
 import DemoSearch from './components/demo-search.vue'
 import DemoOperate from "./components/demo-operate.vue"
 
-import { ENABLE_STATUS_CONFIG } from "#shared/constants/business"
+import { businessDictCode } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -69,6 +69,7 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const demoPermissions = useCrudPermissions('demo')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 // 搜索参数
 const searchParams = ref<DemoQueryDTO>({})
@@ -161,7 +162,7 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
     useBadgeColumn<DemoDto>(
       'status',
       'module.demo.demoStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(demoPermissions.canOperate.value ? [actionColumn] : [])

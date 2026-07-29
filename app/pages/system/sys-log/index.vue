@@ -46,7 +46,7 @@ import { h } from 'vue'
 import type { SysLogDto, SysLogQueryDTO } from '#shared/system/SysLog'
 import SysLogSearch from './components/sys-log-search.vue'
 import SysLogDetail from './components/sys-log-detail.vue'
-import { SUCCESS_FAILURE_CONFIG, SYS_LOG_LEVEL_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, usePaginatedTable } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -57,6 +57,8 @@ const tableRef = useTemplateRef('table')
 const searchParams = ref<SysLogQueryDTO>({})
 const detailVisible = ref(false)
 const detailData = ref<SysLogDto | null>(null)
+const logLevelConfig = useDictBadgeConfig(businessDictCode.sysLogLevel)
+const logStatusConfig = useDictBadgeConfig(businessDictCode.jobLogStatus)
 
 const {
   data,
@@ -105,7 +107,7 @@ const columns = computed<TableColumn<SysLogDto>[]>(() => {
     useBadgeColumn<SysLogDto>(
       'level',
       'module.system.sysLog.logLevel',
-      SYS_LOG_LEVEL_CONFIG,
+      logLevelConfig.value,
       0
     ),
     {
@@ -127,7 +129,7 @@ const columns = computed<TableColumn<SysLogDto>[]>(() => {
     useBadgeColumn<SysLogDto>(
       'status',
       'module.system.sysLog.logStatus',
-      SUCCESS_FAILURE_CONFIG,
+      logStatusConfig.value,
       1
     ),
     actionColumn

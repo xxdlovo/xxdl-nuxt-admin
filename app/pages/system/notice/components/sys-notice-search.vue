@@ -14,10 +14,10 @@
               <UBaseInput v-model="state.title" :placeholder="$ts('module.system.notice.form.noticeTitle')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="noticeType" :label="$ts('module.system.notice.noticeType')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.noticeType" :placeholder="$ts('module.system.notice.form.noticeType')" class="w-full" :items="translateOptions(noticeTypeOptions)" clearable />
+              <USelect v-model.nullable="state.noticeType" :placeholder="$ts('module.system.notice.form.noticeType')" class="w-full" :items="noticeTypeItems" clearable />
             </UFormField>
             <UFormField name="publishStatus" :label="$ts('module.system.notice.status')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.publishStatus" :placeholder="$ts('module.system.notice.form.status')" class="w-full" :items="translateOptions(noticePublishStatusOptions)" clearable />
+              <USelect v-model.nullable="state.publishStatus" :placeholder="$ts('module.system.notice.form.status')" class="w-full" :items="publishStatusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
@@ -34,9 +34,8 @@
 </template>
 
 <script setup lang="ts">
-import { noticePublishStatusOptions, noticeTypeOptions } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { type SysNoticeQueryDTO, SysNoticeQuerySchema } from '#shared/system/notice'
-import { translateOptions } from '~/utils/common'
 
 const { $ts } = useI18n()
 const formItemUi = {
@@ -53,6 +52,8 @@ const schema = SysNoticeQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
 const state = defineModel<SysNoticeQueryDTO>('model', { required: true })
+const noticeTypeItems = useDictNumberOptions(businessDictCode.noticeType)
+const publishStatusItems = useDictNumberOptions(businessDictCode.noticePublishStatus)
 const items = computed(() => [{ label: $ts('common.search'), icon: '' }])
 
 const submit = async () => {

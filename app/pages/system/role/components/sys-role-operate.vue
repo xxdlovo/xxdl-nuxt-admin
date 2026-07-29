@@ -9,8 +9,7 @@ import {
 } from "#shared/system/role";
 
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { enableStatusRecord } from "#shared/constants/business";
+import { businessDictCode } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 import RolePermissionAssignModal from './RolePermissionAssignModal.vue'
 const { $trpc } = useNuxtApp()
@@ -56,7 +55,7 @@ const state = ref<SysRoleAddDTO | SysRoleUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => (props.operateType === 'add' ? SysRoleAddSchema : SysRoleUpdateSchema) as any
 })
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
 const permissionAssignVisible = ref(false)
 const permissionAssignType = ref<'menu' | 'button'>('menu')
 const permissionAssignRole = computed<SysRoleDto | null>(() => {

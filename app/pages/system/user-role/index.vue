@@ -61,7 +61,7 @@ import type { SysUserRoleDto, SysUserRoleQueryDTO } from '#shared/system/userRol
 import SysUserRoleSearch from './components/sys-user-role-search.vue'
 import SysUserRoleOperate from "./components/sys-user-role-operate.vue"
 
-import { ENABLE_STATUS_CONFIG} from "#shared/constants/business"
+import { businessDictCode } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -69,6 +69,7 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const userRolePermissions = useCrudPermissions('system:userRole')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 // 搜索参数
 const searchParams = ref<SysUserRoleQueryDTO>({})
@@ -161,7 +162,7 @@ const columns = computed<TableColumn<SysUserRoleDto>[]>(() => {
     useBadgeColumn<SysUserRoleDto>(
       'status',
       'module.system.userRole.userRoleStatus',
-        ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(userRolePermissions.canOperate.value ? [actionColumn] : [])

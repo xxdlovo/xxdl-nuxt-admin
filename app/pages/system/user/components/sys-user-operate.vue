@@ -3,8 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import type { SysRoleDto } from '#shared/system/role'
 import type { SysDeptDto } from '#shared/system/department'
 import { SysUserAddSchema, SysUserUpdateSchema, type SysUserAddDTO, type SysUserDto, type SysUserUpdateDTO } from '#shared/system/user'
-import { useTransformRecordToOption } from '~/composables/useTransformRecordToOption'
-import { enableStatusRecord, userGenderRecord } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
@@ -53,8 +52,8 @@ const loadingRoles = ref(false)
 const deptItems = ref<Array<{ label: string, value: string }>>([])
 const loadingDepts = ref(false)
 
-const genderItems = useTransformRecordToOption(userGenderRecord)
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const genderItems = useDictOptions(businessDictCode.userGender)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
 
 const { validate } = useZodValidation({
   schema: () => (props.operateType === 'add' ? SysUserAddSchema : SysUserUpdateSchema) as any

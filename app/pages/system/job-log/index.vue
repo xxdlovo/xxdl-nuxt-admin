@@ -80,7 +80,7 @@ definePageMeta({
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysJobLogDto, SysJobLogQueryDTO } from '#shared/system/jobLog'
-import { JOB_LOG_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import SysJobLogSearch from './components/sys-job-log-search.vue'
@@ -97,6 +97,7 @@ const searchParams = ref<SysJobLogQueryDTO>({
 const detailVisible = ref(false)
 const detailData = ref<SysJobLogDto | null>(null)
 const showDeletePopover = ref(false)
+const jobLogStatusConfig = useDictBadgeConfig(businessDictCode.jobLogStatus)
 
 const {
   data,
@@ -182,7 +183,7 @@ const columns = computed<TableColumn<SysJobLogDto>[]>(() => {
       accessorKey: 'triggerType',
       header: () => $ts('module.system.jobLog.triggerType.title')
     },
-    useBadgeColumn<SysJobLogDto>('status', 'module.system.jobLog.logStatus', JOB_LOG_STATUS_CONFIG, 0),
+    useBadgeColumn<SysJobLogDto>('status', 'module.system.jobLog.logStatus', jobLogStatusConfig.value, 0),
     {
       accessorKey: 'startedAt',
       header: () => $ts('module.system.jobLog.startedAt')

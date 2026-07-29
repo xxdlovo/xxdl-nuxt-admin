@@ -9,8 +9,7 @@ import {
 } from "#shared/system/department";
 
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useTransformRecordToOption } from "~/composables/useTransformRecordToOption";
-import { enableStatusRecord } from "#shared/constants/business";
+import { businessDictCode } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -65,7 +64,7 @@ const state = ref<SysDeptAddDTO | SysDeptUpdateDTO>({
 const { schema, validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysDeptAddSchema : SysDeptUpdateSchema
 })
-const statusItems = useTransformRecordToOption(enableStatusRecord)
+const statusItems = useDictOptions(businessDictCode.enableStatus)
 const availableParentOptions = computed(() => {
   if (props.operateType !== 'edit' || !props.data?.id) {
     return props.parentOptions || []

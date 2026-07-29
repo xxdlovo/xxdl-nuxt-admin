@@ -1,5 +1,5 @@
 //#server/sys-router/dictData
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
+import { router, crudPermissionProcedures, protectedProcedure } from '~~/server/trpc/init'
 import { sysDictDataService } from './SysDictDataService'
 import z from 'zod'
 import { SysDictDataAddSchema, SysDictDataUpdateSchema, SysDictDataQuerySchema, SysDictDataPageQuerySchema } from "#shared/system/dictData";
@@ -34,5 +34,9 @@ export const sysDictDataRouter = router({
     page: p.list.input(SysDictDataPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDictDataService(ctx).page(input)
+        }),
+    listByTypeCode: protectedProcedure.input(z.string())
+        .query(async ({ ctx, input }) => {
+            return sysDictDataService(ctx).listByTypeCode(input)
         })
 })

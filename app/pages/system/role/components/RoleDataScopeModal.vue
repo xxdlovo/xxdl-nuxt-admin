@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SysRoleDto } from '#shared/system/role'
-import { dataScopeRecord } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
 
 const props = defineProps<{
@@ -26,11 +26,11 @@ const state = reactive({
   dataScope: '5'
 })
 
+const dataScopeOptions = useDictOptions(businessDictCode.dataScope)
 const dataScopeItems = computed(() =>
-  Object.entries(dataScopeRecord).map(([value, label]) => ({
-    value,
-    disabled: value === '2',
-    label: $ts(label)
+  dataScopeOptions.value.map(item => ({
+    ...item,
+    disabled: item.value === '2'
   }))
 )
 

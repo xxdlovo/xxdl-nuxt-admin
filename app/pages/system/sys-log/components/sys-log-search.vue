@@ -17,7 +17,7 @@
               <UBaseInput v-model="state.message" :placeholder="$ts('module.system.sysLog.form.logMessage')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="level" :label="$ts('module.system.sysLog.logLevel')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.level" :placeholder="$ts('module.system.sysLog.form.logLevel')" class="w-full" :items="translateOptions(sysLogLevelOptions)" clearable />
+              <USelect v-model.nullable="state.level" :placeholder="$ts('module.system.sysLog.form.logLevel')" class="w-full" :items="levelItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
@@ -38,8 +38,7 @@
 <script setup lang="ts">
 import * as z from 'zod'
 const { $ts } = useI18n()
-import {sysLogLevelOptions} from "#shared/constants/business";
-import { translateOptions } from "~/utils/common";
+import { businessDictCode } from "#shared/constants/business";
 import { type SysLogQueryDTO, SysLogQuerySchema } from '#shared/system/SysLog';
 const formItemUi = {
   root: 'flex items-center',
@@ -54,6 +53,7 @@ const schema = SysLogQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
 const state = defineModel<SysLogQueryDTO>('model', { required: true });
+const levelItems = useDictNumberOptions(businessDictCode.sysLogLevel)
 const items = computed(() => [
   {
     label: $ts('common.search'),

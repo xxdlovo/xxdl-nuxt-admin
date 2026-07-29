@@ -13,7 +13,7 @@ export default defineNuxtConfig({
             }
         }
     },
-    modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt', 'motion-v/nuxt'],
+    modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt', 'motion-v/nuxt','pinia-plugin-persistedstate/nuxt'],
     devServer: {
         host: '0.0.0.0',
         port: 3001

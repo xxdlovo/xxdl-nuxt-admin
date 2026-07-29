@@ -68,7 +68,7 @@ import SysRoleSearch from './components/sys-role-search.vue'
 import SysRoleOperate from "./components/sys-role-operate.vue"
 import RoleDataScopeModal from './components/RoleDataScopeModal.vue'
 
-import { DATA_SCOPE_CONFIG, ENABLE_STATUS_CONFIG } from "#shared/constants/business"
+import { businessDictCode } from "#shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 
@@ -78,6 +78,8 @@ const tableRef = useTemplateRef('table')
 const rolePermissions = useCrudPermissions('system:role')
 const dataScopeVisible = ref(false)
 const dataScopeRole = ref<SysRoleDto | null>(null)
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const dataScopeConfig = useDictBadgeConfig(businessDictCode.dataScope)
 
 // 搜索参数
 const searchParams = ref<SysRoleQueryDTO>({})
@@ -182,13 +184,13 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
     useBadgeColumn<SysRoleDto>(
       'status',
       'module.system.role.roleStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     useBadgeColumn<SysRoleDto>(
       'dataScope',
       'module.system.role.dataScope',
-      DATA_SCOPE_CONFIG,
+      dataScopeConfig.value,
       5
     ),
     ...(rolePermissions.canOperate.value ? [actionColumn] : [])

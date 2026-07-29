@@ -80,6 +80,7 @@
       :operate-type="operateType"
       :data="editingData ?? undefined"
       :default-type-id="typeId"
+      :default-type-code="dictCode"
       :disable-type-id="Boolean(typeId)"
       :close="closeVisible"
       :refresh="loadData"
@@ -91,7 +92,7 @@
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysDictDataDto, SysDictDataQueryDTO } from '#shared/system/dictData'
-import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { useBadgeColumn, useSelectionColumn, useTableOperate } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import TableHeaderOperation from '~/components/table/TableHeaderOperation.vue'
@@ -99,7 +100,8 @@ import SysDictDataSearch from './sys-dict-data-search.vue'
 import SysDictDataOperate from './sys-dict-data-operate.vue'
 
 const props = defineProps<{
-  typeId?: string
+  typeId?: string,
+  dictCode?:string
 }>()
 
 const { $trpc } = useNuxtApp()
@@ -107,6 +109,8 @@ const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const dictDataPermissions = useCrudPermissions('system:dictData')
 const pageSizeOptions = [10, 20, 50, 100]
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const badgeColors = new Set(['primary', 'secondary', 'success', 'warning', 'error', 'info', 'neutral'])
 
 const data = ref<SysDictDataDto[]>([])
 const loading = ref(false)
@@ -175,6 +179,7 @@ const columns = computed<TableColumn<SysDictDataDto>[]>(() => {
       return h('div', { class: 'flex gap-2' }, actions)
     }
   }
+  const UBadge = resolveComponent('UBadge')
 
   const baseColumns: TableColumn<SysDictDataDto>[] = [
     ...(dictDataPermissions.canDel.value ? [selectionColumn] : []),
@@ -206,13 +211,22 @@ const columns = computed<TableColumn<SysDictDataDto>[]>(() => {
       header: () => $ts('module.system.dictData.value')
     },
     {
+      accessorKey: 'listClass',
+      header: () => 'List Class',
+      cell: ({ row }) => {
+        const rawColor = row.original.listClass || ''
+        const color = badgeColors.has(rawColor) ? rawColor : 'neutral'
+        return h(UBadge, { color, variant: 'subtle' }, { default: () => color })
+      }
+    },
+    {
       accessorKey: 'sortOrder',
       header: () => $ts('module.system.dictData.sortOrder')
     },
     useBadgeColumn<SysDictDataDto>(
       'status',
       'module.system.dictData.dictStatus',
-      ENABLE_STATUS_CONFIG,
+      enableStatusConfig.value,
       1
     ),
     ...(dictDataPermissions.canOperate.value ? [actionColumn] : [])

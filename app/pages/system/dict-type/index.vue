@@ -98,7 +98,7 @@
             </div>
 
             <div class="flex flex-1 min-h-0 flex-col p-3">
-              <SysDictDataPanel :type-id="selectedDictTypeId" />
+              <SysDictDataPanel :type-id="selectedDictTypeId" :dict-code="selectedDictTypeCode" />
             </div>
           </div>
         </template>
@@ -128,7 +128,7 @@
 
 <script setup lang="ts">
 import type { SysDictTypeDto, SysDictTypeQueryDTO } from '#shared/system/dictType'
-import { ENABLE_STATUS_CONFIG } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import SplitLayout from '~/components/SplitLayout.vue'
 import SysDictTypeOperate from './components/sys-dict-type-operate.vue'
 import SysDictDataPanel from '../dict-data/components/sys-dict-data-panel.vue'
@@ -150,6 +150,7 @@ const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const splitLayoutKey = ref(0)
 const dictTypePermissions = useCrudPermissions('system:dictType')
+const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 
 const dictTypes = ref<SysDictTypeDto[]>([])
 const dictTypeItems = computed(() => {
@@ -164,6 +165,7 @@ const dictTypePagination = reactive({
 })
 const selectedDictType = ref<SysDictTypeDto | null>(null)
 const selectedDictTypeId = computed(() => selectedDictType.value?.id || '')
+const selectedDictTypeCode = computed(() => selectedDictType.value?.code || '')
 
 const {
   operateType: dictTypeOperateType,
@@ -182,13 +184,13 @@ const {
 
 const statusText = (status: unknown) => {
   const normalizedStatus = String(status ?? 1)
-  const config = ENABLE_STATUS_CONFIG[normalizedStatus as keyof typeof ENABLE_STATUS_CONFIG]
+  const config = enableStatusConfig.value[normalizedStatus]
   return config ? $ts(config.i18nKey) : normalizedStatus
 }
 
 const statusColor = (status: unknown) => {
   const normalizedStatus = String(status ?? 1)
-  const config = ENABLE_STATUS_CONFIG[normalizedStatus as keyof typeof ENABLE_STATUS_CONFIG]
+  const config = enableStatusConfig.value[normalizedStatus]
   return config?.color || 'neutral'
 }
 

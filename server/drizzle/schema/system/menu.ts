@@ -10,7 +10,7 @@ export const sysMenu = mysqlTable("sys_menu", {
 	component: varchar({ length: 255 }),
 	icon: varchar({ length: 50 }),
 	sortOrder: int("sort_order").default(0),
-	visible: tinyint().default(1),
+	visible: tinyint().default(0),
 	status: tinyint().default(1),
 	remark: varchar({ length: 255 }),
 	createdBy: varchar("created_by", { length: 36 }),

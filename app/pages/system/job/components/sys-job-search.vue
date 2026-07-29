@@ -17,7 +17,7 @@
               <UBaseInput v-model="state.jobCode" :placeholder="$ts('module.system.job.form.jobCode')" trailing="clear" class="w-full" />
             </UFormField>
             <UFormField name="status" :label="$ts('module.system.job.status')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.job.form.status')" class="w-full" :items="translateOptions(jobStatusOptions)" clearable />
+              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.job.form.status')" class="w-full" :items="statusItems" clearable />
             </UFormField>
             <div class="lg:col-start-4 flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
@@ -34,9 +34,8 @@
 </template>
 
 <script setup lang="ts">
-import { jobStatusOptions } from '#shared/constants/business'
+import { businessDictCode } from '#shared/constants/business'
 import { type SysJobQueryDTO, SysJobQuerySchema } from '#shared/system/job'
-import { translateOptions } from '~/utils/common'
 
 const { $ts } = useI18n()
 const formItemUi = {
@@ -53,6 +52,7 @@ const schema = SysJobQuerySchema
 const form = useTemplateRef('form')
 const active = ref(undefined)
 const state = defineModel<SysJobQueryDTO>('model', { required: true })
+const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
 const items = computed(() => [{ label: $ts('common.search'), icon: '' }])
 
 const submit = async () => {
