@@ -10,6 +10,7 @@
         <!-- 清空按钮 -->
         <UButton
           v-if="showClear && hasValue"
+          type="button"
           color="neutral"
           variant="link"
           size="xs"
@@ -19,6 +20,7 @@
         <!-- 密码切换按钮 -->
         <UButton
           v-if="trailing === 'password'"
+          type="button"
           color="neutral"
           variant="link"
           size="xs"
@@ -28,6 +30,7 @@
         <!-- 复制按钮 -->
         <UButton
           v-if="trailing === 'copy' && hasValue"
+          type="button"
           color="neutral"
           variant="link"
           size="xs"

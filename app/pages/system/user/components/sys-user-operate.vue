@@ -290,6 +290,7 @@ watch(visible, (newVal) => {
         id="sys-user-form"
         :validate="validate"
         :state="state"
+        autocomplete="off"
         class="max-h-[min(70vh,560px)] overflow-y-auto p-1"
         @submit="handleSubmit"
       >
@@ -301,7 +302,12 @@ watch(visible, (newVal) => {
             orientation="horizontal"
             :ui="formItemUi"
           >
-            <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear" />
+            <UBaseInput
+              v-model="state.username"
+              :placeholder="$ts('module.system.user.form.userName')"
+              trailing="clear"
+              autocomplete="new-username"
+            />
           </UFormField>
 
           <UFormField
@@ -312,7 +318,12 @@ watch(visible, (newVal) => {
             orientation="horizontal"
             :ui="formItemUi"
           >
-            <UBaseInput v-model="state.password" :placeholder="$ts('module.system.user.form.password')" trailing="password" />
+            <UBaseInput
+              v-model="state.password"
+              :placeholder="$ts('module.system.user.form.password')"
+              trailing="password"
+              autocomplete="new-password"
+            />
           </UFormField>
 
           <UFormField

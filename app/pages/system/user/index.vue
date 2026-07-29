@@ -272,21 +272,21 @@ onMounted(async () => {
                     </div>
                   </template>
                 </TableHeaderOperation>
-
-                <SysUserOperate
-                  v-model:visible="drawerVisible"
-                  :operate-type="operateType"
-                  :data="editingData ?? undefined"
-                  :default-dept-id="currentDeptId"
-                  :close="closeVisible"
-                  :refresh="refresh"
-                />
               </template>
             </TableWithPagination>
           </UCard>
         </div>
       </template>
     </SplitLayout>
+
+    <SysUserOperate
+      v-model:visible="drawerVisible"
+      :operate-type="operateType"
+      :data="editingData ?? undefined"
+      :default-dept-id="currentDeptId"
+      :close="closeVisible"
+      :refresh="refresh"
+    />
 
     <UModal
       v-model:open="resetPasswordVisible"
