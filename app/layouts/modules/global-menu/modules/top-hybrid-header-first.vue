@@ -24,6 +24,17 @@ const {
 } = useMixMenu(() => props.menus)
 
 const sideItems = computed(() => toNavigationItems(secondLevelMenus.value))
+const navigationMenuUi = computed(() => ({
+  list: 'flex flex-col gap-1.5',
+  link: 'min-h-10 gap-2 text-[15px] shadow-none before:shadow-none focus-visible:before:ring-0',
+  linkLeadingIcon: 'size-6',
+  linkTrailing: collapsed.value ? 'hidden' : 'ms-auto inline-flex items-center',
+  linkTrailingIcon: 'size-5 shrink-0 opacity-80',
+  childList: 'flex flex-col gap-1.5',
+  childLink: 'min-h-9 gap-2 text-[15px] shadow-none before:shadow-none focus-visible:before:ring-0',
+  childLinkIcon: 'size-5'
+}))
+const activeTopMenuClass = '!bg-transparent text-primary shadow-none hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent'
 const sideWidth = computed(() => {
   if (!isActiveFirstLevelMenuHasChildren.value) {
     return 0
@@ -67,7 +78,8 @@ function handleSelectFirstLevel(menu: RbacMenu) {
               :label="menu.name"
               :icon="normalizeMenuIcon(menu.icon)"
               color="neutral"
-              :variant="isActiveTopMenu(menu) ? 'soft' : 'ghost'"
+              variant="ghost"
+              :class="isActiveTopMenu(menu) ? activeTopMenuClass : ''"
               @click="handleSelectFirstLevel(menu)"
             />
           </div>
@@ -84,8 +96,10 @@ function handleSelectFirstLevel(menu: RbacMenu) {
               :items="sideItems"
               :collapsed="collapsed"
               orientation="vertical"
+              trailing-icon="i-lucide-chevron-down"
               tooltip
               popover
+              :ui="navigationMenuUi"
             />
           </div>
         </aside>

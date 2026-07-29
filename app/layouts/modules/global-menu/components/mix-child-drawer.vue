@@ -36,6 +36,16 @@ const open = computed(() => props.visible && hasMenus.value)
 const reservedWidth = computed(() => props.pinned && hasMenus.value ? props.width : 0)
 const panelWidth = computed(() => open.value ? props.width : 0)
 const rootWidth = computed(() => props.floating ? panelWidth.value : reservedWidth.value)
+const navigationMenuUi = {
+  list: 'flex flex-col gap-1.5',
+  link: 'min-h-10 gap-2 text-[15px] shadow-none before:shadow-none focus-visible:before:ring-0',
+  linkLeadingIcon: 'size-6',
+  linkTrailing: 'ms-auto inline-flex items-center',
+  linkTrailingIcon: 'size-5 shrink-0 opacity-80',
+  childList: 'flex flex-col gap-1.5',
+  childLink: 'min-h-9 gap-2 text-[15px] shadow-none before:shadow-none focus-visible:before:ring-0',
+  childLinkIcon: 'size-5'
+}
 </script>
 
 <template>
@@ -63,8 +73,10 @@ const rootWidth = computed(() => props.floating ? panelWidth.value : reservedWid
           v-if="items.length > 0"
           orientation="vertical"
           :items="items"
+          trailing-icon="i-lucide-chevron-down"
           tooltip
           popover
+          :ui="navigationMenuUi"
         />
       </div>
     </div>

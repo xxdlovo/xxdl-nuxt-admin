@@ -49,7 +49,7 @@ function handleMouseLeave() {
         class="flex h-full shrink-0 flex-col border-r border-default bg-default"
         :style="{ width: `${collapsed ? themeStore.sider.mixCollapsedWidth : themeStore.sider.mixWidth}px` }"
       >
-        <AppLogo :show-title="false" class="h-14 shrink-0 justify-center" />
+        <AppLogo :show-title="false" class="h-14 w-full shrink-0 justify-center" />
         <div class="min-h-0 flex-1">
           <FirstLevelMenu
             :menus="firstLevelMenus"

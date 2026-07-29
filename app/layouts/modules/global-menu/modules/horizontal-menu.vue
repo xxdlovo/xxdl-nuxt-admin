@@ -18,6 +18,7 @@ const activeTrail = computed(() => resolveActiveTrail(renderableMenus.value, rou
 const dropdownUi = {
   content: 'z-[1000]'
 }
+const activeTopMenuClass = '!bg-transparent text-primary shadow-none hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent'
 
 function isActiveTopMenu(menu: RbacMenu) {
   return activeTrail.value[0]?.id === menu.id
@@ -49,7 +50,8 @@ function getTopMenuItems(menu: RbacMenu) {
                   :icon="normalizeMenuIcon(menu.icon)"
                   trailing-icon="i-lucide-chevron-down"
                   color="neutral"
-                  :variant="isActiveTopMenu(menu) ? 'soft' : 'ghost'"
+                  variant="ghost"
+                  :class="isActiveTopMenu(menu) ? activeTopMenuClass : ''"
                 />
               </UDropdownMenu>
 
@@ -59,7 +61,8 @@ function getTopMenuItems(menu: RbacMenu) {
                 :icon="normalizeMenuIcon(menu.icon)"
                 :to="findFirstPath(menu)"
                 color="neutral"
-                :variant="isActiveTopMenu(menu) ? 'soft' : 'ghost'"
+                variant="ghost"
+                :class="isActiveTopMenu(menu) ? activeTopMenuClass : ''"
               />
             </template>
           </div>

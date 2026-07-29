@@ -29,25 +29,31 @@ function handleToggleCollapse(event: MouseEvent) {
   blurCurrentTarget(event)
   emit('toggleCollapse')
 }
+
+const buttonUi = {
+  leadingIcon: 'size-6'
+}
 </script>
 
 <template>
   <div class="first-level-menu flex h-full min-h-0 flex-col">
     <div class="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-      <div class="flex flex-col gap-1">
+      <div class="flex flex-col gap-2">
         <UTooltip v-for="menu in menus" :key="menu.id" :text="menu.name" :delay-duration="0">
           <UButton
             :icon="normalizeMenuIcon(menu.icon)"
             :label="collapsed ? undefined : menu.name"
             color="neutral"
-            :variant="activeId === menu.id ? 'soft' : 'ghost'"
+            variant="ghost"
             :square="collapsed"
+            size="xl"
             block
-            class="min-h-10 justify-center outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+            :ui="buttonUi"
+            class="min-h-11 justify-center outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
             :class="[
-              collapsed ? 'px-0' : 'flex-col gap-1 px-1 py-2 text-xs',
+              collapsed ? 'px-0' : 'flex-col gap-1.5 px-1 py-2 text-sm',
               inverted ? 'text-default hover:bg-elevated' : '',
-              activeId === menu.id && inverted ? 'bg-elevated text-highlighted' : ''
+              activeId === menu.id ? '!bg-transparent text-primary shadow-none hover:!bg-transparent active:!bg-transparent focus-visible:!bg-transparent' : ''
             ]"
             @click="handleSelect(menu, $event)"
           />

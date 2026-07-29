@@ -25,6 +25,7 @@ const hybridSiderCollapsed = ref(false)
 let idleTimer: number | null = null
 
 const {
+  activeFirstLevelMenu,
   firstLevelMenus,
   secondLevelMenus,
   activeSecondLevelMenu,
@@ -41,6 +42,7 @@ const renderableSecondLevelMenus = computed(() => getRenderableMenus(secondLevel
 const headerItems = computed<NavigationMenuItem[]>(() => firstLevelMenus.value.map(menu => ({
   label: menu.name,
   icon: normalizeMenuIcon(menu.icon),
+  active: activeFirstLevelMenu.value?.id === menu.id,
   onSelect: () => handleSelectFirst(menu)
 })))
 const showDrawer = computed(() => {
@@ -223,7 +225,7 @@ watch(
     >
       <AppHeader :show-logo="!showFloatingSider" show-logo-title show-menu>
         <template #menu>
-          <UNavigationMenu orientation="horizontal" :items="headerItems" />
+          <UNavigationMenu orientation="horizontal" variant="link" :items="headerItems" />
         </template>
       </AppHeader>
 
