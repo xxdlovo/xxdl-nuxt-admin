@@ -1,10 +1,11 @@
 //#server/sys-router/user
-import { publicProcedure, router, crudPermissionProcedures } from '~~/server/trpc/init'
+import {publicProcedure, router, crudPermissionProcedures, permissionProcedure} from '~~/server/trpc/init'
 import type { Context } from '~~/server/trpc/context'
 import {sysUserService} from './SysUserService'
 import z from 'zod'
 import {SysUserAddSchema, SysUserPageQuerySchema, SysUserQuerySchema, SysUserResetPasswordSchema, SysUserUpdateSchema} from '#shared/system/user'
 import { SysUserRoleAssignSchema, SysUserRoleAssignedIdsQuerySchema } from '#shared/system/userRole'
+import {demoReadonlyMiddleware} from "#server/trpc/middlewares/demo";
 
 const p = crudPermissionProcedures('system:user')
 
@@ -30,7 +31,7 @@ export const sysUserRouter = router({
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).updateById(input.id, input)
         }),
-    resetPassword: p.edit.input(SysUserResetPasswordSchema)
+    resetPassword: permissionProcedure('system:user:reset').use(demoReadonlyMiddleware).input(SysUserResetPasswordSchema)
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).resetPassword(input)
         }),
@@ -42,11 +43,11 @@ export const sysUserRouter = router({
         .query(async ({ctx, input})=>{
             return sysUserService(ctx).getById(input)
         }),
-    assignedRoleIds: p.list.input(SysUserRoleAssignedIdsQuerySchema)
+    assignedRoleIds:permissionProcedure('system:user:asrole').use(demoReadonlyMiddleware).input(SysUserRoleAssignedIdsQuerySchema)
         .query(async ({ctx, input})=>{
             return sysUserService(ctx).listAssignedRoleIds(input)
         }),
-    assignRoles: p.edit.input(SysUserRoleAssignSchema)
+    assignRoles: permissionProcedure('system:user:asrole').use(demoReadonlyMiddleware).input(SysUserRoleAssignSchema)
         .mutation(async ({ctx, input})=>{
             return sysUserService(ctx).assignRoles(input)
         }),

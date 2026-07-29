@@ -10,7 +10,7 @@ import { businessDictCode } from '#shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import { useToastSuccess } from '~/utils/toast'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
-
+const { hasPermission } = useRbacProfile()
 type SysUserTableRow = SysUserDto & {
   deptName?: string | null
   deptCode?: string | null
@@ -94,6 +94,8 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           size: 'xs',
           onClick: () => handleEdit(row.original.id as string)
         }, { default: () => $ts('common.edit') }))
+      }
+      if (hasPermission('system:user:reset')) {
         actions.push(h(UButton, {
           variant: 'outline',
           color: 'neutral',

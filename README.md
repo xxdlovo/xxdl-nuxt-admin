@@ -1,28 +1,31 @@
 # NuxtAdmin
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 A full-stack Nuxt 4 admin system built with Nuxt UI, tRPC, Drizzle ORM, and MySQL.
 
 NuxtAdmin is designed as a practical foundation for internal tools, business management platforms, and backend administration systems. It puts the admin interface, authentication, RBAC permissions, system modules, typed APIs, and database access in one Nuxt application.
 
-> Frontend inspiration: [SoybeanJS](https://soybeanjs.cn/)
->
 > Recommended Node.js version: `22.20.2`
 
-## Status
+## Demo
 
-The project is still being polished. The administrator password, database seed/data files, and complete setup guide are being organized and will be published soon.
+- Demo address 1: https://nuxtadmin.devitem.top/
+- Demo address 2: https://xxdl-nuxt-admin.vercel.app/
+- Account: `admin`
+- Password: `adminadmin`
 
-Scheduled jobs are also being actively worked on. The current implementation already includes job and job-log modules, cron expressions, manual execution, dispatch tasks, handler registration, and execution logs. More documentation and examples will be added as the module stabilizes.
+The demo environment is read-only for destructive business operations. Editing and deleting data will return: `Operation not allowed in demo environment`.
 
 ## Preview
 
-You can first check the public landing page for a quick product overview.
+![Dashboard](public/images/dashboard.png)
 
-![Dashboard](public/images/landing/dashboard.png)
+![User management](public/images/users_manager.png)
 
-![User management](public/images/landing/users.png)
+![Role management](public/images/role_manager.png)
 
-![Role permissions](public/images/landing/roles.png)
+![Menu management](public/images/menu_list.png)
 
 ## Features
 
@@ -30,24 +33,16 @@ You can first check the public landing page for a quick product overview.
 - Username/password authentication and server-side sessions.
 - Protected routes for authenticated backend pages.
 - RBAC permission model for users, roles, menus, routes, data scopes, and button permissions.
-- User management.
-- Role and permission management.
-- Menu management.
-- Department management.
-- Dictionary management.
-- Notice management.
-- OSS configuration and file management.
-- Login logs and system logs.
-- Scheduled job management, job dispatching, manual execution, and job logs.
+- User, role, menu, department, dictionary, notice, OSS, log, and scheduled job management.
 - Dashboard page with statistics, charts, notices, activity, and shortcuts.
 - Type-safe API calls through tRPC.
 - Shared DTO validation with Zod.
 - MySQL database access through Drizzle ORM.
 - Multilingual support.
-- Light/dark mode.
-- Theme color, layout, radius, tabs, footer, and watermark configuration.
+- Light/dark mode and configurable themes.
 - Table pagination, search, batch actions, column settings, and common CRUD workflows.
-- Vitest tests, Nuxt type checking, and Drizzle database synchronization commands.
+- Demo environment protection for edit/delete operations.
+- Code generation workflow for quickly adding new business modules.
 
 ## Tech Stack
 
@@ -69,14 +64,26 @@ You can first check the public landing page for a quick product overview.
 
 ## Quick Start
 
+Install dependencies:
+
 ```bash
 pnpm install
-pnpm db:push
-pnpm seed:admin
+```
+
+Create and initialize the database:
+
+```bash
+mysql -u <user> -p <database> < doc/mysql-ddl.sql
+mysql -u <user> -p <database> < doc/init-self.sql
+```
+
+Start the development server:
+
+```bash
 pnpm dev
 ```
 
-The complete local setup guide, including environment variables, administrator credentials, and database initialization details, is being prepared.
+Configure database and session values in `.env` before starting the project. See `.env.example` for the available environment variables.
 
 ## Common Commands
 
@@ -89,12 +96,104 @@ pnpm typecheck
 pnpm test
 pnpm db:push
 pnpm db:pull
-pnpm seed:admin
+```
+
+Database initialization scripts:
+
+```bash
+mysql -u <user> -p <database> < doc/mysql-ddl.sql
+mysql -u <user> -p <database> < doc/init-self.sql
+```
+
+## Code Generation
+
+The project includes a module generation guide: [doc/code-gen.md](doc/code-gen.md).
+
+Use it when adding a new business module after the database table has been created. A typical prompt is:
+
+```text
+我已建好 <table_name> 表，模块名 <module>，业务名 <BusinessName>，请根据 doc/code-gen.md 帮我生成代码。
+```
+
+Examples:
+
+```text
+我已建好 demo 表，模块名 demo，业务名 Demo，请根据 doc/code-gen.md 帮我生成代码。
+```
+
+```text
+我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 doc/code-gen.md 帮我生成代码。
+```
+
+The guide covers Drizzle schema generation, shared Zod DTOs, repository/service/router files, tRPC registration, frontend pages, search forms, operation modals, i18n keys, and RBAC permission codes.
+
+## Directory Structure
+
+Only representative files are shown below. Repeated system modules follow the same pattern.
+
+```text
+.
+|-- app/
+|   |-- components/
+|   |   |-- table/
+|   |   `-- u/
+|   |-- composables/
+|   |-- layouts/
+|   |   `-- modules/
+|   |-- locales/
+|   |   |-- en.json
+|   |   `-- zh.json
+|   |-- pages/
+|   |   |-- demo/
+|   |   |   |-- components/
+|   |   |   `-- index.vue
+|   |   |-- landing/
+|   |   `-- system/
+|   |       |-- user/
+|   |       |-- role/
+|   |       |-- menu/
+|   |       `-- job/
+|   `-- app.vue
+|-- server/
+|   |-- api/
+|   |-- demo-router/
+|   |-- drizzle/
+|   |   |-- schema/
+|   |   |   |-- demo/
+|   |   |   `-- system/
+|   |   |-- CommonRepo.ts
+|   |   `-- db.ts
+|   |-- sys-router/
+|   |   |-- auth/
+|   |   |-- user/
+|   |   |-- role/
+|   |   |-- menu/
+|   |   `-- job/
+|   |-- tasks/
+|   `-- trpc/
+|       |-- middlewares/
+|       |-- context.ts
+|       |-- init.ts
+|       `-- routers.ts
+|-- shared/
+|   |-- auth/
+|   |-- constants/
+|   |-- demo/
+|   |-- system/
+|   `-- types/
+|-- doc/
+|   |-- code-gen.md
+|   |-- mysql-ddl.sql
+|   `-- init-self.sql
+|-- public/
+|   `-- images/
+|-- nuxt.config.ts
+`-- package.json
 ```
 
 ## Scheduled Jobs
 
-The scheduled job module is currently in progress. The project already contains:
+The scheduled job module includes:
 
 - `sys_job` and `sys_job_log` database schemas.
 - Job list and job-log admin pages.
@@ -107,10 +206,10 @@ The scheduled job module is currently in progress. The project already contains:
 - Execution result and error logging.
 - Built-in examples such as old-log cleanup and a reserved demo reset handler.
 
-This area will receive more documentation once the database seed and usage guide are finalized.
+## Reference
+
+- [SoybeanJS](https://soybeanjs.cn/)
 
 ## Project Description
 
-A full-stack Nuxt 4 admin system built with Nuxt UI, tRPC, Drizzle ORM, and MySQL, featuring authentication, RBAC permissions, user/role/menu/department/dictionary/log/OSS/job management, multilingual support, and theme customization.
-
-The project is developed together with Codex. If you have feature requests, ideas, or suggestions, discussion is welcome.
+A full-stack Nuxt 4 admin system built with Nuxt UI, tRPC, Drizzle ORM, and MySQL, featuring authentication, RBAC permissions, user/role/menu/department/dictionary/log/OSS/job management, multilingual support, theme customization, demo environment protection, and a documented module generation workflow.

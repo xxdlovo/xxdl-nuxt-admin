@@ -30,6 +30,7 @@ export async function createContext(event: H3Event) {
     event,
     session,
     user: session.user ?? null,
+    currentPermissionCode: null as string | null,
     permissionCodes: null as string[] | null,
     dataPermission: null as DataPermission | null
   }

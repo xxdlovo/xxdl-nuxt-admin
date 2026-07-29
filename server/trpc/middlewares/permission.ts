@@ -6,6 +6,8 @@ export function permissionMiddleware(permissionCode: string) {
     const { next, ctx } = opts
     const user = ctx.user
 
+    ctx.currentPermissionCode = permissionCode
+
     if (!user) {
       throw new AppError('auth.unauthorized')
     }

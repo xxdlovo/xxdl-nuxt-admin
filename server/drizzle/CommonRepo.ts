@@ -85,7 +85,6 @@ export function CommonRepo<
                     .where(where)
                     .orderBy(...orderBy)
             },
-
             async page(page: number, pageSize: number, dto: any, orderBy: SQL[] = [], extraWhere: SQL[] = []) {
                 const offset = (page - 1) * pageSize
                 const dynamicWhere = schema

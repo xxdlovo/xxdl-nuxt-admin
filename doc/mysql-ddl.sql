@@ -15,6 +15,14 @@ CREATE TABLE `demo` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='演示表';
 
 
+-- nuxt_copy_admin.my_test definition
+
+CREATE TABLE `my_test` (
+                           `id` varchar(100) DEFAULT NULL,
+                           `name` varchar(100) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 -- nuxt_copy_admin.sys_department definition
 
 CREATE TABLE `sys_department` (
@@ -35,7 +43,8 @@ CREATE TABLE `sys_department` (
                                   `updated_by` varchar(36) DEFAULT NULL COMMENT '更新人ID',
                                   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                   `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除: 0-否, 1-是',
-                                  PRIMARY KEY (`id`)
+                                  PRIMARY KEY (`id`),
+                                  UNIQUE KEY `uk_dept_code` (`code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='部门管理表';
 
 
@@ -45,6 +54,7 @@ CREATE TABLE `sys_dict_data` (
                                  `id` varchar(36) NOT NULL COMMENT '主键UUID',
                                  `type_id` varchar(36) NOT NULL COMMENT '字典类型ID',
                                  `label` varchar(50) NOT NULL COMMENT '字典标签',
+                                 `i18n_key` varchar(150) DEFAULT NULL COMMENT '国际化翻译Key',
                                  `value` varchar(100) NOT NULL COMMENT '字典键值',
                                  `sort_order` int DEFAULT '0' COMMENT '排序',
                                  `status` tinyint DEFAULT '1' COMMENT '状态: 0-禁用, 1-启用',
@@ -54,6 +64,7 @@ CREATE TABLE `sys_dict_data` (
                                  `updated_by` varchar(36) DEFAULT NULL COMMENT '更新人ID',
                                  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
                                  `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除: 0-否, 1-是',
+                                 `list_class` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '表格回显颜色',
                                  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='字典数据表';
 
@@ -73,6 +84,60 @@ CREATE TABLE `sys_dict_type` (
                                  `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除: 0-否, 1-是',
                                  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='字典类型表';
+
+
+-- nuxt_copy_admin.sys_job definition
+
+CREATE TABLE `sys_job` (
+                           `id` varchar(36) NOT NULL COMMENT '主键UUID',
+                           `job_name` varchar(100) NOT NULL COMMENT '任务名称',
+                           `job_code` varchar(100) NOT NULL COMMENT '任务编码，业务唯一',
+                           `handler_code` varchar(100) NOT NULL COMMENT '任务处理器编码，对应代码中的实现',
+                           `cron_expression` varchar(100) NOT NULL COMMENT 'Cron表达式',
+                           `cron_timezone` varchar(50) NOT NULL DEFAULT 'Asia/Shanghai' COMMENT 'Cron时区',
+                           `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态：0-停用，1-启用',
+                           `running_status` tinyint NOT NULL DEFAULT '0' COMMENT '运行状态：0-空闲，1-运行中',
+                           `last_run_at` timestamp NULL DEFAULT NULL COMMENT '上次执行时间',
+                           `next_run_at` timestamp NULL DEFAULT NULL COMMENT '下次执行时间',
+                           `last_success_at` timestamp NULL DEFAULT NULL COMMENT '上次成功时间',
+                           `last_fail_at` timestamp NULL DEFAULT NULL COMMENT '上次失败时间',
+                           `last_duration_ms` int DEFAULT NULL COMMENT '上次执行耗时毫秒',
+                           `last_error` text COMMENT '上次失败原因',
+                           `sort_order` int DEFAULT '0' COMMENT '排序',
+                           `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+                           `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
+                           `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                           `updated_by` varchar(36) DEFAULT NULL COMMENT '更新人ID',
+                           `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                           `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除：0-否，1-是',
+                           PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统定时任务表';
+
+
+-- nuxt_copy_admin.sys_job_log definition
+
+CREATE TABLE `sys_job_log` (
+                               `id` varchar(36) NOT NULL COMMENT '主键UUID',
+                               `job_id` varchar(36) NOT NULL COMMENT '任务ID',
+                               `job_name` varchar(100) NOT NULL COMMENT '任务名称快照',
+                               `job_code` varchar(100) NOT NULL COMMENT '任务编码快照',
+                               `handler_code` varchar(100) NOT NULL COMMENT '任务处理器编码快照',
+                               `cron_expression` varchar(100) DEFAULT NULL COMMENT 'Cron表达式快照',
+                               `trigger_type` varchar(20) NOT NULL DEFAULT 'schedule' COMMENT '触发方式：schedule/manual',
+                               `status` tinyint NOT NULL DEFAULT '0' COMMENT '执行状态：0-运行中，1-成功，2-失败，3-跳过',
+                               `started_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '开始时间',
+                               `finished_at` timestamp NULL DEFAULT NULL COMMENT '结束时间',
+                               `duration_ms` int DEFAULT NULL COMMENT '执行耗时毫秒',
+                               `result` json DEFAULT NULL COMMENT '执行结果',
+                               `error_message` text COMMENT '错误信息',
+                               `error_stack` text COMMENT '错误堆栈',
+                               `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
+                               `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                               `updated_by` varchar(36) DEFAULT NULL COMMENT '更新人ID',
+                               `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                               `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除：0-否，1-是',
+                               PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统定时任务执行日志表';
 
 
 -- nuxt_copy_admin.sys_login_log definition
@@ -294,7 +359,7 @@ CREATE TABLE `sys_user` (
                             `is_admin` tinyint DEFAULT '0' COMMENT '是否管理员: 0-否, 1-是',
                             `last_login_time` timestamp NULL DEFAULT NULL COMMENT '最后登录时间',
                             `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
-                            `status` tinyint DEFAULT '1' COMMENT '帐号状态:  1-启用, 2-禁用',
+                            `status` tinyint DEFAULT '1' COMMENT '帐号状态:  1-启用, 0-禁用',
                             `remark` varchar(255) DEFAULT NULL COMMENT '备注',
                             `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
                             `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

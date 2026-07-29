@@ -29,20 +29,20 @@ export const landingContentEn = {
   hero: {
     headline: 'Nuxt 4 full-stack admin foundation',
     title: 'Build business systems.\nSkip the foundation work.',
-    description: 'Authentication, RBAC, system management, type-safe APIs, database access, and a configurable interface in one Nuxt application.',
+    description: 'Authentication, RBAC, system management, type-safe APIs, database access, code generation guidance, and demo read-only protection in one Nuxt application.',
     links: [
-      { label: 'Enter system', icon: 'i-lucide-log-in', color: 'primary', size: 'xl', to: '/login' },
-      { label: 'Explore the interface', trailingIcon: 'i-lucide-arrow-down', size: 'xl', color: 'neutral', variant: 'soft', to: '#showcase' }
+      { label: 'Demo address 1', icon: 'i-lucide-log-in', color: 'primary', size: 'xl', to: '#' },
+      { label: 'Demo address 2', trailingIcon: 'i-lucide-arrow-up-right', size: 'xl', color: 'neutral', variant: 'soft', to: '#' }
     ]
   },
   terminal: {
     title: 'Start locally',
     lines: [
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm install', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm db:push', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm seed:admin', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/init.sql', style: 'cmd' }] },
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm dev', style: 'cmd' }] },
-      { segments: [{ text: 'NuxtAdmin is ready at ', style: 'success' }, { text: 'http://localhost:3001', style: 'url' }] }
+      { segments: [{ text: 'Demo account ', style: 'success' }, { text: 'admin / adminadmin', style: 'url' }] }
     ]
   },
   showcase: {
@@ -56,28 +56,28 @@ export const landingContentEn = {
         label: 'Dashboard',
         title: 'A useful overview from the first login',
         description: 'Statistics, charts, notices, project activity, and shortcuts give teams a practical starting point.',
-        image: '/images/landing/dashboard.png'
+        image: '/images/dashboard.png'
       },
       {
         id: 'users',
         label: 'Users',
         title: 'Efficient user and department operations',
         description: 'Search, paginate, edit, assign roles, and manage organizational data through consistent workflows.',
-        image: '/images/landing/users.png'
+        image: '/images/users_manager.png'
       },
       {
         id: 'roles',
         label: 'Roles & permissions',
         title: 'RBAC that is visible and manageable',
         description: 'Configure role data scopes, menu access, route access, and button-level permissions.',
-        image: '/images/landing/roles.png'
+        image: '/images/role_manager.png'
       },
       {
         id: 'menus',
         label: 'Menus',
         title: 'Routes, navigation, and permissions stay aligned',
         description: 'Manage hierarchical menus, route metadata, icons, visibility, ordering, and permission identifiers.',
-        image: '/images/landing/menus.png'
+        image: '/images/menu_list.png'
       }
     ]
   },
@@ -109,14 +109,14 @@ export const landingContentEn = {
   },
   quickStart: {
     headline: 'Quick start',
-    title: 'From clone to login in four commands.',
-    description: 'Configure the database and administrator password in the environment file, then initialize and run the project.',
+    title: 'Initialize the database, then enter the system.',
+    description: 'Configure the environment file, run the DDL and initialization SQL scripts, then start the Nuxt development server.',
     copy: 'Copy command',
     copied: 'Copied',
     steps: [
       { command: 'pnpm install', description: 'Install project dependencies' },
-      { command: 'pnpm db:push', description: 'Synchronize the database schema' },
-      { command: 'pnpm seed:admin', description: 'Create the administrator account' },
+      { command: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', description: 'Create the database tables' },
+      { command: 'mysql -u <user> -p <database> < doc/init.sql', description: 'Initialize menus, permissions, and the administrator account' },
       { command: 'pnpm dev', description: 'Start the development server' }
     ]
   },
@@ -128,7 +128,8 @@ export const landingContentEn = {
       { label: 'What environment does the project require?', content: 'Node.js 22 is recommended. The project uses pnpm and a MySQL database. Configure the required environment variables before initializing the schema.' },
       { label: 'How does permission control work?', content: 'The RBAC model connects users, roles, menus, data scopes, routes, and button permission codes. Both server procedures and client actions can enforce permissions.' },
       { label: 'Can I use another database?', content: 'The current schema and repository layer target MySQL through Drizzle ORM. Supporting another database requires adapting the Drizzle driver, schema details, and database configuration.' },
-      { label: 'Is it suitable for secondary development?', content: 'Yes. Shared DTOs, reusable CRUD components, tRPC routers, and documented module patterns are designed to make business modules consistent to extend.' },
+      { label: 'Is it suitable for secondary development?', content: 'Yes. Shared DTOs, reusable CRUD components, tRPC routers, and the code generation guide in doc/code-gen.md are designed to make business modules consistent to extend.' },
+      { label: 'Can I modify data in the demo?', content: 'The demo account is admin / adminadmin. The demo environment is protected, so edit and delete operations are blocked.' },
       { label: 'How can it be deployed?', content: 'Build it as a standard Nuxt application and deploy the generated Nitro server to a Node-compatible environment with access to your MySQL and storage services.' },
       { label: 'How is internationalization organized?', content: 'The admin system uses nuxt-i18n-micro with an extensible locale configuration. Landing-page copy is kept in local typed content files so additional languages can be added without expanding the global translation dictionary.' }
     ]
@@ -175,11 +176,11 @@ export const landingContentEn = {
     ]
   },
   cta: {
-    title: 'Start with the system pieces already solved.',
-    description: 'Open NuxtAdmin, inspect the workflows, and shape it around your next business application.',
+    title: 'Try the demo, then build your own module.',
+    description: 'Log in with admin / adminadmin, inspect the workflows, and use doc/code-gen.md to extend the system consistently.',
     links: [
-      { label: 'Enter system', icon: 'i-lucide-log-in', color: 'primary', to: '/login' },
-      { label: 'View source', icon: 'i-simple-icons-github', color: 'neutral', variant: 'soft', to: '#' }
+      { label: 'Demo address 1', icon: 'i-lucide-log-in', color: 'primary', to: '#' },
+      { label: 'Demo address 2', icon: 'i-lucide-arrow-up-right', color: 'neutral', variant: 'soft', to: '#' }
     ]
   },
   footer: {

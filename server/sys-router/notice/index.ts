@@ -1,8 +1,9 @@
 //#server/sys-router/notice
-import { router, crudPermissionProcedures, protectedProcedure } from '~~/server/trpc/init'
+import {router, crudPermissionProcedures, protectedProcedure, permissionProcedure} from '~~/server/trpc/init'
 import { sysNoticeService } from './SysNoticeService'
 import z from 'zod'
 import { SysNoticeAddSchema, SysNoticeUpdateSchema, SysNoticeQuerySchema, SysNoticePageQuerySchema, SysNoticePublishStatusSchema } from '#shared/system/notice'
+import {demoReadonlyMiddleware} from "#server/trpc/middlewares/demo";
 
 const p = crudPermissionProcedures('system:notice')
 
@@ -23,7 +24,7 @@ export const sysNoticeRouter = router({
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).updateById(input.id, input)
         }),
-    updatePublishStatus: p.edit.input(SysNoticePublishStatusSchema)
+    updatePublishStatus: permissionProcedure('system:notice:push').use(demoReadonlyMiddleware).input(SysNoticePublishStatusSchema)
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).updatePublishStatus(input)
         }),

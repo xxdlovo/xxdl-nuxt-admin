@@ -5,7 +5,7 @@ import type { SysDeptDto } from '#shared/system/department'
 import { SysUserAddSchema, SysUserUpdateSchema, type SysUserAddDTO, type SysUserDto, type SysUserUpdateDTO } from '#shared/system/user'
 import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
-
+const { hasPermission, isAdmin } = useRbacProfile()
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 
@@ -147,6 +147,11 @@ function fillFormData() {
 async function loadRoleOptions() {
   loadingRoles.value = true
   try {
+    if(!hasPermission('system:user:asrole')){
+      loadingRoles.value = false
+      return
+    }
+
     const roles = await $trpc.sysRole.list.query({}) as SysRoleDto[]
 
     roleItems.value = roles
@@ -215,10 +220,12 @@ async function loadAssignedRoles() {
     selectedRoleIds.value = []
     return
   }
+  if(hasPermission('system:user:asrole')){
+    selectedRoleIds.value = await $trpc.sysUser.assignedRoleIds.query({
+      userId: props.data.id
+    })
+  }
 
-  selectedRoleIds.value = await $trpc.sysUser.assignedRoleIds.query({
-    userId: props.data.id
-  })
 }
 
 async function initFormData() {
@@ -254,10 +261,13 @@ async function handleEdit() {
   } as SysUserUpdateDTO
 
   await $trpc.sysUser.update.mutate(payload)
-  await $trpc.sysUser.assignRoles.mutate({
-    userId: state.value.id,
-    roleIds: selectedRoleIds.value
-  })
+  if(hasPermission('system:user:asrole')){
+    await $trpc.sysUser.assignRoles.mutate({
+      userId: state.value.id,
+      roleIds: selectedRoleIds.value
+    })
+  }
+
   useToastSuccess($ts('common.modifySuccess'))
 }
 
@@ -403,7 +413,7 @@ watch(visible, (newVal) => {
           </UFormField>
 
           <UFormField
-            v-if="props.operateType === 'edit'"
+            v-if="props.operateType === 'edit' && hasPermission('system:user:asrole')"
             :label="$ts('module.system.user.userRole')"
             orientation="horizontal"
             :ui="formItemUi"

@@ -3,7 +3,7 @@ import type { LandingContent } from './types'
 export const landingContentZh = {
   seo: {
     title: 'NuxtAdmin - Nuxt 4 全栈后台管理系统',
-    description: '基于 Nuxt 4 的生产级后台基础方案，内置登录认证、RBAC、系统管理、类型安全 API、MySQL、国际化和界面配置。'
+    description: '基于 Nuxt 4 的后台管理系统，内置登录认证、RBAC、系统管理、类型安全 API、MySQL、国际化、主题配置、演示环境保护和代码生成规范。'
   },
   brand: {
     name: 'NuxtAdmin',
@@ -29,26 +29,26 @@ export const landingContentZh = {
   hero: {
     headline: 'Nuxt 4 全栈后台基础方案',
     title: '专注业务系统。\n基础能力开箱即用。',
-    description: '在一个 Nuxt 应用中集成登录认证、RBAC、系统管理、类型安全 API、数据库访问与可配置界面。',
+    description: '在一个 Nuxt 应用中集成登录认证、RBAC、系统管理、类型安全 API、数据库访问、代码生成规范和演示环境只读保护。',
     links: [
-      { label: '进入系统', icon: 'i-lucide-log-in', color: 'primary', size: 'xl', to: '/login' },
-      { label: '查看界面', trailingIcon: 'i-lucide-arrow-down', size: 'xl', color: 'neutral', variant: 'soft', to: '#showcase' }
+      { label: '演示地址 1', icon: 'i-lucide-log-in', color: 'primary', size: 'xl', to: '#' },
+      { label: '演示地址 2', trailingIcon: 'i-lucide-arrow-up-right', size: 'xl', color: 'neutral', variant: 'soft', to: '#' }
     ]
   },
   terminal: {
     title: '本地启动',
     lines: [
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm install', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm db:push', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm seed:admin', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/init.sql', style: 'cmd' }] },
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm dev', style: 'cmd' }] },
-      { segments: [{ text: 'NuxtAdmin 已运行于 ', style: 'success' }, { text: 'http://localhost:3001', style: 'url' }] }
+      { segments: [{ text: '演示账号 ', style: 'success' }, { text: 'admin / adminadmin', style: 'url' }] }
     ]
   },
   showcase: {
     headline: '界面预览',
     title: '不是静态外壳，而是可直接运行的后台系统。',
-    description: '从日常管理到权限配置，查看项目中已经实现的真实页面与操作流程。',
+    description: '从日常管理到权限配置，查看项目中已经实现的真实页面与操作流程。演示环境会限制编辑和删除数据。',
     imageAlt: 'NuxtAdmin 系统界面预览',
     items: [
       {
@@ -56,28 +56,28 @@ export const landingContentZh = {
         label: '仪表盘',
         title: '登录后立即获得清晰的工作概览',
         description: '统计数据、图表、通知、项目动态与快捷入口，为业务后台提供实用的首页起点。',
-        image: '/images/landing/dashboard.png'
+        image: '/images/dashboard.png'
       },
       {
         id: 'users',
         label: '用户管理',
         title: '高效处理用户与组织数据',
         description: '通过一致的交互完成搜索、分页、编辑、角色分配和部门数据管理。',
-        image: '/images/landing/users.png'
+        image: '/images/users_manager.png'
       },
       {
         id: 'roles',
         label: '角色权限',
         title: '看得见、配得清的 RBAC',
         description: '集中配置角色数据范围、菜单访问、路由访问与按钮级权限。',
-        image: '/images/landing/roles.png'
+        image: '/images/role_manager.png'
       },
       {
         id: 'menus',
         label: '菜单管理',
         title: '让路由、导航与权限保持一致',
         description: '管理树形菜单、路由元数据、图标、显示状态、排序和权限标识。',
-        image: '/images/landing/menus.png'
+        image: '/images/menu_list.png'
       }
     ]
   },
@@ -90,7 +90,7 @@ export const landingContentZh = {
       { icon: 'i-lucide-key-round', title: '完整 RBAC', description: '用户、角色、菜单、数据范围、路由和按钮权限使用统一模型。' },
       { icon: 'i-lucide-settings-2', title: '系统管理', description: '内置部门、字典、通知、登录日志、系统日志与常用 CRUD 流程。' },
       { icon: 'i-lucide-cloud-upload', title: 'OSS 与文件', description: '管理存储配置、校验连接、上传文件并维护文件记录。' },
-      { icon: 'i-lucide-languages', title: '多语言支持', description: '提供可持久化的语言切换与可扩展内容结构，便于继续增加其他语言。' },
+      { icon: 'i-lucide-braces', title: '代码生成规范', description: '参考 doc/code-gen.md，按统一模式生成 Schema、DTO、路由和页面。' },
       { icon: 'i-lucide-palette', title: '可配置界面', description: '支持明暗主题、主题色、布局、圆角、标签页、页脚与水印设置。' }
     ]
   },
@@ -109,14 +109,14 @@ export const landingContentZh = {
   },
   quickStart: {
     headline: '快速开始',
-    title: '四条命令，从克隆项目到进入系统。',
-    description: '先在环境文件中配置数据库与管理员密码，然后初始化并运行项目。',
+    title: '初始化数据库，然后进入系统。',
+    description: '先配置环境文件，再执行 DDL 和初始化 SQL 脚本，最后启动 Nuxt 开发服务。',
     copy: '复制命令',
     copied: '已复制',
     steps: [
       { command: 'pnpm install', description: '安装项目依赖' },
-      { command: 'pnpm db:push', description: '同步数据库结构' },
-      { command: 'pnpm seed:admin', description: '创建管理员账号' },
+      { command: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', description: '创建数据库表结构' },
+      { command: 'mysql -u <user> -p <database> < doc/init.sql', description: '初始化菜单、权限与管理员账号' },
       { command: 'pnpm dev', description: '启动开发服务器' }
     ]
   },
@@ -127,10 +127,10 @@ export const landingContentZh = {
     items: [
       { label: '项目需要什么运行环境？', content: '推荐使用 Node.js 22。项目使用 pnpm 和 MySQL 数据库，初始化数据库结构前需要先配置必要的环境变量。' },
       { label: '权限控制是如何实现的？', content: 'RBAC 模型串联用户、角色、菜单、数据范围、路由和按钮权限码，服务端过程与客户端操作都可以进行权限校验。' },
+      { label: '可以修改演示环境的数据吗？', content: '演示账号为 admin / adminadmin。演示环境开启只读保护，编辑和删除操作会被限制。' },
+      { label: '如何生成新的业务模块？', content: '参考 doc/code-gen.md。文档约定了 Drizzle Schema、共享 DTO、Repo、Service、tRPC Router、页面、搜索表单、操作弹窗、翻译 key 和 RBAC 权限码的生成方式。' },
       { label: '可以更换其他数据库吗？', content: '当前数据库结构与仓储层通过 Drizzle ORM 面向 MySQL 实现。更换数据库需要调整 Drizzle 驱动、部分结构定义和数据库配置。' },
-      { label: '适合进行二次开发吗？', content: '适合。共享 DTO、通用 CRUD 组件、tRPC 路由与项目中的模块开发规范，可以帮助新增业务模块保持一致。' },
-      { label: '项目应该如何部署？', content: '按照标准 Nuxt 应用完成构建，将生成的 Nitro 服务部署到可运行 Node.js 的环境，并确保能够访问 MySQL 与对象存储服务。' },
-      { label: '国际化内容如何组织？', content: '后台系统使用 nuxt-i18n-micro 和可扩展的语言配置。落地页文案独立存放在带类型约束的本地内容文件中，增加其他语言时无需扩大全局翻译字典。' }
+      { label: '项目应该如何部署？', content: '按照标准 Nuxt 应用完成构建，将生成的 Nitro 服务部署到可运行 Node.js 的环境，并确保能访问 MySQL 与对象存储服务。' }
     ]
   },
   contact: {
@@ -175,11 +175,11 @@ export const landingContentZh = {
     ]
   },
   cta: {
-    title: '从已经解决的系统能力开始。',
-    description: '进入 NuxtAdmin，体验现有流程，再将它塑造成你的下一套业务系统。',
+    title: '先体验演示系统，再生成自己的业务模块。',
+    description: '使用 admin / adminadmin 登录演示环境，查看现有流程，再参考 doc/code-gen.md 扩展系统。',
     links: [
-      { label: '进入系统', icon: 'i-lucide-log-in', color: 'primary', to: '/login' },
-      { label: '查看源码', icon: 'i-simple-icons-github', color: 'neutral', variant: 'soft', to: '#' }
+      { label: '演示地址 1', icon: 'i-lucide-log-in', color: 'primary', to: '#' },
+      { label: '演示地址 2', icon: 'i-lucide-arrow-up-right', color: 'neutral', variant: 'soft', to: '#' }
     ]
   },
   footer: {
@@ -191,6 +191,6 @@ export const landingContentZh = {
       { label: '常见问题', to: '#faq' },
       { label: '联系我们', to: '#contact' }
     ],
-    copyright: '基于 Nuxt 与 Nuxt UI 构建。'
+    copyright: '基于 Nuxt 与 Nuxt UI 构建，参考 SoybeanJS。'
   }
 } satisfies LandingContent

@@ -229,6 +229,12 @@ export async function buildScope(table: any, ctx: Context): Promise<SQL[]> {
         return conditions
     }
 
+    // 这两个查询不限制数据范围
+    const blankPermission:string[] = ['system:dept:list','system:role:list']
+
+    if(blankPermission.includes(ctx.currentPermissionCode as string)) {
+        return conditions
+    }
     const scopeConditions = [
         buildDeptScope(table, permission.deptIds),
         permission.includeSelf ? buildSelfScope(table, ctx.user?.id) : null
