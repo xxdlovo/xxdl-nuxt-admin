@@ -61,6 +61,9 @@ export function sysOssService(ctx: Context) {
         async listUploadConfigs() {
             return await configRepo.listUploadable()
         },
+        async getDefaultUploadConfig() {
+            return await configRepo.getDefaultUploadable()
+        },
         async uploadFile(input: SysOssUploadFileInput): Promise<SysOssDto> {
             if (!input.fileName) {
                 throw new AppError('module.system.oss.uploadFileRequired')

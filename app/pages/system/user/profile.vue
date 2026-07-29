@@ -8,7 +8,7 @@ import {
   type SysUserDto,
   type SysUserProfileUpdateDTO
 } from '#shared/system/user'
-import { useToastSuccess } from '~/utils/toast'
+import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
 
 definePageMeta({
   layout: 'system',
@@ -26,6 +26,10 @@ const isEditing = ref(false)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
 const lastProfileData = ref<SysUserDto | null>(null)
+const avatarFile = ref<File | null>(null)
+const uploadingAvatar = ref(false)
+const avatarProgress = ref(0)
+const avatarUploadXhr = shallowRef<XMLHttpRequest | null>(null)
 
 const profileState = reactive<Partial<SysUserProfileUpdateDTO>>({
   nickname: '',
@@ -56,6 +60,7 @@ const genderItems = useDictOptions(businessDictCode.userGender)
 const roleNames = computed(() => profile.value?.roles.map(role => role.name || role.code).filter(Boolean) ?? [])
 const displayName = computed(() => user.value?.nickname || user.value?.username || $ts('module.system.profile.userFallback'))
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
+const avatarPreview = computed(() => profileState.avatar || user.value?.avatar || undefined)
 const isAdminText = computed(() => user.value?.isAdmin === 1 ? $ts('module.system.profile.superAdmin') : $ts('module.system.profile.normalUser'))
 const genderText = computed(() => {
   const current = genderItems.value.find(item => String(item.value) === String(profileState.gender ?? user.value?.gender ?? 0))
@@ -70,6 +75,13 @@ const genderValue = computed({
 })
 
 const permissionsCountText = computed(() => $ts('module.system.profile.permissionCount').replace('{count}', String(profile.value?.permissions.length || 0)))
+
+const formatFileSize = (size?: number | null) => {
+  const value = Number(size || 0)
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(2)} KB`
+  return `${(value / 1024 / 1024).toFixed(2)} MB`
+}
 
 function fillProfileState(data?: SysUserDto | null) {
   const source = data || (user.value as SysUserDto | null)
@@ -98,8 +110,115 @@ async function loadData() {
 
 function cancelEdit() {
   fillProfileState(lastProfileData.value)
+  resetAvatarUpload()
   isEditing.value = false
 }
+
+function resetAvatarUpload() {
+  avatarUploadXhr.value?.abort()
+  avatarFile.value = null
+  avatarProgress.value = 0
+  uploadingAvatar.value = false
+  avatarUploadXhr.value = null
+}
+
+function parseUploadError(xhr: XMLHttpRequest) {
+  try {
+    const body = JSON.parse(xhr.responseText)
+    return body.message || body.statusMessage || xhr.statusText
+  } catch {
+    return xhr.statusText || $ts('module.system.oss.uploadFailed')
+  }
+}
+
+async function uploadAvatar() {
+  if (!avatarFile.value) {
+    useToastWarning($ts('module.system.oss.uploadFileRequired'))
+    return
+  }
+
+  if (!avatarFile.value.type.startsWith('image/')) {
+    useToastWarning($ts('module.system.oss.uploadFileRequired'))
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', avatarFile.value)
+
+  uploadingAvatar.value = true
+  avatarProgress.value = 0
+
+  await new Promise<void>((resolve) => {
+    const xhr = new XMLHttpRequest()
+    avatarUploadXhr.value = xhr
+    xhr.open('POST', '/api/system/user/avatar')
+    xhr.withCredentials = true
+
+    const locale = useCookie<string>('i18n_locale').value || 'en'
+    xhr.setRequestHeader('x-locale', locale)
+    xhr.setRequestHeader('accept-language', locale)
+
+    xhr.upload.onprogress = (event) => {
+      if (!event.lengthComputable) return
+      avatarProgress.value = Math.min(95, Math.round((event.loaded / event.total) * 100))
+    }
+
+    xhr.onload = () => {
+      uploadingAvatar.value = false
+      avatarUploadXhr.value = null
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const body = JSON.parse(xhr.responseText)
+          const url = body?.data?.url
+          if (url) {
+            profileState.avatar = url
+            avatarProgress.value = 100
+            avatarFile.value = null
+            useToastSuccess($ts('module.system.oss.uploadSuccess'))
+          } else {
+            useToastError($ts('module.system.oss.uploadFailed'))
+          }
+        } catch {
+          useToastError($ts('module.system.oss.uploadFailed'))
+        }
+      } else {
+        useToastError($ts('module.system.oss.uploadFailed'), 5000, parseUploadError(xhr))
+      }
+      resolve()
+    }
+
+    xhr.onerror = () => {
+      uploadingAvatar.value = false
+      avatarUploadXhr.value = null
+      useToastError($ts('module.system.oss.uploadFailed'))
+      resolve()
+    }
+
+    xhr.onabort = () => {
+      uploadingAvatar.value = false
+      avatarUploadXhr.value = null
+      avatarProgress.value = 0
+      useToastWarning($ts('module.system.oss.uploadCanceled'))
+      resolve()
+    }
+
+    xhr.send(formData)
+  })
+}
+
+function cancelAvatarUpload() {
+  avatarUploadXhr.value?.abort()
+}
+
+watch(avatarFile, async (file) => {
+  avatarProgress.value = 0
+  if (!file) return
+  if (uploadingAvatar.value) {
+    avatarUploadXhr.value?.abort()
+  }
+  await uploadAvatar()
+})
 
 async function handleProfileSubmit(event: FormSubmitEvent<SysUserProfileUpdateDTO>) {
   savingProfile.value = true
@@ -138,6 +257,9 @@ async function handlePasswordSubmit(event: FormSubmitEvent<SysUserChangePassword
 }
 
 onMounted(loadData)
+onBeforeUnmount(() => {
+  avatarUploadXhr.value?.abort()
+})
 </script>
 
 <template>
@@ -145,7 +267,7 @@ onMounted(loadData)
     <div class="mx-auto flex max-w-6xl flex-col gap-3">
       <div class="flex flex-col gap-3 rounded-lg border border-default bg-default p-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex min-w-0 items-center gap-3">
-          <UAvatar :src="user?.avatar || undefined" :alt="displayName" size="xl">
+          <UAvatar :src="avatarPreview" :alt="displayName" size="xl">
             {{ avatarText }}
           </UAvatar>
           <div class="min-w-0">
@@ -251,7 +373,49 @@ onMounted(loadData)
                 </UFormField>
 
                 <UFormField name="avatar" :label="$ts('module.system.profile.avatar')" class="md:col-span-2">
-                  <UInput v-model="profileState.avatar" type="url" :placeholder="$ts('module.system.profile.form.avatar')" class="w-full" />
+                  <div class="space-y-3">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                      <UAvatar :src="avatarPreview" :alt="displayName" size="3xl">
+                        {{ avatarText }}
+                      </UAvatar>
+                      <div class="min-w-0 flex-1 space-y-2">
+                        <UFileUpload
+                          v-model="avatarFile"
+                          accept="image/*"
+                          variant="area"
+                          layout="list"
+                          :disabled="uploadingAvatar"
+                          :multiple="false"
+                          :label="$ts('module.system.oss.form.uploadFile')"
+                          :description="$ts('module.system.oss.uploadSingleOnly')"
+                          class="w-full"
+                        />
+                        <div v-if="avatarFile" class="text-sm text-muted">
+                          {{ avatarFile.name }} / {{ formatFileSize(avatarFile.size) }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div v-if="uploadingAvatar || avatarProgress > 0" class="space-y-2">
+                      <div class="flex items-center justify-between text-sm text-muted">
+                        <span>{{ uploadingAvatar ? $ts('module.system.oss.uploading') : $ts('module.system.oss.uploadProgress') }}</span>
+                        <span>{{ avatarProgress }}%</span>
+                      </div>
+                      <UProgress :model-value="avatarProgress" color="primary" />
+                    </div>
+
+                    <UButton
+                      v-if="uploadingAvatar"
+                      type="button"
+                      color="warning"
+                      variant="outline"
+                      icon="i-lucide-ban"
+                      :label="$ts('module.system.oss.cancelUpload')"
+                      @click="cancelAvatarUpload"
+                    />
+
+                    <UInput v-model="profileState.avatar" type="url" :placeholder="$ts('module.system.profile.form.avatar')" class="w-full" />
+                  </div>
                 </UFormField>
 
                 <UFormField name="remark" :label="$ts('module.system.user.remark')" class="md:col-span-2">

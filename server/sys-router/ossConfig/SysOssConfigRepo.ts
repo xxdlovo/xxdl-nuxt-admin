@@ -29,6 +29,20 @@ export const sysOssConfigRepo = (ctx: Context) => {
                 ))
                 .orderBy(desc(sysOssConfig.isDefault), desc(sysOssConfig.createdAt))
         },
+        async getDefaultUploadable() {
+            const rows = await ctx.db
+                .select()
+                .from(sysOssConfig)
+                .where(and(
+                    eq(sysOssConfig.isDefault, 1),
+                    eq(sysOssConfig.status, 1),
+                    eq(sysOssConfig.verifyStatus, 1),
+                    eq(sysOssConfig.isDeleted, 0)
+                ))
+                .limit(1)
+
+            return rows[0] ?? null
+        },
         async getUploadableById(id: string) {
             const rows = await ctx.db
                 .select()
