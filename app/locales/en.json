@@ -12,8 +12,11 @@
   },
   "auth": {
     "invalidCredentials": "Invalid username or password",
+    "userIsBlock": "This user is forbidden",
     "unauthorized": "Please log in first",
-    "forbidden": "No permission"
+    "forbidden": "No permission",
+    "usernameExists": "This user name is already in use",
+    "phoneExists": "This phone number is already in use"
   },
   "common": {
     "notExist": "Query data does not exist",

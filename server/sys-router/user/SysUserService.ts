@@ -9,6 +9,7 @@ import type {
   SysUserDto,
   SysUserPageQueryDTO,
   SysUserQueryDTO,
+  SysUserRegisterDTO,
   SysUserResetPasswordDTO,
   SysUserUpdateDTO
 } from '#shared/system/user'
@@ -47,6 +48,42 @@ export function sysUserService(ctx: Context) {
         password: await hashUserPassword(data.password)
       }
       await repo.create(pojo)
+      return true
+    },
+
+    async register(data: SysUserRegisterDTO): Promise<boolean> {
+      const existingUsername = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(eq(sysUser.username, data.username))
+        .limit(1)
+
+      if (existingUsername[0]) {
+        throw new AppError('auth.usernameExists')
+      }
+
+      const existingPhone = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(eq(sysUser.phone, data.phone))
+        .limit(1)
+
+      if (existingPhone[0]) {
+        throw new AppError('auth.phoneExists')
+      }
+
+      await repo.create({
+        id: randomUuid(),
+        username: data.username,
+        password: await hashUserPassword(data.password),
+        email: `${data.username}@registered.local`,
+        nickname: data.username,
+        phone: data.phone,
+        gender: 0,
+        isAdmin: 0,
+        status: 1
+      })
+
       return true
     },
 

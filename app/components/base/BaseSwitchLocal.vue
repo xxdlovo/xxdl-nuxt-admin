@@ -10,12 +10,14 @@ const localeCookie = useCookie<string>('i18n_locale', {
 
 // Keep server-side error translation in sync with the client locale.
 localeCookie.value ||= $getLocale()
+const activeLocale = computed(() => localeCookie.value || $getLocale())
 
 const items = computed<DropdownMenuItem[]>(() =>
     locales.map((item) => ({
         label: item.name as string,
-        color: item.code === $getLocale() ? 'primary' : 'neutral',
-        onClick: () => {
+        icon: item.code === activeLocale.value ? 'i-lucide-check' : undefined,
+        color: item.code === activeLocale.value ? 'primary' : 'neutral',
+        onSelect: () => {
             localeCookie.value = item.code
             $switchLocale(item.code)
         }
@@ -24,12 +26,7 @@ const items = computed<DropdownMenuItem[]>(() =>
 </script>
 
 <template>
-
     <UDropdownMenu :items="items">
-        <UTooltip :delay-duration="0" :text="$t('icon.lang') as string">
-            <UButton icon="i-lucide:languages" color="neutral" variant="ghost" />
-        </UTooltip>
+        <UButton icon="i-lucide-languages" color="neutral" variant="ghost" :aria-label="$t('icon.lang') as string" />
     </UDropdownMenu>
-
-
 </template>

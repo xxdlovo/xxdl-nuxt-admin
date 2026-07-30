@@ -1,10 +1,25 @@
 
 import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
+import {useRbacProfileStore} from "~/stores/rbacProfile";
+import {useTabsStore} from "~/stores/tabs";
 
 interface SelectOption<T> {
     value: T;
     label: string;
+}
+
+// 判断用户登录后是否需要清理相关store
+export function afterUserLogin(username:string){
+
+    const rbac = useRbacProfileStore()
+   // const oldUser =  rbac.profile?.user?.username || ''
+   //  if(oldUser === username){
+   //      return
+   //  }
+    rbac.clearProfile()
+    const tabs = useTabsStore()
+    tabs.closeAll()
 }
 
 /**

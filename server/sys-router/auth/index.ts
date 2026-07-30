@@ -3,7 +3,7 @@ import { protectedProcedure, publicProcedure, router } from '~~/server/trpc/init
 import { verifyUserPassword } from '#server/utils/password'
 import { sysUserService } from '#server/sys-router/user/SysUserService'
 import { AppError } from '#server/utils/appError'
-import { SysUserChangePasswordSchema, SysUserProfileUpdateSchema } from '#shared/system/user'
+import { SysUserChangePasswordSchema, SysUserProfileUpdateSchema, SysUserRegisterSchema } from '#shared/system/user'
 import { authService } from './AuthService'
 import { logRecorder } from '#server/sys-router/systemLog/LogRecorderService'
 import {demoReadonlyMiddleware} from '#server/trpc/middlewares/demo'
@@ -14,12 +14,16 @@ const LoginSchema = z.object({
 })
 
 export const authRouter = router({
+  register: publicProcedure.input(SysUserRegisterSchema).mutation(async ({ ctx, input }) => {
+    return sysUserService(ctx).register(input)
+  }),
+
   login: publicProcedure.input(LoginSchema).mutation(async ({ ctx, input }) => {
     try {
       const user = await sysUserService(ctx).getLoginUserByUsername(input.username)
 
       if (!user || user.status !== 1) {
-        throw new AppError('auth.invalidCredentials')
+        throw new AppError('auth.userIsBlock')
       }
 
       const validPassword = await verifyUserPassword(user.password, input.password)

@@ -84,6 +84,15 @@ export const SysUserChangePasswordSchema = withMatchingPasswords(
 )
 export type SysUserChangePasswordDTO = z.infer<typeof SysUserChangePasswordSchema>
 
+// public registration
+export const SysUserRegisterSchema = withMatchingPasswords(
+  SysUserPasswordFieldsSchema.extend({
+    phone: z.string().min(1, 'form.phone.required').max(20, 'form.phone.invalid'),
+    username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid')
+  })
+)
+export type SysUserRegisterDTO = z.infer<typeof SysUserRegisterSchema>
+
 // query
 export const SysUserQuerySchema = SysUserBaseSchema.pick({
   id: true,
