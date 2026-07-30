@@ -1,6 +1,7 @@
 
 // 导入所有的表定义
 import { sysDepartment } from "./system/department"
+import { sysConfig } from "./system/config"
 import { sysDictData } from "./system/dictData"
 import { sysDictType } from "./system/dictType"
 import { sysJob } from "./system/job"
@@ -20,6 +21,7 @@ import { demo } from "./demo/index"
 // 导出所有表定义
 export {
   demo,
+  sysConfig,
   sysDepartment,
   sysDictData,
   sysDictType,

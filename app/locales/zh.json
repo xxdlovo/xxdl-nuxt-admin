@@ -16,7 +16,8 @@
     "unauthorized": "请先登录",
     "forbidden": "无权限",
     "usernameExists": "用户名已被使用",
-    "phoneExists": "手机号已被使用"
+    "phoneExists": "手机号已被使用",
+    "registerDisabled": "系统暂未开放注册"
   },
   "common": {
     "notExist": "查询数据不存在",
@@ -792,6 +793,30 @@
         "addSysOssConfig": "新增存储配置",
         "editSysOssConfig": "编辑存储配置"
       },
+      "config": {
+        "title": "参数配置",
+        "configName": "参数名称",
+        "configKey": "参数键名",
+        "configValue": "参数键值",
+        "configType": "参数类型",
+        "status": "状态",
+        "remark": "备注",
+        "type": {
+          "system": "系统内置",
+          "custom": "自定义"
+        },
+        "form": {
+          "configName": "请输入参数名称",
+          "configKey": "请输入参数键名",
+          "configValue": "请输入参数键值",
+          "configType": "请选择参数类型",
+          "status": "请选择状态",
+          "remark": "请输入备注"
+        },
+        "addSysConfig": "新增参数配置",
+        "editSysConfig": "编辑参数配置",
+        "configNotExist": "参数不存在: {key} "
+      },
       "menu": {
         "home": "首页",
         "title": "菜单列表",
@@ -906,6 +931,7 @@
       },
       "register": {
         "title": "注册账号",
+        "disabled": "系统暂未开放注册",
         "agreement": "我已经仔细阅读并接受",
         "protocol": "《用户协议》",
         "policy": "《隐私权政策》"

@@ -74,7 +74,7 @@ const genderValue = computed({
   }
 })
 
-const permissionsCountText = computed(() => $ts('module.system.profile.permissionCount').replace('{count}', String(profile.value?.permissions.length || 0)))
+const permissionsCountText = computed(() => $ts('module.system.profile.permissionCount',{count:String(profile.value?.permissions.length || 0)}))
 
 const formatFileSize = (size?: number | null) => {
   const value = Number(size || 0)

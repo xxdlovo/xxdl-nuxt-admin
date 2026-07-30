@@ -4,6 +4,8 @@ import { verifyUserPassword } from '#server/utils/password'
 import { sysUserService } from '#server/sys-router/user/SysUserService'
 import { AppError } from '#server/utils/appError'
 import { SysUserChangePasswordSchema, SysUserProfileUpdateSchema, SysUserRegisterSchema } from '#shared/system/user'
+import { systemRegisterEnum } from '#shared/constants/business'
+import { sysConfigService } from '#server/sys-router/config/SysConfigService'
 import { authService } from './AuthService'
 import { logRecorder } from '#server/sys-router/systemLog/LogRecorderService'
 import {demoReadonlyMiddleware} from '#server/trpc/middlewares/demo'
@@ -15,6 +17,11 @@ const LoginSchema = z.object({
 
 export const authRouter = router({
   register: publicProcedure.input(SysUserRegisterSchema).mutation(async ({ ctx, input }) => {
+    const value = await sysConfigService(ctx).getValueByKey(systemRegisterEnum.key)
+    if (value !== systemRegisterEnum.yes) {
+      throw new AppError('auth.registerDisabled')
+    }
+
     return sysUserService(ctx).register(input)
   }),
 

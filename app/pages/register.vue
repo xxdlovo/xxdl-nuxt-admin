@@ -1,13 +1,18 @@
 <script setup lang="ts">
+import { systemRegisterEnum } from '#shared/constants/business'
+
 const toast = useToast()
 const { $ts } = useI18n()
 const { $trpc } = useNuxtApp()
+const { getConfigValue } = useConfig()
 const colorMode = useColorMode()
 
 const localeCookie = useCookie<string>('i18n_locale', {
   sameSite: 'lax',
   path: '/'
 })
+const enableReg = ref(false)
+const enableRegLoading = ref(true)
 const loading = ref(false)
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
@@ -35,6 +40,7 @@ const text = computed(() => {
     submit: $ts('page.login.register.title'),
     back: $ts('page.login.common.back'),
     success: isZh ? '注册成功，请登录' : 'Registration successful. Please log in.',
+    disabled: $ts('page.login.register.disabled'),
     passwordMismatch: $ts('form.confirmPwd.invalid'),
     showPassword: isZh ? '显示密码' : 'Show password',
     hidePassword: isZh ? '隐藏密码' : 'Hide password',
@@ -52,6 +58,14 @@ function toggleColorMode() {
 }
 
 async function handleRegister() {
+  if (!enableReg.value) {
+    toast.add({
+      title: text.value.disabled,
+      color: 'warning'
+    })
+    return
+  }
+
   if (form.password !== form.confirmPassword) {
     toast.add({
       title: text.value.passwordMismatch,
@@ -77,6 +91,15 @@ async function handleRegister() {
     loading.value = false
   }
 }
+
+onMounted(async () => {
+  try {
+    const value = await getConfigValue(systemRegisterEnum.key, systemRegisterEnum.no)
+    enableReg.value = value === systemRegisterEnum.yes
+  } finally {
+    enableRegLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -109,7 +132,21 @@ async function handleRegister() {
           <p>{{ text.title }}</p>
         </div>
 
-        <form class="grid gap-4" @submit.prevent="handleRegister">
+        <div v-if="enableRegLoading" class="flex min-h-[18rem] items-center justify-center">
+          <UIcon name="i-lucide-loader-circle" class="size-6 animate-spin text-primary" />
+        </div>
+
+        <div v-else-if="!enableReg" class="grid gap-4 text-center">
+          <div class="mx-auto flex size-12 items-center justify-center rounded-full bg-warning/10 text-warning">
+            <UIcon name="i-lucide-circle-alert" class="size-6" />
+          </div>
+          <p class="text-sm text-muted">{{ text.disabled }}</p>
+          <UButton to="/login" color="neutral" variant="outline" block>
+            {{ text.back }}
+          </UButton>
+        </div>
+
+        <form v-else class="grid gap-4" @submit.prevent="handleRegister">
           <UInput
             v-model="form.phone"
             icon="i-lucide-phone"

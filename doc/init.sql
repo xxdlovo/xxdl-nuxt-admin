@@ -206,6 +206,25 @@ VALUES ('10000000-0000-0000-0000-000000000001', NULL, '首页', 'system:home', 1
         '', '', '', 1, 1, 1, '', NULL, '2026-07-29 08:52:43', NULL, '2026-07-29 09:32:53', 0),
        ('fa74abc0-3643-4110-a9b3-03301d20a111', '10000000-0000-0000-0000-000000000101', '重置密码', 'system:user:reset',
         2, '', '', '', 106, 1, 1, '', NULL, '2026-07-29 08:58:22', NULL, '2026-07-29 09:32:53', 0);
+INSERT INTO sys_menu (
+    id, parent_id, name, code, type, path, component, icon, sort_order,
+    visible, status, remark, created_by, updated_by, is_deleted
+) VALUES
+      ('10000000-0000-0000-0000-000000000171', '10000000-0000-0000-0000-000000000100',
+       '参数配置', 'system:config', 1, '/system/config', 'system/config/index', 'i-lucide-sliders-horizontal', 171,
+       0, 1, '参数配置菜单', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000172', '10000000-0000-0000-0000-000000000171',
+       '参数查询', 'system:config:list', 2, NULL, NULL, NULL, 172,
+       1, 1, '参数配置查询权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000173', '10000000-0000-0000-0000-000000000171',
+       '参数新增', 'system:config:add', 2, NULL, NULL, NULL, 173,
+       1, 1, '参数配置新增权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000174', '10000000-0000-0000-0000-000000000171',
+       '参数编辑', 'system:config:edit', 2, NULL, NULL, NULL, 174,
+       1, 1, '参数配置编辑权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000175', '10000000-0000-0000-0000-000000000171',
+       '参数删除', 'system:config:del', 2, NULL, NULL, NULL, 175,
+       1, 1, '参数配置删除权限', NULL, NULL, 0);
 /*!40000 ALTER TABLE `sys_menu` ENABLE KEYS */;
 UNLOCK
 TABLES;
@@ -755,6 +774,9 @@ VALUES ('805c05d0-8a57-11f1-82f8-00163e031f61', '8052aac4-8a57-11f1-82f8-00163e0
 /*!40000 ALTER TABLE `sys_dict_data` ENABLE KEYS */;
 UNLOCK
 TABLES;
+INSERT INTO xxdl_nuxt_admin.sys_config
+(id, config_name, config_key, config_value, config_type, status, remark, created_by, created_at, updated_by, updated_at, is_deleted)
+VALUES('09171958-f26f-4457-8cae-aeeb2ff45286', '是否开启注册', 'system_register_enable', 'no', 1, 1, '', '30000000-0000-0000-0000-000000000001', '2026-07-30 13:18:01', '30000000-0000-0000-0000-000000000001', '2026-07-30 15:17:09', 0);
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

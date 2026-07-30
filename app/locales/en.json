@@ -16,7 +16,8 @@
     "unauthorized": "Please log in first",
     "forbidden": "No permission",
     "usernameExists": "This user name is already in use",
-    "phoneExists": "This phone number is already in use"
+    "phoneExists": "This phone number is already in use",
+    "registerDisabled": "Registration is currently disabled"
   },
   "common": {
     "notExist": "Query data does not exist",
@@ -792,6 +793,30 @@
         "addSysOssConfig": "Add Storage Config",
         "editSysOssConfig": "Edit Storage Config"
       },
+      "config": {
+        "title": "Parameter Config",
+        "configName": "Parameter Name",
+        "configKey": "Parameter Key",
+        "configValue": "Parameter Value",
+        "configType": "Type",
+        "status": "Status",
+        "remark": "Remark",
+        "type": {
+          "system": "Built-in",
+          "custom": "Custom"
+        },
+        "form": {
+          "configName": "Please enter parameter name",
+          "configKey": "Please enter parameter key",
+          "configValue": "Please enter parameter value",
+          "configType": "Please select parameter type",
+          "status": "Please select status",
+          "remark": "Please enter remark"
+        },
+        "addSysConfig": "Add Parameter Config",
+        "editSysConfig": "Edit Parameter Config",
+        "configNotExist": "config Not Exist: {key}"
+      },
       "menu": {
         "home": "Home",
         "title": "Menu List",
@@ -906,6 +931,7 @@
       },
       "register": {
         "title": "Register",
+        "disabled": "Registration is currently disabled.",
         "agreement": "I have read and agree to",
         "protocol": "《User Agreement》",
         "policy": "《Privacy Policy》"

@@ -16,7 +16,7 @@
         <!-- 问候信息 -->
         <div class="ml-3">
           <h3 class="text-lg font-semibold">
-            {{ $t('page.home.greeting', { userName: '用户名' }) }}
+            {{ $t('page.home.greeting', { userName:useRbacProfile().username.value }) }}
           </h3>
           <p class="text-gray-500 mt-1 leading-relaxed">
             {{ $t('page.home.weatherDesc') }}
@@ -39,8 +39,9 @@
 </template>
 
 <script setup>
-const { $t } = useI18n()
+import {useRbacProfile} from "~/composables/useRbacProfile.js";
 
+const { $t } = useI18n()
 const statisticData = [
   { id: 1, label: $t('page.home.projectCount'), value: 25 },
   { id: 2, label: $t('page.home.todo'), value: '4/16' },

@@ -13,6 +13,7 @@ export function useRbacProfile() {
   return {
     profile,
     loading,
+    username: computed(() => profile.value?.user.username),
     error,
     isAdmin,
     loadProfile: store.loadProfile,

@@ -405,3 +405,20 @@ CREATE TABLE `system_demo` (
                                `myname` varchar(100) DEFAULT NULL,
                                PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='演示表2';
+
+
+CREATE TABLE `sys_config` (
+                              `id` varchar(36) NOT NULL COMMENT '主键UUID',
+                              `config_name` varchar(36) DEFAULT NULL COMMENT '参数名称',
+                              `config_key` varchar(255) NOT NULL COMMENT '参数键名',
+                              `config_value` varchar(255) NOT NULL COMMENT '参数键值',
+                              `config_type` tinyint DEFAULT '1' COMMENT '是否系统内置：0-否，1-是',
+                              `status` tinyint DEFAULT '1' COMMENT '状态：0-禁用，1-正常',
+                              `remark` varchar(255) DEFAULT NULL COMMENT '备注',
+                              `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
+                              `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                              `updated_by` varchar(36) DEFAULT NULL COMMENT '更新人ID',
+                              `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                              `is_deleted` tinyint DEFAULT '0' COMMENT '是否删除：0-否，1-是',
+                              PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='系统参数配置表';

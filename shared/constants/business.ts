@@ -17,4 +17,9 @@ export const businessDictCode = {
     menuIconType: 'menu_icon_type',
     sysLogLevel: 'sys_log_level'
 } as const
-
+// 系统配置
+export const systemRegisterEnum = {
+    key:'system_register_enable',
+    yes: 'yes',
+    no: 'no',
+}
