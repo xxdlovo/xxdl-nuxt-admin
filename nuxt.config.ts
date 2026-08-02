@@ -44,6 +44,13 @@ export default defineNuxtConfig({
         fonts: false
     },
     css: ['~/assets/css/main.css'],
+    icon: {
+        provider: 'server',
+        customCollections: [{
+            prefix: 'custom',
+            dir: './app/assets/icons'
+        }]
+    },
     i18n: {
         // 路由跳转时没有/zh,/en的路径
         strategy: 'no_prefix',

@@ -772,11 +772,12 @@ VALUES ('805c05d0-8a57-11f1-82f8-00163e031f61', '8052aac4-8a57-11f1-82f8-00163e0
         'module.system.sysLog.level.3', '3', 4, 1, NULL, NULL, '2026-07-29 07:50:18', NULL, '2026-07-29 07:50:18', 0,
         NULL);
 /*!40000 ALTER TABLE `sys_dict_data` ENABLE KEYS */;
-UNLOCK
-TABLES;
-INSERT INTO xxdl_nuxt_admin.sys_config
+INSERT INTO sys_config
 (id, config_name, config_key, config_value, config_type, status, remark, created_by, created_at, updated_by, updated_at, is_deleted)
 VALUES('09171958-f26f-4457-8cae-aeeb2ff45286', '是否开启注册', 'system_register_enable', 'no', 1, 1, '', '30000000-0000-0000-0000-000000000001', '2026-07-30 13:18:01', '30000000-0000-0000-0000-000000000001', '2026-07-30 15:17:09', 0);
+
+UNLOCK
+TABLES;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 

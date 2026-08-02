@@ -64,7 +64,8 @@ const menuTypeItems = computed(() => typeItems.value.filter(item => item.value !
 const statusItems = useDictOptions(businessDictCode.enableStatus)
 const iconTypeValue = ref('iconify')
 const iconTypeItems = computed(() => [
-  { label: $ts('module.system.menu.iconType.iconify'), value: 'iconify' }
+  { label: $ts('module.system.menu.iconType.iconify'), value: 'iconify' },
+  { label: $ts('module.system.menu.iconType.local'), value: 'local' }
 ])
 const disabledParentIds = computed(() => {
   const currentId = props.operateType === 'edit' ? props.data?.id : null
