@@ -122,6 +122,7 @@
       :data="editingDictType ?? undefined"
       :close="closeDictTypeVisible"
       :refresh="refreshDictTypes"
+      @saved="handleDictTypeSaved"
     />
   </div>
 </template>
@@ -151,6 +152,7 @@ const { $ts } = useI18n()
 const splitLayoutKey = ref(0)
 const dictTypePermissions = useCrudPermissions('system:dictType')
 const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
+const dictStore = useDictStore()
 
 const dictTypes = ref<SysDictTypeDto[]>([])
 const dictTypeItems = computed(() => {
@@ -246,9 +248,17 @@ const handleDictTypeSelect = async (value: SelectableItem | SelectableItem[] | n
   selectedDictType.value = selected as SysDictTypeDto | null
 }
 
+const handleDictTypeSaved = (payload: { typeId?: string | null, oldCode?: string | null, newCode?: string | null }) => {
+  dictStore.clearDictByCodes([payload.oldCode, payload.newCode])
+  dictStore.setTypeCode(payload.typeId, payload.newCode)
+}
+
 const handleDictTypeDelete = async (id: string) => {
   if (dictTypeLoading.value) return
+  const deleted = dictTypes.value.find(item => item.id === id)
   await $trpc.sysDictType.remove.mutate(id)
+  dictStore.clearDict(deleted?.code)
+  dictStore.removeTypeCode(deleted?.id)
   useToastSuccess($ts('common.deleteSuccess'))
   if (selectedDictType.value?.id === id) {
     selectedDictType.value = null

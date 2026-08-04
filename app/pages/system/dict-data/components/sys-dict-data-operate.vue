@@ -11,7 +11,6 @@ import {
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { businessDictCode } from "#shared/constants/business";
 import { useToastSuccess } from "~/utils/toast";
-import {useDictStore} from "~/stores/dict";
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const props = defineProps<{
@@ -22,7 +21,7 @@ const props = defineProps<{
   defaultTypeCode?: string;
   disableTypeId?: boolean;
   close?: () => void;
-  refresh?: () => void;
+  refresh?: () => void | Promise<void>;
 }>();
 
 const formItemUi = {
@@ -33,6 +32,7 @@ const formItemUi = {
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
+  saved: [typeIds: string[]]
 }>();
 
 const visible = computed({
@@ -86,6 +86,7 @@ const listClassValue = computed<BadgeColor>({
 const selectedListClass = computed(() =>
   listClassItems.find(item => item.value === listClassValue.value) ?? listClassItems.at(-1)!
 )
+const typeCodeDisplay = computed(() => props.defaultTypeCode || '')
 const closeDrawer = () => {
   props.close?.()
 }
@@ -137,20 +138,26 @@ const handleSubmit = async (event: FormSubmitEvent<SysDictDataAddDTO>) => {
     await handleEdit()
   }
   closeDrawer()
-  props.refresh?.()
+  await props.refresh?.()
 }
 
 // 编辑数据
 const handleEdit = async () => {
+  const previousTypeId = props.data?.typeId
   await $trpc.sysDictData.update.mutate(state.value as SysDictDataUpdateDTO)
   useToastSuccess($ts('common.modifySuccess'))
-  const dictStore = useDictStore()
-  dictStore.clearDict(props.defaultTypeCode)
+  emitChangedTypeIds([previousTypeId, state.value.typeId])
 }
+
 // 保存数据
 const handleSave = async () => {
   await $trpc.sysDictData.create.mutate(state.value)
   useToastSuccess($ts('common.addSuccess'))
+  emitChangedTypeIds([state.value.typeId])
+}
+
+const emitChangedTypeIds = (typeIds: Array<string | null | undefined>) => {
+  emit('saved', [...new Set(typeIds.filter((typeId): typeId is string => Boolean(typeId)))])
 }
 
 const title = computed(() => {
@@ -173,11 +180,19 @@ const title = computed(() => {
           <UFormField name="typeId" required :label="$ts('module.system.dictType.code')" orientation="horizontal"
             :ui="formItemUi">
             <UBaseInput
-              v-model="props.defaultTypeCode"
+              v-if="disableTypeId"
+              :model-value="typeCodeDisplay"
               :placeholder="$ts('module.system.dictType.form.code')"
-              :variant="disableTypeId ? 'subtle' : 'outline'"
-              :disabled="disableTypeId"
-              :trailing="disableTypeId ? 'other' : 'clear'"
+              variant="subtle"
+              disabled
+              trailing="other"
+            />
+            <UBaseInput
+              v-else
+              v-model="state.typeId"
+              :placeholder="$ts('module.system.dictData.form.typeId')"
+              variant="outline"
+              trailing="clear"
             />
           </UFormField>
           <UFormField name="label" required :label="$ts('module.system.dictData.label')" orientation="horizontal"

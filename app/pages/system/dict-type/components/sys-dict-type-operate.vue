@@ -18,7 +18,7 @@ const props = defineProps<{
   operateType: string;
   data?: SysDictTypeDto;
   close?: () => void;
-  refresh?: () => void;
+  refresh?: () => void | Promise<void>;
 }>();
 
 const formItemUi = {
@@ -29,6 +29,7 @@ const formItemUi = {
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
+  saved: [payload: { typeId?: string | null, oldCode?: string | null, newCode?: string | null }]
 }>();
 
 const visible = computed({
@@ -95,18 +96,28 @@ const handleSubmit = async (event: FormSubmitEvent<SysDictTypeAddDTO>) => {
     await handleEdit()
   }
   closeDrawer()
-  props.refresh?.()
+  await props.refresh?.()
 }
 
 // 编辑数据
 const handleEdit = async () => {
+  const oldCode = props.data?.code
   await $trpc.sysDictType.update.mutate(state.value as SysDictTypeUpdateDTO)
   useToastSuccess($ts('common.modifySuccess'))
+  emit('saved', {
+    typeId: state.value.id,
+    oldCode,
+    newCode: state.value.code
+  })
 }
 // 保存数据
 const handleSave = async () => {
   await $trpc.sysDictType.create.mutate(state.value)
   useToastSuccess($ts('common.addSuccess'))
+  emit('saved', {
+    typeId: state.value.id,
+    newCode: state.value.code
+  })
 }
 
 const title = computed(() => {

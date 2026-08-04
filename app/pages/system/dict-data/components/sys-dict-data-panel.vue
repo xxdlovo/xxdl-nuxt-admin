@@ -84,6 +84,7 @@
       :disable-type-id="Boolean(typeId)"
       :close="closeVisible"
       :refresh="loadData"
+      @saved="handleDataSaved"
     />
   </div>
 </template>
@@ -115,6 +116,7 @@ const badgeColors = new Set(['primary', 'secondary', 'success', 'warning', 'erro
 const data = ref<SysDictDataDto[]>([])
 const loading = ref(false)
 const searchParams = ref<SysDictDataQueryDTO>({})
+const dictStore = useDictStore()
 const pagination = reactive({
   page: 1,
   pageSize: 20,
@@ -246,8 +248,15 @@ const loadData = async () => {
     pagination.page = result.page
     pagination.pageSize = result.pageSize
     pagination.total = result.total
+    syncDictCodeMap()
   } finally {
     loading.value = false
+  }
+}
+
+const syncDictCodeMap = () => {
+  if (props.typeId && props.dictCode) {
+    dictStore.setTypeCode(props.typeId, props.dictCode)
   }
 }
 
@@ -262,13 +271,24 @@ const handleSearch = async (value: SysDictDataQueryDTO) => {
 
 const handleDelete = async (id: string) => {
   if (loading.value) return
+  const deleted = data.value.find(item => item.id === id)
   await $trpc.sysDictData.remove.mutate(id)
+  await dictStore.clearDictByTypeIds([deleted?.typeId], props.dictCode)
   await onDeleted()
+}
+
+const handleDataSaved = async (typeIds: string[]) => {
+  await dictStore.clearDictByTypeIds(typeIds, props.dictCode)
 }
 
 const handleBatchDelete = async () => {
   if (loading.value || checkedRowKeys.value.length === 0) return
+  const deletedTypeIds = data.value
+    .filter(item => item.id && checkedRowKeys.value.includes(item.id))
+    .map(item => item.typeId)
+
   await $trpc.sysDictData.batchDelete.mutate(checkedRowKeys.value)
+  await dictStore.clearDictByTypeIds(deletedTypeIds, props.dictCode)
   await onBatchDeleted()
 }
 
