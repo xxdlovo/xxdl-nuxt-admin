@@ -1,8 +1,8 @@
-import type {Context} from '#server/trpc/context'
-import {sysLoginLogService} from '#server/sys-router/loginLog/SysLoginLogService'
-import {sysSystemLogService} from '#server/sys-router/systemLog/SysSystemLogService'
-import {getRequestInfo} from '#server/utils/requestInfo'
-import {AppError} from '#server/utils/appError'
+import type { Context } from '#server/trpc/context'
+import { sysLoginLogService } from '#server/sys-router/loginLog/SysLoginLogService'
+import { sysSystemLogService } from '#server/sys-router/systemLog/SysSystemLogService'
+import { getRequestInfo } from '#server/utils/requestInfo'
+import { AppError } from '#server/utils/appError'
 
 /**
  * 系统操作日志级别，对应 sys_system_log.level。
@@ -53,6 +53,21 @@ const MAX_LOG_STRING_LENGTH = 2000
 const MAX_LOG_JSON_STRING_LENGTH = 12000
 
 /**
+ * 按接口单独控制日志载荷清洗。
+ *
+ * - requestPath 匹配 server/api 的真实 URL pathname。
+ * - trpcPath 匹配 tRPC router path。
+ * - requestParamsOmitKeys/requestResultOmitKeys 支持字段名或点号路径，如 ctx、input.ctx。
+ * - 字符串 pattern 以 * 结尾时按前缀匹配，否则按精确匹配。
+ */
+const LOG_PAYLOAD_POLICIES: LogPayloadPolicy[] = [
+    {
+        requestPath: '/api/xxx/stream',
+        requestParamsOmitKeys: ['input.ctx.req1', 'input.ctx.req2', 'input.req3']
+    }
+]
+
+/**
  * 系统操作日志级别类型。
  */
 type LogLevel = typeof LOG_LEVEL[keyof typeof LOG_LEVEL]
@@ -60,6 +75,25 @@ type LogLevel = typeof LOG_LEVEL[keyof typeof LOG_LEVEL]
  * 日志结果状态类型。
  */
 type LogStatus = typeof LOG_STATUS[keyof typeof LOG_STATUS]
+
+type LogPayloadPattern = string | RegExp
+
+type LogPayloadPolicy = {
+    requestPath?: LogPayloadPattern
+    trpcPath?: LogPayloadPattern
+    requestParamsOmitKeys?: string[]
+    requestResultOmitKeys?: string[]
+}
+
+type LogPayloadPolicyInput = {
+    requestPath?: string | null
+    trpcPath?: string | null
+}
+
+type LogPayloadSanitizeOptions = {
+    omitKeys?: Set<string>
+    path?: string[]
+}
 
 /**
  * 登录日志的业务补充信息。
@@ -223,9 +257,57 @@ function limitLogPayloadSize(value: unknown): unknown {
             length: text.length,
             preview: text.slice(0, MAX_LOG_JSON_STRING_LENGTH)
         }
-    } catch {
+    }
+    catch {
         return String(value)
     }
+}
+
+function matchLogPayloadPattern(pattern: LogPayloadPattern | undefined, value: string | null | undefined) {
+    if (!pattern || !value) {
+        return false
+    }
+
+    if (pattern instanceof RegExp) {
+        return pattern.test(value)
+    }
+
+    if (pattern.endsWith('*')) {
+        return value.startsWith(pattern.slice(0, -1))
+    }
+
+    return value === pattern
+}
+
+function resolveLogPayloadPolicy(input: LogPayloadPolicyInput) {
+    return LOG_PAYLOAD_POLICIES.find(policy =>
+        matchLogPayloadPattern(policy.requestPath, input.requestPath)
+        || matchLogPayloadPattern(policy.trpcPath, input.trpcPath)
+    )
+}
+
+function createOmitKeySet(keys: string[] | undefined) {
+    return new Set(keys?.map(key => key.toLowerCase()) ?? [])
+}
+
+function shouldOmitLogPayloadKey(
+    key: string,
+    options: LogPayloadSanitizeOptions | undefined,
+) {
+    if (!options?.omitKeys?.size) {
+        return false
+    }
+
+    const currentPath = [...(options.path ?? []), key].join('.').toLowerCase()
+    const normalizedKey = key.toLowerCase()
+
+    return options.omitKeys.has(normalizedKey) || options.omitKeys.has(currentPath)
+}
+
+function applyLogPayloadPolicy(value: unknown, omitKeys?: string[]) {
+    return sanitizeLogPayload(value, {
+        omitKeys: createOmitKeySet(omitKeys)
+    })
 }
 
 /**
@@ -235,7 +317,12 @@ function limitLogPayloadSize(value: unknown): unknown {
  * - 循环引用替换
  * - bigint/function/symbol 等不可稳定 JSON 化的值安全处理
  */
-function sanitizeLogPayload(value: unknown, depth = 0, seen = new WeakSet<object>()): unknown {
+function sanitizeLogPayload(
+    value: unknown,
+    options: LogPayloadSanitizeOptions = {},
+    depth = 0,
+    seen = new WeakSet<object>(),
+): unknown {
     if (typeof value === 'string') {
         return value.length > MAX_LOG_STRING_LENGTH
             ? `${value.slice(0, MAX_LOG_STRING_LENGTH)}...`
@@ -255,7 +342,12 @@ function sanitizeLogPayload(value: unknown, depth = 0, seen = new WeakSet<object
             return '[MaxDepth]'
         }
 
-        return value.map(item => sanitizeLogPayload(item, depth + 1, seen))
+        return value.map((item, index) => sanitizeLogPayload(
+            item,
+            { ...options, path: [...(options.path ?? []), String(index)] },
+            depth + 1,
+            seen
+        ))
     }
 
     if (!value || typeof value !== 'object') {
@@ -274,9 +366,18 @@ function sanitizeLogPayload(value: unknown, depth = 0, seen = new WeakSet<object
     const sanitized: Record<string, unknown> = {}
 
     for (const [key, item] of Object.entries(value)) {
+        if (shouldOmitLogPayloadKey(key, options)) {
+            continue
+        }
+
         sanitized[key] = SENSITIVE_PARAM_KEYS.has(key.toLowerCase())
             ? '******'
-            : sanitizeLogPayload(item, depth + 1, seen)
+            : sanitizeLogPayload(
+                item,
+                { ...options, path: [...(options.path ?? []), key] },
+                depth + 1,
+                seen
+            )
     }
 
     seen.delete(value)
@@ -302,7 +403,8 @@ function toErrorResult(error: unknown) {
 async function ignoreLogError(action: () => Promise<unknown>, label: string) {
     try {
         await action()
-    } catch (error) {
+    }
+    catch (error) {
         console.error(`[${label} Write Failed]`, error)
     }
 }
@@ -347,14 +449,14 @@ export function logRecorder(ctx: Context) {
          * 登录成功快捷方法。
          */
         async loginSuccess(remark = 'login success') {
-            await this.login(LOG_STATUS.success, {remark})
+            await this.login(LOG_STATUS.success, { remark })
         },
 
         /**
          * 登录失败快捷方法，可传入登录表单中的 username 和异常对象。
          */
         async loginFailure(username?: string | null, remark = 'login failure', error?: unknown) {
-            await this.login(LOG_STATUS.failure, {username, remark, errorCode: toErrorCode(error)})
+            await this.login(LOG_STATUS.failure, { username, remark, errorCode: toErrorCode(error) })
         },
 
         /**
@@ -377,6 +479,9 @@ export function logRecorder(ctx: Context) {
         async system(options: SystemLogOptions) {
             const user = currentUser()
             const info = requestInfo()
+            const requestPath = options.requestPath ?? info.requestPath
+            const trpcPath = options.trpcPath
+            const payloadPolicy = resolveLogPayloadPolicy({ requestPath, trpcPath })
 
             await ignoreLogError(
                 () => sysSystemLogService(ctx).create({
@@ -388,12 +493,12 @@ export function logRecorder(ctx: Context) {
                     browser: info.browser,
                     os: info.os,
                     requestMethod: options.requestMethod ?? info.requestMethod,
-                    requestPath: options.requestPath ?? info.requestPath,
+                    requestPath,
                     trpcType: options.trpcType,
-                    trpcPath: options.trpcPath,
+                    trpcPath,
                     durationMs: options.durationMs,
-                    requestParams: sanitizeLogPayload(options.requestParams),
-                    requestResult: sanitizeLogPayload(options.requestResult),
+                    requestParams: applyLogPayloadPolicy(options.requestParams, payloadPolicy?.requestParamsOmitKeys),
+                    requestResult: applyLogPayloadPolicy(options.requestResult, payloadPolicy?.requestResultOmitKeys),
                     errorCode: options.errorCode,
                     traceId: info.traceId,
                     level: options.level ?? LOG_LEVEL.info,
@@ -411,26 +516,21 @@ export function logRecorder(ctx: Context) {
          * debug 级别系统日志快捷方法。
          */
         async debug(message: string, options: SystemShortcutOptions = {}) {
-            await this.system({...options, level: LOG_LEVEL.debug, status: LOG_STATUS.success, message})
+            await this.system({ ...options, level: LOG_LEVEL.debug, status: LOG_STATUS.success, message })
         },
 
         /**
          * info 级别系统日志快捷方法。
          */
         async info(message: string, options: SystemShortcutOptions = {}) {
-            await this.system({...options, level: LOG_LEVEL.info, status: LOG_STATUS.success, message})
+            await this.system({ ...options, level: LOG_LEVEL.info, status: LOG_STATUS.success, message })
         },
 
         /**
          * warn 级别系统日志快捷方法，默认仍按成功状态记录。
          */
         async warn(message: string, options: SystemShortcutOptions = {}) {
-            await this.system({
-                ...options,
-                level: LOG_LEVEL.warn,
-                status: options.status ?? LOG_STATUS.success,
-                message
-            })
+            await this.system({ ...options, level: LOG_LEVEL.warn, status: options.status ?? LOG_STATUS.success, message })
         },
 
         /**
@@ -452,7 +552,7 @@ export function logRecorder(ctx: Context) {
          * 成功操作快捷方法，适合业务模块中手动记录关键动作。
          */
         async systemSuccess(module: string, message = 'operation success', options: SystemShortcutOptions = {}) {
-            await this.system({...options, level: LOG_LEVEL.info, module, message, status: LOG_STATUS.success})
+            await this.system({ ...options, level: LOG_LEVEL.info, module, message, status: LOG_STATUS.success })
         },
 
         /**
