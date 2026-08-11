@@ -7,6 +7,16 @@ const { $ts } = useI18n()
 const { $trpc } = useNuxtApp()
 const { fetch: fetchUserSession } = useUserSession()
 const colorMode = useColorMode()
+type LoginForm = {
+  username: string
+  password: string
+}
+
+const loginRememberStorageKey = 'xxdl-login-remembered-account'
+const defaultLoginForm: LoginForm = {
+  username: 'admin',
+  password: 'adminadmin'
+}
 
 const localeCookie = useCookie<string>('i18n_locale', {
   sameSite: 'lax',
@@ -14,10 +24,9 @@ const localeCookie = useCookie<string>('i18n_locale', {
 })
 const loading = ref(false)
 const showPassword = ref(false)
-const rememberMe = ref(true)
-const form = reactive({
-  username: 'admin',
-  password: 'adminadmin'
+const rememberMe = ref(false)
+const form = reactive<LoginForm>({
+  ...defaultLoginForm
 })
 
 const currentLocale = computed(() => localeCookie.value === 'zh' ? 'zh' : 'en')
@@ -60,6 +69,53 @@ const themeToggleLabel = computed(() => isDarkMode.value ? loginText.value.switc
 const topShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.44 : 0.94 }))
 const bottomShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.38 : 0.94 }))
 
+function readRememberedLogin(): LoginForm | null {
+  if (!import.meta.client) {
+    return null
+  }
+
+  const rawValue = window.localStorage.getItem(loginRememberStorageKey)
+  if (!rawValue) {
+    return null
+  }
+
+  try {
+    const value = JSON.parse(rawValue) as Partial<LoginForm>
+
+    if (
+        typeof value.username === 'string' &&
+        value.username.trim() &&
+        typeof value.password === 'string' &&
+        value.password
+    ) {
+      return {
+        username: value.username,
+        password: value.password
+      }
+    }
+  } catch {
+    // Ignore malformed persisted state and fall back to the demo account.
+  }
+
+  return null
+}
+
+function persistRememberedLogin() {
+  if (!import.meta.client) {
+    return
+  }
+
+  if (rememberMe.value) {
+    window.localStorage.setItem(loginRememberStorageKey, JSON.stringify({
+      username: form.username,
+      password: form.password
+    }))
+    return
+  }
+
+  window.localStorage.removeItem(loginRememberStorageKey)
+}
+
 function toggleColorMode() {
   const nextMode = isDarkMode.value ? 'light' : 'dark'
 
@@ -71,6 +127,23 @@ function fillDemoAccount(account: { username: string, password: string }) {
   form.username = account.username
   form.password = account.password
 }
+
+onMounted(() => {
+  const rememberedLogin = readRememberedLogin()
+
+  if (rememberedLogin) {
+    Object.assign(form, rememberedLogin)
+    rememberMe.value = true
+  }
+})
+
+watch(rememberMe, (checked) => {
+  if (checked || !import.meta.client) {
+    return
+  }
+
+  window.localStorage.removeItem(loginRememberStorageKey)
+})
 
 async function handleLogin() {
   if (!form.username || !form.password) {
@@ -88,6 +161,7 @@ async function handleLogin() {
       password: form.password
     })
     await fetchUserSession()
+    persistRememberedLogin()
     toast.add({
       title: loginText.value.loginSuccess,
       color: 'success'
@@ -106,18 +180,18 @@ async function handleLogin() {
     <div class="login-shape login-shape-bottom pointer-events-none absolute transition-opacity duration-200" :style="bottomShapeStyle" />
 
     <section
-      class="relative z-[1] flex min-h-screen items-center justify-center p-8 max-sm:items-start max-sm:px-4 max-sm:pt-20 max-sm:pb-10"
-      :aria-label="loginText.aria"
+        class="relative z-[1] flex min-h-screen items-center justify-center p-8 max-sm:items-start max-sm:px-4 max-sm:pt-20 max-sm:pb-10"
+        :aria-label="loginText.aria"
     >
       <div class="login-card relative w-[min(100%,360px)] rounded-lg px-5 pt-4 pb-[1.15rem] backdrop-blur-[14px] max-sm:w-[min(100%,22rem)]">
         <div class="absolute top-3 right-3 flex items-center gap-0.5">
           <UButton
-            type="button"
-            :icon="themeToggleIcon"
-            color="neutral"
-            variant="ghost"
-            :aria-label="themeToggleLabel"
-            @click="toggleColorMode"
+              type="button"
+              :icon="themeToggleIcon"
+              color="neutral"
+              variant="ghost"
+              :aria-label="themeToggleLabel"
+              @click="toggleColorMode"
           />
           <BaseSwitchLocal />
         </div>
@@ -135,35 +209,35 @@ async function handleLogin() {
 
         <form class="grid gap-4" @submit.prevent="handleLogin">
           <UInput
-            v-model="form.username"
-            icon="i-lucide-user"
-            autocomplete="username"
-            :placeholder="loginText.username"
-            size="lg"
-            variant="outline"
-            class="w-full"
+              v-model="form.username"
+              icon="i-lucide-user"
+              autocomplete="username"
+              :placeholder="loginText.username"
+              size="lg"
+              variant="outline"
+              class="w-full"
           />
 
           <UInput
-            v-model="form.password"
-            icon="i-lucide-lock"
-            :type="showPassword ? 'text' : 'password'"
-            autocomplete="current-password"
-            :placeholder="loginText.password"
-            size="lg"
-            variant="outline"
-            class="w-full"
+              v-model="form.password"
+              icon="i-lucide-lock"
+              :type="showPassword ? 'text' : 'password'"
+              autocomplete="current-password"
+              :placeholder="loginText.password"
+              size="lg"
+              variant="outline"
+              class="w-full"
           >
             <template #trailing>
               <UButton
-                type="button"
-                :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                :aria-label="showPassword ? loginText.hidePassword : loginText.showPassword"
-                @click="showPassword = !showPassword"
+                  type="button"
+                  :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  :aria-label="showPassword ? loginText.hidePassword : loginText.showPassword"
+                  @click="showPassword = !showPassword"
               />
             </template>
           </UInput>
@@ -176,11 +250,11 @@ async function handleLogin() {
           </div>
 
           <UButton
-            type="submit"
-            block
-            :loading="loading"
-            size="lg"
-            class="min-h-[2.55rem] rounded-full font-semibold"
+              type="submit"
+              block
+              :loading="loading"
+              size="lg"
+              class="min-h-[2.55rem] rounded-full font-semibold"
           >
             {{ loginText.confirm }}
           </UButton>
@@ -201,13 +275,13 @@ async function handleLogin() {
 
         <div class="flex flex-wrap justify-center gap-2.5">
           <UButton
-            v-for="account in demoAccounts"
-            :key="account.label"
-            type="button"
-            size="sm"
-            disabled
-            class="min-w-[4.25rem] rounded-none font-semibold"
-            @click="fillDemoAccount(account)"
+              v-for="account in demoAccounts"
+              :key="account.label"
+              type="button"
+              size="sm"
+              disabled
+              class="min-w-[4.25rem] rounded-none font-semibold"
+              @click="fillDemoAccount(account)"
           >
             {{ account.label }}
           </UButton>
@@ -222,8 +296,8 @@ async function handleLogin() {
 <style scoped>
 .login-page {
   background:
-    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--ui-primary) 10%, transparent) 0 10rem, transparent 22rem),
-    color-mix(in srgb, var(--ui-primary) 14%, var(--ui-bg));
+      radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--ui-primary) 10%, transparent) 0 10rem, transparent 22rem),
+      color-mix(in srgb, var(--ui-primary) 14%, var(--ui-bg));
 }
 
 .login-card {
@@ -247,9 +321,9 @@ async function handleLogin() {
 
 .login-shape {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--ui-primary) 92%, black),
-    color-mix(in srgb, var(--ui-primary) 66%, white)
+      135deg,
+      color-mix(in srgb, var(--ui-primary) 92%, black),
+      color-mix(in srgb, var(--ui-primary) 66%, white)
   );
 }
 
