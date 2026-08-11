@@ -6,20 +6,22 @@
 
     <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0 sm:p-0' }">
       <TableWithPagination
-        ref="table"
-        :data="data"
-        :columns="columns"
-        :loading="loading"
-        :pagination="pagination"
-        :page-size-options="pageSizeOptions"
+          ref="table"
+          :data="data"
+          :columns="columns"
+          :loading="loading"
+          :pagination="pagination"
+          :page-size-options="pageSizeOptions"
       >
         <template #header>
           <TableHeaderOperation
-            v-if="tableRef?.tableRef"
-            @refresh="refresh"
-            :tableRef="tableRef?.tableRef"
-            :loading="loading"
-            class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
+              v-if="tableRef?.tableRef"
+              @refresh="refresh"
+              :tableRef="tableRef?.tableRef"
+              :loading="loading"
+              :add-permission="permissions.codes.add"
+              :delete-permission="permissions.codes.del"
+              class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
             <template #prefix>
               <span>{{ $ts('module.system.loginLog.title') }}</span>
@@ -53,7 +55,7 @@ import TableWithPagination from '~/components/table/TableWithPagination.vue'
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
-
+const permissions = useCrudPermissions('system:loginLog')
 const searchParams = ref<SysLoginLogQueryDTO>({})
 const detailVisible = ref(false)
 const detailData = ref<SysLoginLogDto | null>(null)
@@ -128,10 +130,10 @@ const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
       header: () => $ts('module.system.loginLog.loginTime')
     },
     useBadgeColumn<SysLoginLogDto>(
-      'status',
-      'module.system.loginLog.loginStatus',
-      loginStatusConfig.value,
-      1
+        'status',
+        'module.system.loginLog.loginStatus',
+        loginStatusConfig.value,
+        1
     ),
     actionColumn
   ]
