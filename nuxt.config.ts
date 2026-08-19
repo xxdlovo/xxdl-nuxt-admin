@@ -3,6 +3,10 @@ export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
     devtools: { enabled: true },
     ssr: false,
+    routeRules: {
+        // Set layout for specific route
+        '/fi/**': { appLayout: 'system' }
+    },
     // 忽略/app/layouts/modules/的文件导入但保留hmr. 更推荐的方法是放到components目录中
     hooks: {
         'app:resolve'(app) {
@@ -46,6 +50,9 @@ export default defineNuxtConfig({
     css: ['~/assets/css/main.css'],
     icon: {
         provider: 'server',
+        clientBundle: {
+            includeCustomCollections: true
+        },
         customCollections: [{
             prefix: 'custom',
             dir: './app/assets/icons'
