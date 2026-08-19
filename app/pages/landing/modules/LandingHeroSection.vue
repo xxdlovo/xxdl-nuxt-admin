@@ -3,7 +3,7 @@ import { Motion } from 'motion-v'
 import LandingGradientGlow from '../components/LandingGradientGlow.vue'
 import LandingHeroShaders from '../components/LandingHeroShaders.client.vue'
 import LandingHeroTerminal from '../components/LandingHeroTerminal.vue'
-import type { LandingContent } from '../content/types'
+import type { LandingContent } from '@/types/landing/content'
 
 const { page } = defineProps<{
   page: LandingContent

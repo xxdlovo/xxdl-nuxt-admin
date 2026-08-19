@@ -62,6 +62,7 @@ const { validate } = useZodValidation({
 const typeItems = useDictOptions(businessDictCode.menuType)
 const menuTypeItems = computed(() => typeItems.value.filter(item => item.value !== '2'))
 const statusItems = useDictOptions(businessDictCode.enableStatus)
+const LOCAL_ICON_COLLECTION = 'custom'
 const iconTypeValue = ref('iconify')
 const iconTypeItems = computed(() => [
   { label: $ts('module.system.menu.iconType.iconify'), value: 'iconify' },
@@ -152,11 +153,47 @@ const remarkValue = computed({
   set: val => { state.value.remark = val }
 })
 
-const previewIcon = computed(() => normalizeNavigationIcon(state.value.icon))
+const isLocalIconName = (icon?: string | null) => {
+  const normalizedIcon = icon?.trim()
+
+  if (!normalizedIcon) {
+    return false
+  }
+
+  return normalizedIcon.startsWith(`${LOCAL_ICON_COLLECTION}:`)
+      || normalizedIcon.startsWith(`i-${LOCAL_ICON_COLLECTION}-`)
+      || (!normalizedIcon.includes(':') && !normalizedIcon.startsWith('i-'))
+}
+
+const normalizeLocalIcon = (icon?: string | null) => {
+  const normalizedIcon = icon?.trim()
+
+  if (!normalizedIcon) {
+    return ''
+  }
+
+  if (normalizedIcon.startsWith(`${LOCAL_ICON_COLLECTION}:`)) {
+    return normalizedIcon
+  }
+
+  if (normalizedIcon.startsWith(`i-${LOCAL_ICON_COLLECTION}-`)) {
+    return `${LOCAL_ICON_COLLECTION}:${normalizedIcon.slice(`i-${LOCAL_ICON_COLLECTION}-`.length)}`
+  }
+
+  return `${LOCAL_ICON_COLLECTION}:${normalizedIcon.replace(/\.svg$/i, '')}`
+}
+
+const normalizeFormIcon = () => iconTypeValue.value === 'local'
+    ? normalizeLocalIcon(state.value.icon)
+    : (state.value.icon ?? '').trim()
+
+const previewIcon = computed(() => normalizeNavigationIcon(
+    iconTypeValue.value === 'local' ? normalizeLocalIcon(state.value.icon) : state.value.icon
+))
 
 const title = computed(() => props.operateType === 'add'
-  ? $ts('module.system.menu.addMenu')
-  : $ts('module.system.menu.editMenu')
+    ? $ts('module.system.menu.addMenu')
+    : $ts('module.system.menu.editMenu')
 )
 
 const toMenuFormState = (menu?: SysMenuDto | null): SysMenuAddDTO | SysMenuUpdateDTO => ({
@@ -179,6 +216,7 @@ const buildSubmitPayload = (): SysMenuAddDTO | SysMenuUpdateDTO => ({
   ...toMenuFormState(state.value),
   parentId: state.value.parentId || null,
   type: Number(state.value.type ?? 1),
+  icon: normalizeFormIcon(),
   sortOrder: state.value.sortOrder ?? 0,
   visible: state.value.visible ?? 0,
   status: state.value.status ?? 1
@@ -190,16 +228,16 @@ const getButtonChildren = (menuId?: string | null): MenuButtonDraft[] => {
   }
 
   return props.allMenus
-    .filter(item => item.parentId === menuId && item.type === 2)
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-    .map(item => ({
-      id: item.id,
-      name: item.name || '',
-      code: item.code || '',
-      sortOrder: item.sortOrder ?? 0,
-      status: item.status ?? 1,
-      remark: item.remark || ''
-    }))
+      .filter(item => item.parentId === menuId && item.type === 2)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map(item => ({
+        id: item.id,
+        name: item.name || '',
+        code: item.code || '',
+        sortOrder: item.sortOrder ?? 0,
+        status: item.status ?? 1,
+        remark: item.remark || ''
+      }))
 }
 
 const initFormData = () => {
@@ -213,6 +251,7 @@ const initFormData = () => {
     }
 
     state.value = toMenuFormState(props.data)
+    iconTypeValue.value = isLocalIconName(state.value.icon) ? 'local' : 'iconify'
     buttonRows.value = Number(props.data.type ?? 1) === 1 ? getButtonChildren(props.data.id) : []
     return
   }
@@ -223,17 +262,18 @@ const initFormData = () => {
     type: Number(props.defaultType ?? 1),
     visible: 0
   }
+  iconTypeValue.value = 'iconify'
   buttonRows.value = []
 }
 
 watch(
-  () => [open.value, props.operateType, props.data?.id, props.parentId, props.defaultType],
-  () => {
-    if (open.value) {
-      initFormData()
-    }
-  },
-  { immediate: true }
+    () => [open.value, props.operateType, props.data?.id, props.parentId, props.defaultType],
+    () => {
+      if (open.value) {
+        initFormData()
+      }
+    },
+    { immediate: true }
 )
 
 const setOpen = (value: boolean) => {
@@ -324,16 +364,16 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
 
 <template>
   <UModal
-    :open="open"
-    :title="title"
-    :dismissible="true"
-    :ui="{
+      :open="open"
+      :title="title"
+      :dismissible="true"
+      :ui="{
       content: 'max-w-[820px]',
       header: 'px-6 py-4',
       body: 'px-6 py-5',
       footer: 'justify-end'
     }"
-    @update:open="setOpen"
+      @update:open="setOpen"
   >
     <template #body>
       <UForm :validate="validate" :state="state" class="space-y-5" @submit="handleSubmit">
@@ -382,9 +422,9 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
 
           <UFormField name="visible" :label="$ts('module.system.menu.hideInMenu')" orientation="horizontal" :ui="formItemUi">
             <URadioGroup
-              v-model="hiddenValue"
-              orientation="horizontal"
-              :items="[
+                v-model="hiddenValue"
+                orientation="horizontal"
+                :items="[
                 { label: $ts('common.yesOrNo.yes'), value: true },
                 { label: $ts('common.yesOrNo.no'), value: false }
               ]"
@@ -412,10 +452,10 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
           </div>
 
           <UTable
-            v-if="buttonRows.length > 0"
-            :data="buttonRows"
-            :columns="buttonColumns"
-            :ui="{ base: 'min-w-[720px]', td: 'align-top' }"
+              v-if="buttonRows.length > 0"
+              :data="buttonRows"
+              :columns="buttonColumns"
+              :ui="{ base: 'min-w-[720px]', td: 'align-top' }"
           >
             <template #name-cell="{ row }">
               <UBaseInput v-model="row.original.name" :placeholder="$ts('module.system.menu.form.buttonDesc')" class="w-full" />
@@ -431,10 +471,10 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
 
             <template #status-cell="{ row }">
               <USelect
-                :model-value="String(row.original.status || 1)"
-                :items="statusItems"
-                class="w-28"
-                @update:model-value="value => row.original.status = Number(value)"
+                  :model-value="String(row.original.status || 1)"
+                  :items="statusItems"
+                  class="w-28"
+                  @update:model-value="value => row.original.status = Number(value)"
               />
             </template>
 
@@ -444,12 +484,12 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
           </UTable>
 
           <UButton
-            v-else
-            type="button"
-            color="neutral"
-            variant="ghost"
-            class="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-dashed border-default text-sm text-muted transition hover:border-primary hover:text-primary"
-            @click="addButtonRow"
+              v-else
+              type="button"
+              color="neutral"
+              variant="ghost"
+              class="flex h-9 w-full items-center justify-center gap-2 rounded-md border border-dashed border-default text-sm text-muted transition hover:border-primary hover:text-primary"
+              @click="addButtonRow"
           >
             <UIcon name="i-lucide-plus" class="size-4" />
             <span>{{ $ts('module.system.menu.addButton') }}</span>

@@ -4,7 +4,4 @@ export default defineNuxtRouteMiddleware((to) => {
     return
   }
 
-  if (!to.path.startsWith('/system') && to.path !== '/demo' && !to.path.startsWith('/show-case')) {
-    to.meta.layout = false
-  }
 })

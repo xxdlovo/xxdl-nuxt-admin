@@ -1,6 +1,6 @@
 import { landingContentEn } from './content/en'
 import { landingContentZh } from './content/zh'
-import type { LandingLocale } from './content/types'
+import type { LandingLocale } from '@/types/landing/content'
 
 const contentByLocale = {
   en: landingContentEn,

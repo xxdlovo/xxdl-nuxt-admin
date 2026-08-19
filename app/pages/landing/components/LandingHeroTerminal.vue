@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Motion } from 'motion-v'
-import type { TerminalSegment } from '../content/types'
+import type { TerminalSegment } from '@/types/landing/content'
 
 defineProps<{
   title: string

@@ -1,7 +1,7 @@
 import { createContext } from '#server/trpc/context'
 import { authService } from '#server/sys-router/auth/AuthService'
 import { sysOssService } from '#server/sys-router/oss/SysOssService'
-import { logRecorder } from '#server/sys-router/systemLog/LogRecorderService'
+import { apiOperationLog } from '#server/utils/apiOperationLog'
 import { AppError } from '#server/utils/appError'
 import { createServerT } from '#server/utils/serverI18n'
 import { crudPermissionCodes } from '#shared/auth'
@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
     const t = createServerT(event)
     const start = Date.now()
     const ctx = await createContext(event)
+    const operationLog = apiOperationLog(ctx, 'sysOss.upload', start)
     let requestParams: Record<string, unknown> = {}
 
     try {
@@ -57,43 +58,30 @@ export default defineEventHandler(async (event) => {
             body: new Uint8Array(filePart.data)
         })
 
-        await logRecorder(ctx).systemSuccess(
-            'sysOss.upload',
-            `upload ${filePart.filename} success ${Date.now() - start}ms`,
-            {
-                requestMethod: 'POST',
-                requestPath: '/api/system/oss/upload',
-                durationMs: Date.now() - start,
-                requestParams,
-                requestResult: {
-                    id: data.id,
-                    originalName: data.originalName,
-                    fileName: data.fileName,
-                    fileSize: data.fileSize,
-                    service: data.service,
-                    bucketName: data.bucketName,
-                    objectName: data.objectName,
-                    url: data.url
-                }
+        await operationLog.success({
+            action: `upload ${filePart.filename}`,
+            requestParams,
+            requestResult: {
+                id: data.id,
+                originalName: data.originalName,
+                fileName: data.fileName,
+                fileSize: data.fileSize,
+                service: data.service,
+                bucketName: data.bucketName,
+                objectName: data.objectName,
+                url: data.url
             }
-        )
+        })
 
         return {
             success: true,
             data
         }
     } catch (error) {
-        await logRecorder(ctx).systemFailure(
-            'sysOss.upload',
-            error,
-            `upload file failed ${Date.now() - start}ms`,
-            {
-                requestMethod: 'POST',
-                requestPath: '/api/system/oss/upload',
-                durationMs: Date.now() - start,
-                requestParams
-            }
-        )
+        await operationLog.failure(error, {
+            action: 'upload file',
+            requestParams
+        })
 
         const statusCode = error instanceof AppError
             ? error.i18nKey === 'auth.unauthorized' ? 401 : error.i18nKey === 'auth.forbidden' ? 403 : 400

@@ -257,7 +257,7 @@ const handleDictTypeDelete = async (id: string) => {
   if (dictTypeLoading.value) return
   const deleted = dictTypes.value.find(item => item.id === id)
   await $trpc.sysDictType.remove.mutate(id)
-  dictStore.clearDict(deleted?.code)
+  dictStore.clearDict(deleted?.code  ?? undefined)
   dictStore.removeTypeCode(deleted?.id)
   useToastSuccess($ts('common.deleteSuccess'))
   if (selectedDictType.value?.id === id) {

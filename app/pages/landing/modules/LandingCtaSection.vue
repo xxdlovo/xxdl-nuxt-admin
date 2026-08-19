@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Motion } from 'motion-v'
 import LandingGradientGlow from '../components/LandingGradientGlow.vue'
-import type { LandingContent } from '../content/types'
+import type { LandingContent } from '@/types/landing/content'
 
 const { cta } = defineProps<{
   cta: LandingContent['cta']

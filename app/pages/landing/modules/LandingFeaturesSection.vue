@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Motion } from 'motion-v'
-import type { LandingContent } from '../content/types'
+import type { LandingContent } from '@/types/landing/content'
 
 const { features } = defineProps<{
   features: LandingContent['features']

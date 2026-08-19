@@ -1,4 +1,4 @@
-import type { LandingContent } from './types'
+import type { LandingContent } from '@/types/landing/content'
 
 export const landingContentZh = {
   seo: {

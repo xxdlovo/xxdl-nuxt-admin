@@ -6,7 +6,7 @@ import { z } from "zod"
 
 export const ApiRequestSchema = z.object({
     page: z.number().int().min(1).default(1),
-    pageSize: z.number().int().min(1).max(100).default(10),
+    pageSize: z.number().int().min(1).max(1000).default(10),
 })
 export type  ApiReq  = z.infer<typeof ApiRequestSchema>
 /**
