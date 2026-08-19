@@ -71,7 +71,7 @@ jobs:
 
       - name: Build app
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=8192
         run: pnpm build
 
       - name: Set up Docker Buildx
@@ -91,6 +91,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ${{ env.IMAGE_NAME }}
+          provenance: false
+          sbom: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
