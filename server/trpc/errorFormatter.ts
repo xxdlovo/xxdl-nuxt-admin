@@ -39,13 +39,28 @@ function getRequestLocale(ctx?: any) {
 export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
     const locale = getRequestLocale(ctx)
     const $t = createLocaleT(locale)
+    const unauthorizedKeys = new Set([
+        'auth.unauthorized'
+    ])
 
     let customMessage = error.message
     let errorType = $t("system.serverError")
+    let trpcCode = shape.data.code
+    let httpStatus = shape.data.httpStatus
+    let i18nKey: string | undefined
 
     if (error.cause instanceof AppError) {
-        errorType = $t("system.serverError")
-        customMessage = $t(error.cause.i18nKey)
+        i18nKey = error.cause.i18nKey
+        errorType = $t(error.cause.i18nKey)
+        // errorType = $t("system.serverError")
+        // errorType = unauthorizedKeys.has(error.cause.i18nKey)
+        //     ? $t("auth.unauthorized")
+        //     : $t("system.serverError")
+        // customMessage = $t(error.cause.i18nKey) + ': ' + customMessage
+        if (unauthorizedKeys.has(error.cause.i18nKey)) {
+            trpcCode = 'UNAUTHORIZED'
+            httpStatus = 401
+        }
     }
     else if (error.cause instanceof ZodError) {
         errorType = $t("system.zodError")
@@ -94,7 +109,9 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
             ...shape.data,
             type: errorType,
             message: customMessage,
-            code: error.code,
+            i18nKey,
+            code: trpcCode,
+            httpStatus,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
         } as TRPCFormattedError,
     }
