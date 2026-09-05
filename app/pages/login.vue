@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import {afterUserLogin} from "~/utils/common";
-
+definePageMeta({
+  layout: false
+})
 const route = useRoute()
 const toast = useToast()
 const { $ts } = useI18n()

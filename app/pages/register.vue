@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { systemRegisterEnum } from '#shared/constants/business'
-
+definePageMeta({
+  layout: false
+})
 const toast = useToast()
 const { $ts } = useI18n()
 const { $trpc } = useNuxtApp()
