@@ -23,3 +23,10 @@ export const systemRegisterEnum = {
     yes: 'yes',
     no: 'no',
 }
+
+// 其他登录入口开关。配置中心返回的是字符串；缺少该配置时，登录页使用 true 作为默认值。
+export const systemOtherLoginEnum = {
+    key: 'system_otherlogin_enable',
+    enabled: 'true',
+    disabled: 'false',
+}

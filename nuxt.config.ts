@@ -1,3 +1,16 @@
+// session Cookie 是否要求 HTTPS。
+//
+// h3 的默认值为 secure: true。这个默认值在 HTTPS 域名下是正确的，
+// 但浏览器会拒绝通过 http://IP:端口 访问时返回的 Secure Cookie，
+// 导致登录接口虽然成功，后续读取 session 时仍然是未登录状态。
+// 使用环境变量允许部署环境显式覆盖默认判断：
+// - 本地开发（NODE_ENV 不是 production）默认关闭 Secure，兼容 HTTP；
+// - 生产环境默认开启 Secure，要求通过 HTTPS 访问；
+// - 如果生产环境暂时只能使用 HTTP，请设置 NUXT_SESSION_COOKIE_SECURE=false。
+const sessionCookieSecure = process.env.NUXT_SESSION_COOKIE_SECURE !== undefined
+    ? process.env.NUXT_SESSION_COOKIE_SECURE === 'true'
+    : process.env.NODE_ENV === 'production'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
@@ -24,6 +37,20 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         demoMode: process.env.NUXT_DEMO_MODE === 'true',
+        // nuxt-auth-utils 会把该配置传给 h3 的 useSession，
+        // 登录接口 setUserSession 和客户端 /api/_auth/session 会共用这些 Cookie 规则。
+        session: {
+            // SessionConfig 的 password 在模块类型中是必填字段；这里保留空字符串作为配置默认值。
+            // 真实密钥始终通过 NUXT_SESSION_PASSWORD 注入，Nuxt 会在运行时用该环境变量覆盖此值，
+            // 因此不能在源码中填写真实密码，也不能省略该字段而触发 TypeScript 类型错误。
+            password: '',
+            cookie: {
+                path: '/',
+                sameSite: 'lax',
+                httpOnly: true,
+                secure: sessionCookieSecure
+            }
+        },
         db: {
             host: '',
             user: '',

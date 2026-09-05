@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {afterUserLogin} from "~/utils/common";
+import { systemOtherLoginEnum } from '#shared/constants/business'
 definePageMeta({
   layout: false
 })
@@ -7,7 +8,8 @@ const route = useRoute()
 const toast = useToast()
 const { $ts } = useI18n()
 const { $trpc } = useNuxtApp()
-const { fetch: fetchUserSession } = useUserSession()
+const { fetch: fetchUserSession, loggedIn } = useUserSession()
+const { getConfigValue } = useConfig()
 const colorMode = useColorMode()
 type LoginForm = {
   username: string
@@ -29,6 +31,8 @@ const localeCookie = useCookie<string>('i18n_locale', {
 const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
+// 其他登录配置缺失时默认展示，确保历史部署尚未新增配置项时登录页功能不受影响。
+const otherLoginEnabled = ref(true)
 const form = reactive<LoginForm>({
   ...defaultLoginForm
 })
@@ -56,6 +60,9 @@ const loginText = computed(() => {
     admin: $ts('page.login.pwdLogin.admin'),
     user: $ts('page.login.pwdLogin.user'),
     missingCredentials: isZh ? '请输入用户名和密码' : 'Please enter username and password',
+    sessionNotReady: isZh
+      ? '登录成功，但登录会话未生效，请检查 Cookie 或 HTTPS 配置'
+      : 'Login succeeded, but the session was not established. Check the Cookie or HTTPS configuration.',
     showPassword: isZh ? '显示密码' : 'Show password',
     hidePassword: isZh ? '隐藏密码' : 'Hide password',
     switchToLight: `${$ts('common.switch')} ${$ts('theme.themeSchema.light')}`,
@@ -132,12 +139,22 @@ function fillDemoAccount(account: { username: string, password: string }) {
   form.password = account.password
 }
 
-onMounted(() => {
+onMounted(async () => {
   const rememberedLogin = readRememberedLogin()
 
   if (rememberedLogin) {
     Object.assign(form, rememberedLogin)
     rememberMe.value = true
+  }
+
+  // 验证码登录和演示账号属于同一组“其他登录”入口，统一由系统配置控制。
+  // 配置服务返回字符串；未创建该配置项时 getConfigValue 会返回传入的布尔默认值 true。
+  try {
+    const value = await getConfigValue(systemOtherLoginEnum.key, true)
+    otherLoginEnabled.value = value === true || value === systemOtherLoginEnum.enabled
+  } catch {
+    // 配置接口暂时不可用时保留 true，避免网络波动把验证码和其他账号入口错误隐藏。
+    otherLoginEnabled.value = true
   }
 })
 
@@ -165,6 +182,19 @@ async function handleLogin() {
       password: form.password
     })
     await fetchUserSession()
+
+    // 登录接口返回成功只代表账号密码校验通过；真正决定能否访问受保护页面的是 session Cookie。
+    // 如果浏览器因 Secure Cookie、反向代理或域名配置问题没有保存该 Cookie，
+    // 此时继续跳转只会被全局鉴权中间件重新带回 /login?redirect=...，形成“登录成功但不跳转”。
+    // 先校验 loggedIn，给出明确提示并停止跳转，避免向用户展示误导性的登录成功流程。
+    if (!loggedIn.value) {
+      toast.add({
+        title: loginText.value.sessionNotReady,
+        color: 'warning'
+      })
+      return
+    }
+
     persistRememberedLogin()
     toast.add({
       title: loginText.value.loginSuccess,
@@ -263,8 +293,12 @@ async function handleLogin() {
             {{ loginText.confirm }}
           </UButton>
 
-          <div class="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
-            <UButton type="button" color="neutral" variant="outline" block disabled>
+          <div
+              class="grid gap-2.5 max-sm:grid-cols-1"
+              :class="otherLoginEnabled ? 'grid-cols-2' : 'grid-cols-1'"
+          >
+            <!-- 与其他账号入口共用开关，关闭后不渲染尚未启用的验证码登录入口。 -->
+            <UButton v-if="otherLoginEnabled" type="button" color="neutral" variant="outline" block disabled>
               {{ loginText.verificationLogin }}
             </UButton>
             <UButton to="/register" color="neutral" variant="outline" block>
@@ -273,23 +307,26 @@ async function handleLogin() {
           </div>
         </form>
 
-        <div class="login-divider my-[1.05rem] mb-3 flex items-center gap-3 text-[0.78rem] whitespace-nowrap text-muted">
-          <span>{{ loginText.otherAccount }}</span>
-        </div>
+        <!-- 配置关闭时，分隔线和演示账号必须一并隐藏，避免留下无意义的登录区域。 -->
+        <template v-if="otherLoginEnabled">
+          <div class="login-divider my-[1.05rem] mb-3 flex items-center gap-3 text-[0.78rem] whitespace-nowrap text-muted">
+            <span>{{ loginText.otherAccount }}</span>
+          </div>
 
-        <div class="flex flex-wrap justify-center gap-2.5">
-          <UButton
-              v-for="account in demoAccounts"
-              :key="account.label"
-              type="button"
-              size="sm"
-              disabled
-              class="min-w-[4.25rem] rounded-none font-semibold"
-              @click="fillDemoAccount(account)"
-          >
-            {{ account.label }}
-          </UButton>
-        </div>
+          <div class="flex flex-wrap justify-center gap-2.5">
+            <UButton
+                v-for="account in demoAccounts"
+                :key="account.label"
+                type="button"
+                size="sm"
+                disabled
+                class="min-w-[4.25rem] rounded-none font-semibold"
+                @click="fillDemoAccount(account)"
+            >
+              {{ account.label }}
+            </UButton>
+          </div>
+        </template>
       </div>
     </section>
 
