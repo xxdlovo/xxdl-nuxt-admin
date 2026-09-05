@@ -23,6 +23,7 @@ const emit = defineEmits<{
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
+const { profile, loadProfile } = useRbacProfile()
 
 const visible = computed({
   get: () => props.open,
@@ -189,6 +190,10 @@ async function save() {
       menuIds: selectedIds.value,
       types: selectableTypes.value as Array<0 | 1 | 2>
     })
+    // 当前登录用户属于正在编辑的角色时，权限变更后立即重建本地 profile。
+    if (profile.value?.roles.some(item => item.id === props.role?.id)) {
+      await loadProfile(true)
+    }
     useToastSuccess($ts('common.modifySuccess'))
     visible.value = false
   } finally {

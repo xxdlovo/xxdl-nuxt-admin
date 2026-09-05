@@ -12,27 +12,47 @@ import type {
     SysRoleMenuUpdateDTO
 } from "#shared/system/roleMenu";
 import { randomUuid } from "#shared/utils/uuid";
+import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
+import { sysRoleRepo } from '#server/sys-router/role/SysRoleRepo'
 
 export function sysRoleMenuService(ctx: Context) {
     const repo = sysRoleMenuRepo(ctx)
+    const roleRepo = sysRoleRepo(ctx)
+    const rbacCache = rbacCacheService()
 
     return {
         async create(data: SysRoleMenuAddDTO): Promise<boolean> {
             const uuid = randomUuid()
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
+            const role = await roleRepo.getById(data.roleId)
+            role?.code ? await rbacCache.invalidateRole(role.code) : await rbacCache.invalidateAllRoles()
             return true
         },
         async remove(id: string): Promise<boolean> {
+            const old = await repo.getById(id)
             await repo.remove(id)
+            const role = old?.roleId ? await roleRepo.getById(old.roleId) : null
+            role?.code ? await rbacCache.invalidateRole(role.code) : await rbacCache.invalidateAllRoles()
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
+            const old = await Promise.all(ids.map(id => repo.getById(id)))
             await repo.batchRemove(ids)
+            const roles = await Promise.all(old.map(item => item?.roleId ? roleRepo.getById(item.roleId) : null))
+            const codes = new Set(roles.map(role => role?.code).filter((code): code is string => Boolean(code)))
+            if (codes.size) await Promise.all([...codes].map(code => rbacCache.invalidateRole(code)))
+            else await rbacCache.invalidateAllRoles()
             return ids.length
         },
         async updateById(id: string, data: SysRoleMenuUpdateDTO): Promise<boolean> {
+            const old = await repo.getById(id)
             await repo.updateById(id, data)
+            const roleIds = new Set([old?.roleId, data.roleId].filter((value): value is string => Boolean(value)))
+            const roles = await Promise.all([...roleIds].map(roleId => roleRepo.getById(roleId)))
+            const codes = new Set(roles.map(role => role?.code).filter((code): code is string => Boolean(code)))
+            if (codes.size) await Promise.all([...codes].map(code => rbacCache.invalidateRole(code)))
+            else await rbacCache.invalidateAllRoles()
             return true
         },
         async getOne(req: SysRoleMenuQueryDTO): Promise<SysRoleMenuDto> {
@@ -82,6 +102,8 @@ export function sysRoleMenuService(ctx: Context) {
             await repo.enableByIds(enableIds, operatorId)
             await repo.disableByIds(disableIds, operatorId)
             await repo.createActiveAssignments(data.roleId, insertMenuIds, operatorId)
+            const role = await roleRepo.getById(data.roleId)
+            role?.code ? await rbacCache.invalidateRole(role.code) : await rbacCache.invalidateAllRoles()
 
             return true
         },

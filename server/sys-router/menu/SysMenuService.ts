@@ -7,6 +7,7 @@ import { randomUuid } from "#shared/utils/uuid";
 import { and, asc, eq, inArray, isNull, or, type SQL } from 'drizzle-orm'
 import { sysMenu, sysRoleMenu } from '#server/drizzle/schema'
 import type { RbacFlatMenu } from '#shared/auth'
+import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
 
 function toRbacFlatMenu(menu: typeof sysMenu.$inferSelect): RbacFlatMenu {
     return {
@@ -29,17 +30,20 @@ function enabledPermissionWhere() {
 
 export function sysMenuService(ctx: Context) {
     const repo = sysMenuRepo(ctx)
+    const rbacCache = rbacCacheService()
 
     return {
         async create(data: SysMenuAddDTO): Promise<string> {
             const uuid = randomUuid()
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
+            await Promise.all([rbacCache.invalidateAllRoles(), rbacCache.invalidateAdmin()])
             return uuid
         },
         async remove(id: string): Promise<boolean> {
             const ids = await repo.listSelfAndDescendantIds([id])
             await repo.batchRemove(ids)
+            await Promise.all([rbacCache.invalidateAllRoles(), rbacCache.invalidateAdmin()])
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
@@ -49,10 +53,12 @@ export function sysMenuService(ctx: Context) {
 
             const deleteIds = await repo.listSelfAndDescendantIds(ids)
             await repo.batchRemove(deleteIds)
+            await Promise.all([rbacCache.invalidateAllRoles(), rbacCache.invalidateAdmin()])
             return deleteIds.length
         },
         async updateById(id: string, data: SysMenuUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
+            await Promise.all([rbacCache.invalidateAllRoles(), rbacCache.invalidateAdmin()])
             return true
         },
         async getOne(req: SysMenuQueryDTO): Promise<SysMenuDto> {

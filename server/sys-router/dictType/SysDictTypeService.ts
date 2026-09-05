@@ -4,9 +4,11 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysDictTypeAddDTO, SysDictTypeDto, SysDictTypePageQueryDTO, SysDictTypeQueryDTO, SysDictTypeUpdateDTO } from "#shared/system/dictType";
 import { randomUuid } from "#shared/utils/uuid";
+import { dictCacheService } from '#server/sys-router/storage/cache/DictCacheService'
 
 export function sysDictTypeService(ctx: Context) {
     const repo = sysDictTypeRepo(ctx)
+    const cache = dictCacheService()
 
     return {
         async create(data: SysDictTypeAddDTO): Promise<boolean> {
@@ -17,14 +19,17 @@ export function sysDictTypeService(ctx: Context) {
         },
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            await cache.invalidateAll()
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            await cache.invalidateAll()
             return ids.length
         },
         async updateById(id: string, data: SysDictTypeUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
+            await cache.invalidateAll()
             return true
         },
         async getOne(req: SysDictTypeQueryDTO): Promise<SysDictTypeDto> {

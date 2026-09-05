@@ -7,6 +7,7 @@ import { randomUuid } from "#shared/utils/uuid";
 import { and, eq } from 'drizzle-orm'
 import { sysRole, sysUserRole } from '#server/drizzle/schema'
 import type { RbacRole } from '#shared/auth'
+import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
 
 type SysRoleDataScope = NonNullable<SysRoleDto['dataScope']>
 
@@ -31,6 +32,7 @@ function toSysRoleDto(role: any): SysRoleDto | null {
 
 export function sysRoleService(ctx: Context) {
     const repo = sysRoleRepo(ctx)
+    const rbacCache = rbacCacheService()
 
     return {
         async create(data: SysRoleAddDTO): Promise<boolean> {
@@ -40,11 +42,17 @@ export function sysRoleService(ctx: Context) {
             return true
         },
         async remove(id: string): Promise<boolean> {
+            const old = await repo.getById(id)
             await repo.remove(id)
+            old?.code ? await rbacCache.invalidateRole(old.code) : await rbacCache.invalidateAllRoles()
+            await rbacCache.invalidateAllUsers()
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
+            const old = await repo.listByIds(ids)
             await repo.batchRemove(ids)
+            await Promise.all(old.map(role => rbacCache.invalidateRole(role.code)))
+            await rbacCache.invalidateAllUsers()
             return ids.length
         },
         async updateById(id: string, data: SysRoleUpdateDTO): Promise<boolean> {
@@ -53,12 +61,20 @@ export function sysRoleService(ctx: Context) {
                 ...data,
                 dataScope: data.dataScope ?? current?.dataScope ?? '5'
             })
+            if (current?.code && data.code && current.code !== data.code) {
+                await Promise.all([rbacCache.invalidateRole(current.code), rbacCache.invalidateRole(data.code)])
+            } else if (current?.code) await rbacCache.invalidateRole(current.code)
+            else await rbacCache.invalidateAllRoles()
+            await rbacCache.invalidateAllUsers()
             return true
         },
         async updateDataScope(data: SysRoleDataScopeUpdateDTO): Promise<boolean> {
             await repo.updateById(data.id, {
                 dataScope: data.dataScope
             })
+            const role = await repo.getById(data.id)
+            role?.code ? await rbacCache.invalidateRole(role.code) : await rbacCache.invalidateAllRoles()
+            await rbacCache.invalidateAllUsers()
             return true
         },
         async getOne(req: SysRoleQueryDTO): Promise<SysRoleDto> {

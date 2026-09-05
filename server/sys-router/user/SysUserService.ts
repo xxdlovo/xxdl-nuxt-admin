@@ -21,6 +21,7 @@ import { randomUuid } from '#shared/utils/uuid'
 import { hashUserPassword } from '#server/utils/password'
 import { and, eq } from 'drizzle-orm'
 import { sysDepartment, sysUser } from '#server/drizzle/schema'
+import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
   if (!user) {
@@ -39,6 +40,7 @@ export function sysUserService(ctx: Context) {
   const repo = sysUserRepo(ctx)
   const userRoleRepo = sysUserRoleRepo(ctx)
   const roleRepo = sysRoleRepo(ctx)
+  const rbacCache = rbacCacheService()
 
   return {
     async create(data: SysUserAddDTO): Promise<boolean> {
@@ -89,11 +91,13 @@ export function sysUserService(ctx: Context) {
 
     async remove(id: string): Promise<boolean> {
       await repo.remove(id)
+      await rbacCache.invalidateUser(id)
       return true
     },
 
     async batchRemove(ids: string[]): Promise<number> {
       await repo.batchRemove(ids)
+      await Promise.all(ids.map(id => rbacCache.invalidateUser(id)))
       return ids.length
     },
 
@@ -122,6 +126,7 @@ export function sysUserService(ctx: Context) {
         ...values,
         deptId
       })
+      if (data.status !== undefined) await rbacCache.invalidateUser(id)
       const updatedRows = await ctx.db
         .select({ deptId: sysUser.deptId })
         .from(sysUser)
@@ -205,6 +210,7 @@ export function sysUserService(ctx: Context) {
       await userRoleRepo.enableByIds(enableIds, operatorId)
       await userRoleRepo.disableByIds(disableIds, operatorId)
       await userRoleRepo.createActiveAssignments(data.userId, insertRoleIds, operatorId)
+      await rbacCache.invalidateUser(data.userId)
 
       return true
     },

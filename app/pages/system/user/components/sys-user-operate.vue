@@ -5,7 +5,7 @@ import type { SysDeptDto } from '#shared/system/department'
 import { SysUserAddSchema, SysUserUpdateSchema, type SysUserAddDTO, type SysUserDto, type SysUserUpdateDTO } from '#shared/system/user'
 import { businessDictCode } from '#shared/constants/business'
 import { useToastSuccess } from '~/utils/toast'
-const { hasPermission, isAdmin } = useRbacProfile()
+const { hasPermission, isAdmin, profile, loadProfile } = useRbacProfile()
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 
@@ -224,6 +224,10 @@ async function loadAssignedRoles() {
     selectedRoleIds.value = await $trpc.sysUser.assignedRoleIds.query({
       userId: props.data.id
     })
+    // 修改当前登录用户的角色后，立即刷新前端 profile，使菜单和按钮权限同步。
+    if (profile.value?.user.id === state.value.id) {
+      await loadProfile(true)
+    }
   }
 
 }

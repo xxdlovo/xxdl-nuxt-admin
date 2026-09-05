@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { ComputedRef } from 'vue'
 import {useRbacProfileStore} from "~/stores/rbacProfile";
 import {useTabsStore} from "~/stores/tabs";
+import { useDictStore } from '~/stores/dict'
 
 interface SelectOption<T> {
     value: T;
@@ -18,6 +19,7 @@ export function afterUserLogin(username:string){
    //      return
    //  }
     rbac.clearProfile()
+    useDictStore().clearDict()
     const tabs = useTabsStore()
     tabs.closeAll()
 }

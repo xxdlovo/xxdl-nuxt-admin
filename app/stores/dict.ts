@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import type { SysDictDataDto } from '#shared/system/dictData'
-import { localStoragePersist } from './persistedStorage'
 
 export const useDictStore = defineStore('dict', () => {
   const itemsByCode = ref<Record<string, SysDictDataDto[]>>({})
@@ -124,11 +123,5 @@ export const useDictStore = defineStore('dict', () => {
     removeTypeCode,
     clearDictByCodes,
     clearDictByTypeIds
-  }
-}, {
-  persist: {
-    key: 'dict',
-    storage: localStoragePersist,
-    pick: ['itemsByCode']
   }
 })
