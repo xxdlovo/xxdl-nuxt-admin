@@ -22,7 +22,9 @@ const defaultLoginForm: LoginForm = {
 
 const localeCookie = useCookie<string>('i18n_locale', {
   sameSite: 'lax',
-  path: '/'
+  path: '/',
+  // 登录页与全局语言切换器共用同一个长期 Cookie，刷新或重启开发服务后仍保留语言。
+  maxAge: 60 * 60 * 24 * 365
 })
 const loading = ref(false)
 const showPassword = ref(false)

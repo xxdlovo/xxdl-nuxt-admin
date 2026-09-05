@@ -11,7 +11,9 @@ const colorMode = useColorMode()
 
 const localeCookie = useCookie<string>('i18n_locale', {
   sameSite: 'lax',
-  path: '/'
+  path: '/',
+  // 注册页直接读取全局语言 Cookie，设置一年有效期避免页面间出现不同持久化策略。
+  maxAge: 60 * 60 * 24 * 365
 })
 const enableReg = ref(false)
 const enableRegLoading = ref(true)

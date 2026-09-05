@@ -16,9 +16,12 @@ export function useLandingLocale() {
   const locale = useState<LandingLocale>('landing-locale', () => normalizeLocale($getLocale()))
   const localeCookie = useCookie<string>('i18n_locale', {
     sameSite: 'lax',
-    path: '/'
+    path: '/',
+    // 落地页与后台共用语言偏好，并在客户端重启后保留一年。
+    maxAge: 60 * 60 * 24 * 365
   })
 
+  // i18n 模块优先从该 Cookie 恢复语言；仅在首次访问没有 Cookie 时写入当前默认值。
   locale.value = normalizeLocale($getLocale())
   localeCookie.value ||= locale.value
 

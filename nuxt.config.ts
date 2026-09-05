@@ -61,6 +61,9 @@ export default defineNuxtConfig({
     i18n: {
         // 路由跳转时没有/zh,/en的路径
         strategy: 'no_prefix',
+        // 统一语言 Cookie 名称，避免模块默认的 user-locale 与业务代码使用的
+        // i18n_locale 不一致，导致重启后模块读取不到上次选择的语言并回退英文。
+        localeCookie: 'i18n_locale',
         locales: [
             { code: 'en', iso: 'en-US', dir: 'ltr', name: 'English' },
             { code: 'zh', iso: 'zh-CN', dir: 'ltr', name: '中文' }

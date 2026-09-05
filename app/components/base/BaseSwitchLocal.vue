@@ -5,10 +5,13 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 const locales = $getLocales()
 const localeCookie = useCookie<string>('i18n_locale', {
     sameSite: 'lax',
-    path: '/'
+    path: '/',
+    // 语言偏好应跨浏览器重启保留一年；同时与 i18n 模块的 Cookie 配置保持一致。
+    maxAge: 60 * 60 * 24 * 365
 })
 
-// Keep server-side error translation in sync with the client locale.
+// 首次渲染时如果 Cookie 尚不存在，使用 i18n 模块已经解析出的当前语言初始化它。
+// 后续切换由下面的 onSelect 同步写入 Cookie，服务端错误翻译也会读取同一个值。
 localeCookie.value ||= $getLocale()
 const activeLocale = computed(() => localeCookie.value || $getLocale())
 
