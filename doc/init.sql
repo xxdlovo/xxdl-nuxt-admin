@@ -225,6 +225,19 @@ INSERT INTO sys_menu (
       ('10000000-0000-0000-0000-000000000175', '10000000-0000-0000-0000-000000000171',
        '参数删除', 'system:config:del', 2, NULL, NULL, NULL, 175,
        1, 1, '参数配置删除权限', NULL, NULL, 0);
+INSERT INTO sys_menu (
+    id, parent_id, name, code, type, path, component, icon, sort_order,
+    visible, status, remark, created_by, updated_by, is_deleted
+) VALUES
+      ('10000000-0000-0000-0000-000000000231', '10000000-0000-0000-0000-000000000100',
+       '存储管理', 'system:storage', 1, '/system/storage', 'system/storage/index', 'i-lucide-database', 231,
+       0, 1, '存储管理菜单（只读）', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000232', '10000000-0000-0000-0000-000000000231',
+       '存储查询', 'system:storage:list', 2, NULL, NULL, NULL, 232,
+       1, 1, '存储查询权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000233', '10000000-0000-0000-0000-000000000231',
+       '内存存储删除', 'system:storage:del', 2, NULL, NULL, NULL, 233,
+       1, 1, '内存存储删除权限', NULL, NULL, 0);
 /*!40000 ALTER TABLE `sys_menu` ENABLE KEYS */;
 UNLOCK
 TABLES;

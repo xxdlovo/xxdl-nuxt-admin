@@ -817,6 +817,23 @@
         "editSysConfig": "Edit Parameter Config",
         "configNotExist": "config Not Exist: {key}"
       },
+      "storage": {
+        "title": "Storage Management",
+        "memory": "Memory Storage",
+        "assets": "Asset Bucket",
+        "notice": "Storage viewing notes",
+        "memoryNotice": "Memory data exists only in the current service process and is lost on restart or isolated across instances.",
+        "assetsNotice": "The asset bucket reads server/storage by default and may target its subdirectories. It is read-only; changes require a new deployment.",
+        "resourcePathPlaceholder": "Resource directory, e.g. server/storage/config",
+        "prefixPlaceholder": "Filter by prefix (optional)",
+        "key": "Key",
+        "type": "Type",
+        "size": "Size",
+        "updatedAt": "Modified At",
+        "preview": "Content Preview",
+        "detailTitle": "Storage Details",
+        "binaryNotice": "Binary content is not displayed as text."
+      },
       "menu": {
         "home": "Home",
         "title": "Menu List",

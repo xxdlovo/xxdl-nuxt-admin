@@ -18,6 +18,7 @@ import { authRouter } from '#server/sys-router/auth'
 import { sysJobRouter } from '#server/sys-router/job'
 import { sysJobLogRouter } from '#server/sys-router/jobLog'
 import { sysConfigRouter } from '#server/sys-router/config'
+import { sysStorageRouter } from '#server/sys-router/storage'
 
 // 收集相关路由
 export const appRouter = router({
@@ -25,6 +26,7 @@ export const appRouter = router({
     sysJob: sysJobRouter,
     sysJobLog: sysJobLogRouter,
     sysConfig: sysConfigRouter,
+    sysStorage: sysStorageRouter,
     sysUser: sysUserRouter,
     sysDept: sysDeptRouter,
     demo: demoRouter,

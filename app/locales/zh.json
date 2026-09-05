@@ -817,6 +817,23 @@
         "editSysConfig": "编辑参数配置",
         "configNotExist": "参数不存在: {key} "
       },
+      "storage": {
+        "title": "存储管理",
+        "memory": "内存存储",
+        "assets": "资源桶",
+        "notice": "存储查看说明",
+        "memoryNotice": "内存数据仅存在当前服务进程，重启服务或多实例部署时不会共享。",
+        "assetsNotice": "资源桶默认读取 server/storage，可指定其子目录；资源只读，修改内容需要重新部署。",
+        "resourcePathPlaceholder": "资源目录，例如 server/storage/config",
+        "prefixPlaceholder": "按前缀筛选（可选）",
+        "key": "Key",
+        "type": "类型",
+        "size": "大小",
+        "updatedAt": "修改时间",
+        "preview": "内容预览",
+        "detailTitle": "存储详情",
+        "binaryNotice": "二进制内容不提供文本预览。"
+      },
       "menu": {
         "home": "首页",
         "title": "菜单列表",

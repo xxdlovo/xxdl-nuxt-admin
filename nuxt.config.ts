@@ -63,6 +63,13 @@ export default defineNuxtConfig({
         }
     },
     nitro: {
+        // 业务临时数据使用独立的 memory 命名空间，避免误读 Nitro 默认
+        // storage 中的 data、cache、root、build 等框架内部内容。
+        storage: {
+            memory: {
+                driver: 'memory'
+            }
+        },
         experimental: {
             tasks: true
         },
