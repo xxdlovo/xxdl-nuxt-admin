@@ -31,6 +31,14 @@ export default defineNuxtConfig({
         }
     },
     modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt', 'motion-v/nuxt','pinia-plugin-persistedstate/nuxt'],
+    // trpc-nuxt 2.1.x 的产物内部使用了 Nuxt 虚拟模块 #imports，
+    // 该虚拟模块只能在 Nuxt 构建管线中解析。若不 transpile 该包，
+    // Nitro 会把 node_modules 中的 ESM 直接交给 Node 解析，
+    // 从而抛出 Package import specifier "#imports" is not defined。
+    // 参考：https://github.com/wobsoriano/trpc-nuxt/issues/250
+    build: {
+        transpile: ['trpc-nuxt']
+    },
     devServer: {
         host: '0.0.0.0',
         port: 3001
