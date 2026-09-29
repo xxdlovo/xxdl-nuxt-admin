@@ -335,48 +335,104 @@ export function demoService(ctx: Context) {
 - 多级模块：将 `/` 替换为 `:`，例如 `system/user` -> `system:user`
 - 标准 CRUD 权限码固定为：`<resource>:list`、`<resource>:add`、`<resource>:edit`、`<resource>:del`
 
+在文件顶部用 `proc({ permission })` 显式声明四个权限 procedure，再在路由里引用。
+**不要使用 `crudPermissionProcedures` 工厂** —— 权限码隐式拼接不利于检索，项目已统一改为显式写法。
+
 ```typescript
 //#server/<module>-router
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
+import { router, proc } from '~~/server/trpc/init'
 import { demoService } from './DemoService'
 import z from 'zod'
-import { DemoAddSchema, DemoUpdateSchema, DemoQuerySchema, DemoPageQuerySchema } from "#shared/demo";
+import {
+    DemoAddSchema,
+    DemoUpdateSchema,
+    DemoQuerySchema,
+    DemoPageQuerySchema
+} from '#shared/demo'
 
-const p = crudPermissionProcedures('demo')
+const listProc = proc({ permission: 'demo:list' })
+const addProc = proc({ permission: 'demo:add' })
+const editProc = proc({ permission: 'demo:edit' })
+const delProc = proc({ permission: 'demo:del' })
 
 export const demoRouter = router({
-    create: p.add.input(DemoAddSchema)
+    create: addProc.input(DemoAddSchema)
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(DemoUpdateSchema)
+    update: editProc.input(DemoUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return demoService(ctx).updateById(input.id, input)
         }),
-    getOne: p.list.input(DemoQuerySchema)
+    getOne: listProc.input(DemoQuerySchema)
         .query(async ({ ctx, input }) => {
             return demoService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return demoService(ctx).getById(input)
         }),
-    page: p.list.input(DemoPageQuerySchema)
+    page: listProc.input(DemoPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return demoService(ctx).page(input)
         })
 })
 ```
 
-> **注意**：固定 7 个接口方法（create / remove / batchDelete / update / getOne / getById / page），确保一致性。查询类接口统一使用 `p.list`，新增使用 `p.add`，修改使用 `p.edit`，删除和批量删除使用 `p.del`。
+> **注意**：固定 7 个接口方法（create / remove / batchDelete / update / getOne / getById / page），确保一致性。查询类统一用 `listProc`，新增用 `addProc`，修改用 `editProc`，删除与批量删除用 `delProc`。
+
+### Step 8.1: 操作类型与 `proc()` 参数约定
+
+#### 操作类型必须逐条核对
+
+| 操作类型 | 用于哪些接口 |
+|---------|-------------|
+| `.query()` | `getOne`、`getById`、`page`、`list`（纯读取，无副作用） |
+| `.mutation()` | `create`、`update`、`remove`、`batchDelete` |
+
+> **⚠️ 常见错误**：把只做查询的接口写成 `.mutation()`（例如内部只调用 `getById` 的调试/统计接口）。生成后请逐个核对，读接口一律 `.query()`。
+
+#### `proc()` 只传 `permission`
+
+| 参数 | 是否需要显式声明 | 说明 |
+|------|----------------|------|
+| `permission` | **必传** | 权限码，规则见下方「权限资源码规则」 |
+| `readonly` | 一般不传 | `NUXT_DEMO_MODE=true` 时由它统一决定，mutation 自动受保护，无需在控制器声明 |
+| `log` | 一般不传 | 不传时按操作类型决定：mutation 记录、query 跳过（读操作过于频繁，不写审计日志）。需要审计查询时显式传 `log: true` |
+| `dataScope` | 仅特殊接口传 | 默认应用数据权限。列表类接口若需要完整数据（树结构、选择器、授权），传 `dataScope: false` **并加注释说明原因** |
+
+`dataScope: false` 示例（参考 `system/role`、`system/dept`）：
+
+```typescript
+// 角色列表类接口需要完整角色数据（用于选择器/授权），不做数据范围限制
+const listProc = proc({ permission: 'system:role:list', dataScope: false })
+```
+
+#### 控制器文件格式化规范
+
+- `.input(...)` 与 `.query(...)` / `.mutation(...)` **分两行书写**，方法体三行展开，禁止压成单行链式：
+
+  ```typescript
+  // ✅ 正确
+  page: listProc.input(DemoPageQuerySchema)
+      .query(async ({ ctx, input }) => {
+          return demoService(ctx).page(input)
+      }),
+
+  // ❌ 错误：读起来困难，后续加逻辑容易出错
+  page: listProc.input(DemoPageQuerySchema).query(({ ctx, input }) => demoService(ctx).page(input)),
+  ```
+
+- `import` 语句一行一个来源；从同一模块导入多个符号时用多行花括号，不要堆在一行。
+- 文件首行保留 `//#server/<module>-router` 定位注释。
 
 ---
 
@@ -417,21 +473,30 @@ AI 生成模块时需要给出菜单/按钮权限初始化 SQL，或提示用户
 
 ```sql
 -- 页面菜单：用于侧边栏入口和页面访问
+-- code 用 <resource>:list；path 为页面路由；component 为 app/pages 下的相对路径
 INSERT INTO sys_menu
   (id, parent_id, name, code, type, path, component, icon, sort_order, visible, status, remark, created_by, updated_by, is_deleted)
 VALUES
-  ('<menu_id>', NULL, 'Demo管理', 'demo:list', 2, '/demo', 'demo/index', 'i-lucide-table', 0, 1, 1, 'Demo列表权限', '<admin_id>', '<admin_id>', 0);
+  ('<menu_id>', '<parent_dir_id>', 'Demo管理', 'demo:list', 1, '/demo', 'demo/index', 'i-lucide-table', 40, 0, 1, 'Demo列表权限', '<admin_id>', '<admin_id>', 0);
 
 -- 按钮权限：用于新增/编辑/删除按钮和接口权限
 INSERT INTO sys_menu
   (id, parent_id, name, code, type, path, component, icon, sort_order, visible, status, remark, created_by, updated_by, is_deleted)
 VALUES
-  ('<add_id>', '<menu_id>', '新增Demo', 'demo:add', 3, NULL, NULL, NULL, 1, 0, 1, 'Demo新增权限', '<admin_id>', '<admin_id>', 0),
-  ('<edit_id>', '<menu_id>', '编辑Demo', 'demo:edit', 3, NULL, NULL, NULL, 2, 0, 1, 'Demo编辑权限', '<admin_id>', '<admin_id>', 0),
-  ('<del_id>', '<menu_id>', '删除Demo', 'demo:del', 3, NULL, NULL, NULL, 3, 0, 1, 'Demo删除权限', '<admin_id>', '<admin_id>', 0);
+  ('<add_id>', '<menu_id>', 'Demo新增', 'demo:add', 2, NULL, NULL, NULL, 1, 1, 1, 'Demo新增权限', '<admin_id>', '<admin_id>', 0),
+  ('<edit_id>', '<menu_id>', 'Demo编辑', 'demo:edit', 2, NULL, NULL, NULL, 2, 1, 1, 'Demo编辑权限', '<admin_id>', '<admin_id>', 0),
+  ('<del_id>', '<menu_id>', 'Demo删除', 'demo:del', 2, NULL, NULL, NULL, 3, 1, 1, 'Demo删除权限', '<admin_id>', '<admin_id>', 0);
 ```
 
-> `type` 取值以当前项目菜单约定为准：页面菜单使用菜单类型，按钮权限使用按钮类型；按钮权限通常 `visible=0`，不显示在侧边栏。
+> **`type` / `visible` 的真实取值以当前 `sys_menu` 数据为准**（已核对线上表）：
+>
+> | 层级 | `type` | `visible` | 说明 |
+> |------|--------|-----------|------|
+> | 目录 | `0` | `0` | 仅作为父节点分组，如「系统管理」「文件管理」 |
+> | 页面菜单 | `1` | `0` | 侧边栏可见的页面入口，`path` 指向路由，`component` 指向 `app/pages` 下相对路径 |
+> | 按钮权限 | `2` | `1` | `path`/`component` 留空，仅提供 `code` 用于接口与按钮鉴权 |
+>
+> 页面菜单需先在 `sys_menu` 中找到合适的父目录（如 `system` 目录或更细的 `system:file` 分组）作为 `parent_id`；目录本身无 `path`/`component`。
 
 ---
 
@@ -554,31 +619,59 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
 
 #### 13.1 前端翻译（`app/locales/{zh,en}.json`）
 
-在 `module` 对象下添加模块翻译，结构如下：
+**唯一落点**：`app/locales/zh.json` 与 `app/locales/en.json` 的 `module` 对象下。
+
+> **⚠️ 不要手写 `app/locales/pages/**`** —— 该目录已被 `.gitignore` 忽略，是 `nuxt-i18n-micro` 在构建时生成的产物（当前多为空 `{}`）。同理 `server/assets/_locales/` 也是产物。手写进去会在下次构建时被覆盖。
+
+多级模块用嵌套 key 表达：模块名 `system/ossConfig` 对应 `module.system.ossConfig`，代码里以 `$ts('module.system.ossConfig.title')` 引用。
+
+结构如下（以 `system/oauthAccount` 为真实范例）：
 
 ```json
 {
   "module": {
-    "<module>": {
-      "title": "Demo列表 / Demo List",
-      "<field1>": "字段1 / field1",
-      "<field2>": "字段2 / field2",
-      "<status>": "Demo状态 / demoStatus",
-      "form": {
-        "<field1>": "请输入字段1 / Please enter field1",
-        "<field2>": "请输入字段2 / Please enter field2",
-        "<status>": "请选择状态 / Please select demo status"
-      },
-      "add<Module>": "新增Demo / add Demo",
-      "edit<Module>": "编辑Demo / edit Demo"
+    "system": {
+      "oauthAccount": {
+        "title": "第三方账号绑定",
+        "provider": "登录平台",
+        "providerUserId": "平台用户ID",
+        "providerLogin": "平台账号",
+        "userId": "系统用户ID",
+        "createdAt": "创建时间",
+        "form": {
+          "provider": "请输入登录平台，例如 github",
+          "providerUserId": "请输入平台用户ID",
+          "providerLogin": "请输入平台账号",
+          "userId": "请输入系统用户ID"
+        },
+        "addSysOauthAccount": "新增绑定",
+        "editSysOauthAccount": "编辑绑定"
+      }
     }
   }
 }
 ```
 
+约定：
+- `form.*` 子对象存放表单占位符与校验提示
+- `add<Business>` / `edit<Business>` 命名新增/编辑弹窗标题，`<Business>` 用业务名（如 `SysOauthAccount`）
+- `title` 用于列表页标题与表头前缀
+
 需要同时修改两个文件：
 - [app/locales/zh.json](file:///d:/ws_project/xxdl-nuxt-admin/app/locales/zh.json)
 - [app/locales/en.json](file:///d:/ws_project/xxdl-nuxt-admin/app/locales/en.json)
+
+#### 13.2 校验方法
+
+生成后建议逐个核对页面里的 `$ts('...')` 是否都能在 locale 文件中查到：
+
+```powershell
+# 提取页面中所有 $ts('key') 并在 zh.json 里查找
+Select-String -Path app/pages/<module>/**/*.vue -Pattern "\`$ts\('([^']+)'\)" -AllMatches |
+  ForEach-Object { $_.Matches } | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+```
+
+另需确认两个 JSON 文件仍能正常解析（`ConvertFrom-Json` / `JSON.parse`），插入时注意逗号与缩进。
 
 
 ---
@@ -605,6 +698,28 @@ export const <module>StatusRecord: Record<string, string> = {
 export const <module>StatusOptions = transformRecordToOption(<module>StatusRecord);
 ```
 
+> 路由注册名（`appRouter` 的 key）**直接决定前端调用前缀**：注册为 `sysOauthAccount`，前端就必须写 `$trpc.sysOauthAccount.page.query()`。写错前缀时 tRPC 返回的是 `No procedure found on path "..."`（HTTP 404），而不是鉴权错误，容易误判成路由没注册。
+
+### 9.2 命名约定对照（务必逐级对应）
+
+以 `sys_oauth_account` 为例，同一实体的名字在不同层风格不同，**不要混用**：
+
+| 层次 | 命名 | 说明 |
+|------|------|------|
+| 数据库表名 | `sys_oauth_account` | snake_case |
+| Drizzle 变量 | `sysOauthAccount` | 表名转小驼峰 |
+| schema 文件 | `server/drizzle/schema/system/oauthAccount.ts` | 去掉 `sys_` 前缀的小驼峰 |
+| 模块名 | `system/oauthAccount` | `<一级目录>/<业务目录>` |
+| 业务名 | `SysOauthAccount` | 大驼峰，用于 `SysOauthAccountRepo` / `SysOauthAccountService` / 各 Schema |
+| 资源码（权限码前缀） | `system:oauthAccount` | 模块名把 `/` 换成 `:` |
+| **tRPC 路由名** | **`sysOauthAccount`** | 与 Drizzle 变量同名（保留 `sys` 前缀），前端 `$trpc.sysOauthAccount.*` |
+| 页面目录 | `app/pages/system/oauth-account/` | kebab-case |
+| i18n key | `module.system.oauthAccount` | 保留小驼峰 |
+
+> **易错点**：tRPC 路由名用 `sys` 前缀（`sysOauthAccount`），而资源码/i18n 用 `system`（`system:oauthAccount`）。两者不相同，生成时以本表为准。
+>
+> 参考现有模块：`sysUser` / `sysOss` / `sysOssConfig` / `sysDictType` 均为 `sys` 前缀路由名。
+
 ---
 
 ## 三、路径别名对照
@@ -618,41 +733,47 @@ export const <module>StatusOptions = transformRecordToOption(<module>StatusRecor
 
 ---
 
-## 四、文件清单模板（共约 14 个文件/修改点）
+## 四、文件清单模板（共约 19 个文件/修改点）
 
-用户确认模块名后（如 `<module>`），AI 需要创建/修改以下文件：
+用户确认模块名后（如 `<module>` = `system/oauthAccount`，业务名 `<Business>` = `SysOauthAccount`），AI 需要创建/修改以下文件：
 
 | # | 文件路径 | 操作 | 说明 |
 |---|----------|------|------|
 | 1 | MySQL 建表 SQL | 新建 | 在数据库中执行 |
-| 2 | `server/drizzle/schema/<module>/index.ts` | **新建** | 从 `out/schema.ts` copy 并清理 |
-| 3 | `server/drizzle/schema/index.ts` | **修改** | 添加 export |
+| 2 | `server/drizzle/schema/system/<business>.ts` | **新建** | 从 `out/schema.ts` copy 并清理（两级模块用**小驼峰文件名**，如 `oauthAccount.ts`） |
+| 3 | `server/drizzle/schema/index.ts` | **修改** | 添加 import 与 export |
 | 4 | `shared/<module>/common.ts` | **新建** | 基础 Zod Schema |
 | 5 | `shared/<module>/input.ts` | **新建** | 增删改查 DTO |
 | 6 | `shared/<module>/output.ts` | **新建** | 响应 DTO |
 | 7 | `shared/<module>/index.ts` | **新建** | 统一导出 |
-| 8 | `server/<module>-router/<Module>Repo.ts` | **新建** | CommonRepo 工厂 |
-| 9 | `server/<module>-router/<Module>Service.ts` | **新建** | 业务逻辑 |
-| 10 | `server/<module>-router/index.ts` | **新建** | tRPC 路由定义 |
+| 8 | `server/sys-router/<business>/<Business>Repo.ts` | **新建** | CommonRepo 工厂 |
+| 9 | `server/sys-router/<business>/<Business>Service.ts` | **新建** | 业务逻辑 |
+| 10 | `server/sys-router/<business>/index.ts` | **新建** | tRPC 路由定义 |
 | 11 | `server/trpc/routers.ts` | **修改** | 注册路由 |
-| 12 | `app/pages/<module>/index.vue` | **新建** | 列表页面 |
-| 13 | `app/pages/<module>/components/<module>-search.vue` | **新建** | 搜索组件 |
-| 14 | `app/pages/<module>/components/<module>-operate.vue` | **新建** | 新增/编辑弹窗 |
-| 15 | `app/locales/zh.json` | **修改** | 添加中文翻译 |
-| 16 | `app/locales/en.json` | **修改** | 添加英文翻译 |
-| 17 | `sys_menu` 权限数据 | **新增/配置** | 菜单入口和 `list/add/edit/del` 按钮权限码 |
-| 18 | `server/assets/_locales/merged/<module>/zh` | **新建** | 服务端中文翻译 |
-| 19 | `shared/constants/business.ts` | **修改** | 业务常量（可选） |
+| 12 | `app/pages/<module-kebab>/index.vue` | **新建** | 列表页面（目录名 kebab-case，`system/oauthAccount` → `system/oauth-account`） |
+| 13 | `app/pages/<module-kebab>/components/sys-<business-kebab>-search.vue` | **新建** | 搜索组件 |
+| 14 | `app/pages/<module-kebab>/components/sys-<business-kebab>-operate.vue` | **新建** | 新增/编辑弹窗 |
+| 15 | `app/locales/zh.json` | **修改** | `module.<module>.<business>` 下添加中文翻译 |
+| 16 | `app/locales/en.json` | **修改** | 同上，英文翻译 |
+| 17 | `sys_menu` 权限数据 | **新增/配置** | 页面菜单（`type=1`）与 `list/add/edit/del` 按钮权限（`type=2`） |
+| 18 | ~~`server/assets/_locales/merged/...`~~ | **勿手写** | 构建产物，由 `app/locales` 生成 |
+| 19 | `shared/constants/business.ts` | **修改** | 业务常量（可选，仅当有状态/枚举字段需 badge 或下拉时） |
+
+> 第 2 项的目录层级由模块名决定：单级模块用 `server/drizzle/schema/<module>/index.ts`（如 `demo/index.ts`），两级模块用 `server/drizzle/schema/<一级>/<业务名>.ts`（如 `system/oauthAccount.ts`）。
 
 ---
 
 ## 五、注意事项 & 已知问题
 
-1. **Schema `out/schema.ts`** 是自动生成的，可能包含 typo（如 `filed1` vs `field1`），复制到 `server/drizzle/schema/` 后需要人工检查修正
+1. **Schema `out/schema.ts`** 是自动生成的，可能包含 typo（如 `filed1` vs `field1`），复制到 `server/drizzle/schema/` 后需要人工检查修正；同时清理多余 import（`mysqlSchema`、`AnyMySqlColumn`、`sql`、`json`、`longtext` 等只保留实际用到的）
 2. **搜索组件**的 `schema` 变量必须正确引用当前模块的 `QuerySchema`
 3. **新增接口的 id** 由 Service 层通过 `randomUuid()` 生成，前端新增表单不需要传 id
 4. **模糊查询**通过在 common.ts 的字段上加 `.meta({ query: 'like' })` 实现，后端 `buildWhereBySchema` 自动解析
-5. **标准 CRUD 路由使用 `crudPermissionProcedures(resourceCode)`**，不要再直接使用 `protectedProcedure`。只有 `auth.profile`、纯登录态接口或特殊非 CRUD 接口才考虑 `protectedProcedure` / `permissionProcedure`
+5. **控制器统一使用 `proc({ permission })`**，权限码显式书写（如 `system:oauthAccount:add`），不使用 `crudPermissionProcedures` 工厂。只有纯登录态接口才用 `protectedProcedure` / `permissionProcedure`
 6. **前端组件 import 必须有显式后缀 `.vue`**
 7. **`AppError`** 接收 i18n key 作为参数，客户端会自动翻译显示
-8. **input.ts / output.ts 的 NOT NULL 规则**：生成 input.ts 和 output.ts 时，必须根据 DB schema 的 `.notNull()` 设置字段。`common.ts` 的 `BaseSchema` 统一使用 `.nullish()` 便于复用，但在 `AddSchema`/`RespSchema` 中，DB `NOT NULL` 的**业务字段**需通过 `extend()` 覆盖为必填（如 `z.string()` 而非 `z.string().nullish()`）。ID 字段在 `AddSchema` 中用 `.nonoptional()`，在 `UpdateSchema` 中用 `.nonempty()`；`createdAt`/`updatedAt` 等 DB 自管字段保持 `nullish`。
+8. **input.ts / output.ts 的 NOT NULL 规则**：生成 input.ts 和 output.ts 时，必须根据 DB schema 的 `.notNull()` 设置字段。`common.ts` 的 `BaseSchema` 统一使用 `.nullish()` 便于复用，但在 `AddSchema`/`RespSchema` 中，DB `NOT NULL` 的**业务字段**需通过 `extend()` 覆盖为必填（如 `z.string()` 而非 `z.string().nullish()`）。ID 字段在 `AddSchema` 中用 `.nonoptional()`，在 `UpdateSchema` 中用 `.nonempty()`；`createdAt`/`updatedAt` 等 DB 自管字段保持 `nullish`
+9. **操作类型必须逐条核对**：读接口（`getOne`/`getById`/`page`/`list`）一律 `.query()`，写接口（`create`/`update`/`remove`/`batchDelete`）一律 `.mutation()`，详见 Step 8.1
+10. **`dataScope: false` 仅在必要时添加**：列表接口需要全量数据（树结构、选择器、授权）时才传，并加注释说明原因，否则保持默认的数据权限过滤
+11. **页面目录与 i18n key 的命名映射**：模块名 `system/oauthAccount` → 页面目录 `app/pages/system/oauth-account/`（kebab-case）→ i18n key `module.system.oauthAccount`（保留小驼峰）→ 资源码 `system:oauthAccount`。三者大小写风格不同，生成时不要混用
+12. **`app/locales/pages/**` 与 `server/assets/_locales/**` 都是构建产物**（已 gitignore），不要手写，翻译只加在 `app/locales/{zh,en}.json`
