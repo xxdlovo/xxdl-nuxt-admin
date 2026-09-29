@@ -1,15 +1,17 @@
 import { AppError } from '#server/utils/appError'
 
-type DemoRuntimeConfig = {
-  demoMode?: boolean | string
-}
+/**
+ * demo 只读保护的参数化中间件。
+ *
+ * enabled 由 proc() 计算得出（该接口声明了 readonly 且当前处于 demo 模式），
+ * 因此这里只负责「命中即拦截」，不再重复判断环境变量。
+ */
+export function demoReadonlyMiddleware(enabled: boolean) {
+  return async (opts: any) => {
+    if (!enabled) {
+      return opts.next()
+    }
 
-export const demoReadonlyMiddleware = async (opts: any) => {
-  const config = useRuntimeConfig(opts.ctx.event) as DemoRuntimeConfig
-  const demoMode = process.env.NUXT_DEMO_MODE === 'true' || String(config.demoMode) === 'true'
-  if (demoMode) {
     throw new AppError('system.demoReadonly')
   }
-
-  return opts.next()
 }

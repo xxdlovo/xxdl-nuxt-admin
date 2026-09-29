@@ -229,10 +229,8 @@ export async function buildScope(table: any, ctx: Context): Promise<SQL[]> {
         return conditions
     }
 
-    // 这两个查询不限制数据范围
-    const blankPermission:string[] = ['system:dept:list','system:role:list']
-
-    if(blankPermission.includes(ctx.currentPermissionCode as string)) {
+    // 由 proc({ dataScope: false }) 显式声明跳过的接口，不做数据范围限制
+    if (ctx.skipDataScope) {
         return conditions
     }
     const scopeConditions = [

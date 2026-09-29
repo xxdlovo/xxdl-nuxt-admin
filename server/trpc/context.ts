@@ -32,7 +32,9 @@ export async function createContext(event: H3Event) {
     user: session.user ?? null,
     currentPermissionCode: null as string | null,
     permissionCodes: null as string[] | null,
-    dataPermission: null as DataPermission | null
+    dataPermission: null as DataPermission | null,
+    // 由 proc({ dataScope: false }) 标记，buildScope 据此跳过数据范围条件
+    skipDataScope: false
   }
 }
 

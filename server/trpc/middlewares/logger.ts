@@ -6,49 +6,36 @@ type OperationLogPolicyInput = {
      */
     type: string
     /**
-     * tRPC router path, for example systemLog.page or user.update.
+     * 由 proc({ log }) 显式声明的开关。
+     * proc() 已把默认值归一为 true，因此这里的 undefined 只可能来自
+     * 未经过 proc() 的 procedure（如 protectedProcedure）。
      */
-    path: string
+    log?: boolean
 }
 
 /**
- * Queries are intentionally excluded because page/get/getOne/getById calls are
- * read-only and usually too noisy for operation audit logs.
+ * 是否记录操作日志。
+ *
+ * 1. proc({ log }) 显式指定时以它为准：true 记录，false 跳过；
+ * 2. 未指定时按 operation type 判断：
+ *    mutation 记录，query 不记录（page/get/getOne/getById 这类读操作
+ *    过于频繁，不适合写入审计日志）。
  */
-const DEFAULT_RECORDED_OPERATION_TYPES = new Set(['mutation'])
-
-/**
- * Keep this list small. Use it only for sensitive reads such as exporting data,
- * viewing secrets, or reading private audit details.
- */
-const FORCE_RECORDED_QUERY_PATHS = new Set<string>([
-])
-
-/**
- * Add noisy or technical mutations here if they are not meaningful user actions.
- */
-const SKIPPED_OPERATION_PATHS = new Set<string>([
-])
-
 function shouldRecordOperationLog(input: OperationLogPolicyInput) {
-    if (SKIPPED_OPERATION_PATHS.has(input.path)) {
-        return false
+    if (input.log !== undefined) {
+        return input.log
     }
 
-    if (FORCE_RECORDED_QUERY_PATHS.has(input.path)) {
-        return true
-    }
-
-    return DEFAULT_RECORDED_OPERATION_TYPES.has(input.type)
+    return input.type === 'mutation'
 }
 
 /**
  * Global tRPC log middleware.
  */
 export const loggerMiddleware = async (opts: any) => {
-    const { path, type, ctx, next } = opts
+    const { path, type, ctx, next, meta } = opts
 
-    if (!shouldRecordOperationLog({ path, type })) {
+    if (!shouldRecordOperationLog({ type, log: meta?.log })) {
         return next()
     }
 
