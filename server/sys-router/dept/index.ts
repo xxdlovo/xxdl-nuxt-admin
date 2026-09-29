@@ -1,41 +1,46 @@
 //#server/sys-router/department
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
+import { router, proc } from '~~/server/trpc/init'
 import { sysDeptService } from './SysDeptService'
 import z from 'zod'
-import { SysDeptAddSchema, SysDeptUpdateSchema, SysDeptQuerySchema, SysDeptPageQuerySchema } from "#shared/system/department";
+import { SysDeptAddSchema, SysDeptUpdateSchema, SysDeptQuerySchema, SysDeptPageQuerySchema } from '#shared/system/department'
 
-const p = crudPermissionProcedures('system:dept')
+const addProc = proc({ permission: 'system:dept:add' })
+const editProc = proc({ permission: 'system:dept:edit' })
+const delProc = proc({ permission: 'system:dept:del' })
+
+// 部门列表类接口需要完整部门树（用于选择器/树形展示），不做数据范围限制
+const listProc = proc({ permission: 'system:dept:list', dataScope: false })
 
 export const sysDeptRouter = router({
-    create: p.add.input(SysDeptAddSchema)
+    create: addProc.input(SysDeptAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysDeptService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysDeptService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysDeptService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(SysDeptUpdateSchema)
+    update: editProc.input(SysDeptUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysDeptService(ctx).updateById(input.id, input)
         }),
-    getOne: p.list.input(SysDeptQuerySchema)
+    getOne: listProc.input(SysDeptQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDeptService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysDeptService(ctx).getById(input)
         }),
-    page: p.list.input(SysDeptPageQuerySchema)
+    page: listProc.input(SysDeptPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDeptService(ctx).page(input)
         }),
-    list: p.list.input(SysDeptQuerySchema)
+    list: listProc.input(SysDeptQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDeptService(ctx).list(input)
         })

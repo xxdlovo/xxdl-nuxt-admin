@@ -1,37 +1,40 @@
 //#server/sys-router/dictData
-import { router, crudPermissionProcedures, protectedProcedure } from '~~/server/trpc/init'
+import { router, proc, protectedProcedure } from '~~/server/trpc/init'
 import { sysDictDataService } from './SysDictDataService'
 import z from 'zod'
-import { SysDictDataAddSchema, SysDictDataUpdateSchema, SysDictDataQuerySchema, SysDictDataPageQuerySchema } from "#shared/system/dictData";
+import { SysDictDataAddSchema, SysDictDataUpdateSchema, SysDictDataQuerySchema, SysDictDataPageQuerySchema } from '#shared/system/dictData'
 
-const p = crudPermissionProcedures('system:dictData')
+const listProc = proc({ permission: 'system:dictData:list' })
+const addProc = proc({ permission: 'system:dictData:add' })
+const editProc = proc({ permission: 'system:dictData:edit' })
+const delProc = proc({ permission: 'system:dictData:del' })
 
 export const sysDictDataRouter = router({
-    create: p.add.input(SysDictDataAddSchema)
+    create: addProc.input(SysDictDataAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysDictDataService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysDictDataService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysDictDataService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(SysDictDataUpdateSchema)
+    update: editProc.input(SysDictDataUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysDictDataService(ctx).updateById(input.id, input)
         }),
-    getOne: p.list.input(SysDictDataQuerySchema)
+    getOne: listProc.input(SysDictDataQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDictDataService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysDictDataService(ctx).getById(input)
         }),
-    page: p.list.input(SysDictDataPageQuerySchema)
+    page: listProc.input(SysDictDataPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysDictDataService(ctx).page(input)
         }),

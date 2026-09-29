@@ -66,14 +66,14 @@ export type ProcOptions = {
  * 把「登录 / 权限 / 数据权限 / demo 只读 / 日志」收敛成一组参数。
  *
  * @example
- * create: proc({ permission: 'demo:add', readonly: true })
+ * create: proc({ permission: 'demo:add' })
  *   .input(DemoAddSchema)
  *   .mutation(({ ctx, input }) => demoService(ctx).create(input))
  */
 export const proc = (options: ProcOptions = {}) =>
   protectedProcedure
     .use(permissionMiddleware(options.permission))
-    .use(demoReadonlyMiddleware(options.readonly === true && demoMode))
+    .use(demoReadonlyMiddleware(demoMode || options.readonly === true))
     .use(dataScopeMiddleware(options.dataScope !== false))
     .meta({ log: options.log})
 

@@ -1,63 +1,74 @@
-//#server/system-role-router
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
+//#server/sys-router/role
+import { router, proc } from '~~/server/trpc/init'
 import { sysRoleService } from './SysRoleService'
 import { sysRoleMenuService } from '#server/sys-router/roleMenu/SysRoleMenuService'
 import { sysMenuService } from '#server/sys-router/menu/SysMenuService'
 import z from 'zod'
-import { SysRoleAddSchema, SysRoleUpdateSchema, SysRoleQuerySchema, SysRolePageQuerySchema, SysRoleDataScopeUpdateSchema } from "#shared/system/role";
+import {
+    SysRoleAddSchema,
+    SysRoleUpdateSchema,
+    SysRoleQuerySchema,
+    SysRolePageQuerySchema,
+    SysRoleDataScopeUpdateSchema
+} from '#shared/system/role'
 import { SysRoleMenuAssignedIdsQuerySchema, SysRoleMenuAssignSchema } from '#shared/system/roleMenu'
 
-const p = crudPermissionProcedures('system:role')
+const addProc = proc({ permission: 'system:role:add' })
+const editProc = proc({ permission: 'system:role:edit' })
+const delProc = proc({ permission: 'system:role:del' })
+
+// 角色列表类接口需要完整角色数据（用于选择器/授权），不做数据范围限制
+const listProc = proc({ permission: 'system:role:list', dataScope: false })
 
 export const sysRoleRouter = router({
-    create: p.add.input(SysRoleAddSchema)
+    create: addProc.input(SysRoleAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(SysRoleUpdateSchema)
+    update: editProc.input(SysRoleUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).updateById(input.id, input)
         }),
-    updateDataScope: p.edit.input(SysRoleDataScopeUpdateSchema)
+    updateDataScope: editProc.input(SysRoleDataScopeUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).updateDataScope(input)
         }),
-    getOne: p.list.input(SysRoleQuerySchema)
+    getOne: listProc.input(SysRoleQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).getById(input)
         }),
-    list: p.list.input(SysRoleQuerySchema)
+    list: listProc.input(SysRoleQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).list(input)
         }),
-    page: p.list.input(SysRolePageQuerySchema)
+    page: listProc.input(SysRolePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleService(ctx).page(input)
         }),
-    assignableMenus: p.list.input(z.object({
+    assignableMenus: listProc.input(z.object({
         types: z.array(z.union([z.literal(0), z.literal(1), z.literal(2)])).min(1)
     }))
         .query(async ({ ctx, input }) => {
             const menus = await sysMenuService(ctx).list({})
             return menus.filter(menu => menu.type != null && input.types.includes(menu.type as 0 | 1 | 2))
         }),
-    assignedMenuIds: p.list.input(SysRoleMenuAssignedIdsQuerySchema)
+    assignedMenuIds: listProc.input(SysRoleMenuAssignedIdsQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysRoleMenuService(ctx).listAssignedMenuIds(input)
         }),
-    assignMenus: p.edit.input(SysRoleMenuAssignSchema)
+    assignMenus: editProc.input(SysRoleMenuAssignSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleMenuService(ctx).assignByRoleAndTypes(input)
         })

@@ -1,37 +1,36 @@
 //#server/demo-router
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
-import {demoService} from './DemoService'
 import z from 'zod'
-import  {DemoAddSchema,DemoUpdateSchema, DemoQuerySchema,DemoPageQuerySchema} from "#shared/demo";
-const p = crudPermissionProcedures('demo')
+import { proc, router } from '~~/server/trpc/init'
+import { DemoAddSchema, DemoUpdateSchema, DemoQuerySchema, DemoPageQuerySchema } from '#shared/demo'
+import { demoService } from './DemoService'
+
 export const demoRouter = router({
-    create: p.add.input(DemoAddSchema)
-        .mutation(async ({ctx, input})=>{
+    create: proc({ permission: 'demo:add' }).input(DemoAddSchema)
+        .mutation(async ({ ctx, input }) => {
             return demoService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
-        .mutation(async ({ctx, input})=>{
+    remove: proc({ permission: 'demo:del' }).input(z.string())
+        .mutation(async ({ ctx, input }) => {
             return demoService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
-        .mutation(async ({ctx, input})=>{
+    batchDelete: proc({ permission: 'demo:del' }).input(z.array(z.string()))
+        .mutation(async ({ ctx, input }) => {
             return demoService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(DemoUpdateSchema)
-        .mutation(async ({ctx, input})=>{
+    update: proc({ permission: 'demo:edit' }).input(DemoUpdateSchema)
+        .mutation(async ({ ctx, input }) => {
             return demoService(ctx).updateById(input.id, input)
         }),
-    getOne: p.list.input(DemoQuerySchema)
-        .query(async ({ctx, input})=>{
+    getOne: proc({ permission: 'demo:list' }).input(DemoQuerySchema)
+        .query(async ({ ctx, input }) => {
             return demoService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
-        .query(async ({ctx, input})=>{
+    getById: proc({ permission: 'demo:list' }).input(z.string())
+        .query(async ({ ctx, input }) => {
             return demoService(ctx).getById(input)
         }),
-    page: p.list.input(DemoPageQuerySchema)
-        .query(async ({ctx, input})=>{
+    page: proc({ permission: 'demo:list' }).input(DemoPageQuerySchema)
+        .query(async ({ ctx, input }) => {
             return demoService(ctx).page(input)
         })
-
 })

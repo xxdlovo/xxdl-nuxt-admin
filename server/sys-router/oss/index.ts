@@ -1,41 +1,45 @@
-//#server/system-oss-router
-import { router, crudPermissionProcedures } from '~~/server/trpc/init'
+//#server/sys-router/oss
+import { router, proc } from '~~/server/trpc/init'
 import { sysOssService } from './SysOssService'
 import z from 'zod'
-import { SysOssAddSchema, SysOssUpdateSchema, SysOssQuerySchema, SysOssPageQuerySchema } from "#shared/system/oss";
+import { SysOssAddSchema, SysOssUpdateSchema, SysOssQuerySchema, SysOssPageQuerySchema } from '#shared/system/oss'
 
-const p = crudPermissionProcedures('system:oss')
+const listProc = proc({ permission: 'system:oss:list' })
+const addProc = proc({ permission: 'system:oss:add' })
+const editProc = proc({ permission: 'system:oss:edit' })
+const delProc = proc({ permission: 'system:oss:del' })
 
 export const sysOssRouter = router({
-    create: p.add.input(SysOssAddSchema)
+    create: addProc.input(SysOssAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysOssService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysOssService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysOssService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(SysOssUpdateSchema)
+    update: editProc.input(SysOssUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysOssService(ctx).updateById(input.id, input)
         }),
-    getOne: p.list.input(SysOssQuerySchema)
+    getOne: listProc.input(SysOssQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOssService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysOssService(ctx).getById(input)
         }),
-    page: p.list.input(SysOssPageQuerySchema)
+    page: listProc.input(SysOssPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOssService(ctx).page(input)
         }),
-    uploadConfigs: p.add
+    // 读取上传配置属于查询，沿用 add 权限码以保持与既有 sys_menu 授权一致
+    uploadConfigs: addProc
         .query(async ({ ctx }) => {
             return sysOssService(ctx).listUploadConfigs()
         })

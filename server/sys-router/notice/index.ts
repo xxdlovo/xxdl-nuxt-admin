@@ -1,46 +1,48 @@
 //#server/sys-router/notice
-import {router, crudPermissionProcedures, protectedProcedure, permissionProcedure} from '~~/server/trpc/init'
+import { router, protectedProcedure, proc } from '~~/server/trpc/init'
 import { sysNoticeService } from './SysNoticeService'
 import z from 'zod'
 import { SysNoticeAddSchema, SysNoticeUpdateSchema, SysNoticeQuerySchema, SysNoticePageQuerySchema, SysNoticePublishStatusSchema } from '#shared/system/notice'
-import {demoReadonlyMiddleware} from "#server/trpc/middlewares/demo";
 
-const p = crudPermissionProcedures('system:notice')
+const listProc = proc({ permission: 'system:notice:list' })
+const addProc = proc({ permission: 'system:notice:add' })
+const editProc = proc({ permission: 'system:notice:edit' })
+const delProc = proc({ permission: 'system:notice:del' })
 
 export const sysNoticeRouter = router({
-    create: p.add.input(SysNoticeAddSchema)
+    create: addProc.input(SysNoticeAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).create(input)
         }),
-    remove: p.del.input(z.string())
+    remove: delProc.input(z.string())
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).remove(input)
         }),
-    batchDelete: p.del.input(z.array(z.string()))
+    batchDelete: delProc.input(z.array(z.string()))
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).batchRemove(input)
         }),
-    update: p.edit.input(SysNoticeUpdateSchema)
+    update: editProc.input(SysNoticeUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).updateById(input.id, input)
         }),
-    updatePublishStatus: permissionProcedure('system:notice:push').use(demoReadonlyMiddleware).input(SysNoticePublishStatusSchema)
+    updatePublishStatus: proc({ permission: 'system:notice:push' }).input(SysNoticePublishStatusSchema)
         .mutation(async ({ ctx, input }) => {
             return sysNoticeService(ctx).updatePublishStatus(input)
         }),
-    getOne: p.list.input(SysNoticeQuerySchema)
+    getOne: listProc.input(SysNoticeQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysNoticeService(ctx).getOne(input)
         }),
-    getById: p.list.input(z.string())
+    getById: listProc.input(z.string())
         .query(async ({ ctx, input }) => {
             return sysNoticeService(ctx).getById(input)
         }),
-    list: p.list.input(SysNoticeQuerySchema)
+    list: listProc.input(SysNoticeQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysNoticeService(ctx).list(input)
         }),
-    page: p.list.input(SysNoticePageQuerySchema)
+    page: listProc.input(SysNoticePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysNoticeService(ctx).page(input)
         }),
