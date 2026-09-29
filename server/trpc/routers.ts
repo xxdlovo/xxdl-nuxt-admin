@@ -11,6 +11,7 @@ import { sysRoleMenuRouter } from '#server/sys-router/roleMenu'
 import { sysLoginLogRouter } from '#server/sys-router/loginLog'
 import { sysNoticeRouter } from '#server/sys-router/notice'
 import { sysOauthAccountRouter } from '#server/sys-router/oauthAccount'
+import { sysOauthConfigRouter } from '#server/sys-router/oauthConfig'
 import { sysOssRouter } from '#server/sys-router/oss'
 import { sysOssConfigRouter } from '#server/sys-router/ossConfig'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
@@ -39,6 +40,7 @@ export const appRouter = router({
     sysLoginLog: sysLoginLogRouter,
     sysNotice: sysNoticeRouter,
     sysOauthAccount: sysOauthAccountRouter,
+    sysOauthConfig: sysOauthConfigRouter,
     sysOss: sysOssRouter,
     sysOssConfig: sysOssConfigRouter,
     systemLog: sysSystemLogRouter,

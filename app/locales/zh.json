@@ -928,6 +928,34 @@
         },
         "addSysOauthAccount": "新增绑定",
         "editSysOauthAccount": "编辑绑定"
+      },
+      "oauthConfig": {
+        "title": "第三方登录配置",
+        "platform": "平台标识",
+        "platformName": "平台名称",
+        "icon": "平台图标",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUrl": "回调地址",
+        "scope": "权限范围",
+        "defaultRoleId": "默认角色ID",
+        "status": "是否启用",
+        "sortOrder": "显示顺序",
+        "extra": "扩展字段",
+        "createdAt": "创建时间",
+        "form": {
+          "platform": "请输入平台标识，例如 github",
+          "platformName": "请输入平台名称，例如 GitHub",
+          "icon": "请输入图标类名或图片地址",
+          "clientId": "请输入 Client ID",
+          "clientSecret": "请输入 Client Secret",
+          "redirectUrl": "留空则由请求自动推导，例如 /auth/github",
+          "scope": "逗号分隔，例如 read:user,user:email",
+          "defaultRoleId": "首次登录自动建号时分配的角色ID，留空表示不分配",
+          "status": "请选择是否启用"
+        },
+        "addSysOauthConfig": "新增登录配置",
+        "editSysOauthConfig": "编辑登录配置"
       }
     }
   },

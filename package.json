@@ -50,7 +50,7 @@
     "@iconify-json/tabler": "1.2.39",
     "@nuxt/kit": "4.5.2",
     "@nuxt/test-utils": "^4.3.2",
-    "@tanstack/vue-table": "^9.2.4",
+    "@tanstack/vue-table": "^8.21.3",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "26.6.2",
     "@vue/test-utils": "^2.5.1",
@@ -58,7 +58,7 @@
     "happy-dom": "20.14.5",
     "playwright-core": "1.63.0",
     "tsx": "4.23.15",
-    "typescript": "^7.0.2",
+    "typescript": "5.7.3",
     "vitest": "5.0.1",
     "vue-tsc": "3.3.11"
   }

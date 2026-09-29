@@ -928,6 +928,34 @@
         },
         "addSysOauthAccount": "Add Binding",
         "editSysOauthAccount": "Edit Binding"
+      },
+      "oauthConfig": {
+        "title": "OAuth Login Config",
+        "platform": "Platform",
+        "platformName": "Platform Name",
+        "icon": "Icon",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret",
+        "redirectUrl": "Redirect URL",
+        "scope": "Scope",
+        "defaultRoleId": "Default Role ID",
+        "status": "Enabled",
+        "sortOrder": "Sort Order",
+        "extra": "Extra",
+        "createdAt": "Created At",
+        "form": {
+          "platform": "Please enter platform, e.g. github",
+          "platformName": "Please enter platform name, e.g. GitHub",
+          "icon": "Icon class name or image URL",
+          "clientId": "Please enter Client ID",
+          "clientSecret": "Please enter Client Secret",
+          "redirectUrl": "Leave empty to derive from request, e.g. /auth/github",
+          "scope": "Comma separated, e.g. read:user,user:email",
+          "defaultRoleId": "Role assigned on first OAuth login, leave empty for none",
+          "status": "Please select enabled status"
+        },
+        "addSysOauthConfig": "Add OAuth Config",
+        "editSysOauthConfig": "Edit OAuth Config"
       }
     }
   },

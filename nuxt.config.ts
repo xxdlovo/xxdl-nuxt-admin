@@ -28,6 +28,16 @@ export default defineNuxtConfig({
                     delete app.layouts[name]
                 }
             }
+        },
+        // Nuxt 生成的 .nuxt/tsconfig.*.json 会写入 "libReplacement"，
+        // 而当前 typescript@5.7.3 不识别该选项，pnpm typecheck 会以
+        // TS5023 "Unknown compiler option 'libReplacement'" 失败。
+        // 这里在类型准备阶段把它从生成的配置里摘掉。
+        'prepare:types'(options: { tsConfig?: { compilerOptions?: Record<string, unknown> } }) {
+            const compilerOptions = options?.tsConfig?.compilerOptions
+            if (compilerOptions && 'libReplacement' in compilerOptions) {
+                delete compilerOptions.libReplacement
+            }
         }
     },
     modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt', 'motion-v/nuxt','pinia-plugin-persistedstate/nuxt'],
