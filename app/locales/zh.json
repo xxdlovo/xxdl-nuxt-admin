@@ -909,6 +909,25 @@
           "iconify": "iconify图标",
           "local": "本地图标"
         }
+      },
+      "oauthAccount": {
+        "title": "第三方账号绑定",
+        "provider": "登录平台",
+        "providerUserId": "平台用户ID",
+        "providerLogin": "平台账号",
+        "userId": "系统用户ID",
+        "avatar": "头像",
+        "rawProfile": "原始资料",
+        "createdAt": "创建时间",
+        "form": {
+          "provider": "请输入登录平台，例如 github",
+          "providerUserId": "请输入平台用户ID",
+          "providerLogin": "请输入平台账号",
+          "userId": "请输入系统用户ID",
+          "avatar": "请输入头像地址"
+        },
+        "addSysOauthAccount": "新增绑定",
+        "editSysOauthAccount": "编辑绑定"
       }
     }
   },

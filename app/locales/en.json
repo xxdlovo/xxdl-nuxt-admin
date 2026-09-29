@@ -909,6 +909,25 @@
           "iconify": "Iconify Icon",
           "local": "Local Icon"
         }
+      },
+      "oauthAccount": {
+        "title": "OAuth Account Binding",
+        "provider": "Provider",
+        "providerUserId": "Provider User ID",
+        "providerLogin": "Provider Account",
+        "userId": "System User ID",
+        "avatar": "Avatar",
+        "rawProfile": "Raw Profile",
+        "createdAt": "Created At",
+        "form": {
+          "provider": "Please enter provider, e.g. github",
+          "providerUserId": "Please enter provider user ID",
+          "providerLogin": "Please enter provider account",
+          "userId": "Please enter system user ID",
+          "avatar": "Please enter avatar URL"
+        },
+        "addSysOauthAccount": "Add Binding",
+        "editSysOauthAccount": "Edit Binding"
       }
     }
   },

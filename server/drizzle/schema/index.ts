@@ -9,6 +9,7 @@ import { sysJobLog } from "./system/jobLog"
 import { sysLoginLog } from "./system/loginLog"
 import { sysMenu } from "./system/menu"
 import { sysNotice } from "./system/notice"
+import { sysOauthAccount } from "./system/oauthAccount"
 import { sysOss } from "./system/oss"
 import { sysOssConfig } from "./system/ossConfig"
 import { sysRole } from "./system/role"
@@ -30,6 +31,7 @@ export {
   sysLoginLog,
   sysMenu,
   sysNotice,
+  sysOauthAccount,
   sysOss,
   sysOssConfig,
   sysRole,
