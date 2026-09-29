@@ -21,3 +21,14 @@ export const SysOauthConfigRespSchema = z.object({
     updatedAt: SysOauthConfigBaseSchema.shape.updatedAt,
 });
 export type SysOauthConfigRespDTO = z.infer<typeof SysOauthConfigRespSchema>;
+
+/**
+ * 登录页展示用的已启用平台。
+ * 只暴露可公开字段，绝不含 clientId / clientSecret。
+ */
+export const SysOauthEnabledPlatformSchema = z.object({
+    platform: z.string(),
+    platformName: z.string(),
+    icon: z.string().nullish(),
+});
+export type SysOauthEnabledPlatformDTO = z.infer<typeof SysOauthEnabledPlatformSchema>;

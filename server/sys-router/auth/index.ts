@@ -1,9 +1,14 @@
 import { z } from 'zod'
-import { proc, publicProcedure, router } from '~~/server/trpc/init'
-import { verifyUserPassword } from '#server/utils/password'
+import { proc, publicProcedure, protectedProcedure, router } from '~~/server/trpc/init'
+import { verifyUserPassword, isPlaceholderPassword } from '#server/utils/password'
 import { sysUserService } from '#server/sys-router/user/SysUserService'
 import { AppError } from '#server/utils/appError'
-import { SysUserChangePasswordSchema, SysUserProfileUpdateSchema, SysUserRegisterSchema } from '#shared/system/user'
+import {
+    SysUserChangePasswordSchema,
+    SysUserProfileUpdateSchema,
+    SysUserRegisterSchema,
+    SysUserSetPasswordSchema
+} from '#shared/system/user'
 import { systemRegisterEnum } from '#shared/constants/business'
 import { sysConfigService } from '#server/sys-router/config/SysConfigService'
 import { authService } from './AuthService'
@@ -89,7 +94,16 @@ export const authRouter = router({
             throw new AppError('auth.unauthorized')
         }
 
-        return sysUserService(ctx).getById(ctx.user.id)
+        const current = await sysUserService(ctx).getById(ctx.user.id)
+        // getById 已剔除 password，这里额外补一个状态位：
+        // 前端据此决定密码表单是「设置新密码」（无需原密码）
+        // 还是「修改密码」（必须输入原密码）。
+        const passwordStatus = await sysUserService(ctx).getPasswordStatus(ctx.user.id)
+
+        return {
+            ...(current ?? {}),
+            hasPassword: passwordStatus?.hasPassword ?? true
+        }
     }),
 
     updateProfile: proc().input(SysUserProfileUpdateSchema).mutation(async ({ ctx, input }) => {
@@ -149,6 +163,46 @@ export const authRouter = router({
         const validPassword = await verifyUserPassword(user.password, input.oldPassword)
         if (!validPassword) {
             throw new AppError('auth.invalidCredentials')
+        }
+
+        return sysUserService(ctx).resetPassword({
+            id: ctx.user.id,
+            password: input.password,
+            confirmPassword: input.confirmPassword
+        })
+    }),
+
+    /**
+     * 设置 / 修改密码。
+     *
+     * 行为取决于用户是否已经设置过密码（由 sys_user.password 是否为占位标记判断）：
+     * - 从未设置过（OAuth 建号用户）：直接设置新密码，无需原密码 —— 库中的占位标记
+     *   对用户不可知，要求原密码没有意义；
+     * - 已设置过真实密码：必须提供并校验原密码，恢复原有的修改密码保护。
+     *
+     * 该校验放在服务端而不是依赖前端分支：否则任何登录用户都能直接调用本接口
+     * 绕过原密码校验，等于废掉原有保护。
+     */
+    setPassword: protectedProcedure.input(SysUserSetPasswordSchema).mutation(async ({ ctx, input }) => {
+        if (!ctx.user) {
+            throw new AppError('auth.unauthorized')
+        }
+
+        const current = await sysUserService(ctx).getLoginUserByUsername(ctx.user.username)
+        if (!current || current.id !== ctx.user.id) {
+            throw new AppError('common.notExist')
+        }
+
+        // 已设置过密码 → 必须校验原密码
+        if (!isPlaceholderPassword(current.password)) {
+            if (!input.oldPassword) {
+                throw new AppError('auth.oldPasswordRequired')
+            }
+
+            const validPassword = await verifyUserPassword(current.password, input.oldPassword)
+            if (!validPassword) {
+                throw new AppError('auth.invalidCredentials')
+            }
         }
 
         return sysUserService(ctx).resetPassword({

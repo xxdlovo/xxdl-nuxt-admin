@@ -84,6 +84,16 @@ export const SysUserChangePasswordSchema = withMatchingPasswords(
 )
 export type SysUserChangePasswordDTO = z.infer<typeof SysUserChangePasswordSchema>
 
+// current user sets / changes password.
+// oldPassword 可选：从未设置过密码的用户（OAuth 建号）不需要它；
+// 已设置过真实密码的用户由服务端强制要求校验，见 auth.setPassword。
+export const SysUserSetPasswordSchema = withMatchingPasswords(
+  SysUserPasswordFieldsSchema.extend({
+    oldPassword: z.string().optional()
+  })
+)
+export type SysUserSetPasswordDTO = z.infer<typeof SysUserSetPasswordSchema>
+
 // public registration
 export const SysUserRegisterSchema = withMatchingPasswords(
   SysUserPasswordFieldsSchema.extend({

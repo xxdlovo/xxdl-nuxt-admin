@@ -17,7 +17,15 @@
     "forbidden": "无权限",
     "usernameExists": "用户名已被使用",
     "phoneExists": "手机号已被使用",
-    "registerDisabled": "系统暂未开放注册"
+    "registerDisabled": "系统暂未开放注册",
+    "oauthBindingNotFound": "未找到该第三方账号绑定，可能已被解绑",
+    "oauthPlatformDisabled": "该第三方登录方式未启用",
+    "oauthPlatformUnsupported": "暂不支持该第三方登录方式",
+    "oauthMisconfigured": "第三方登录配置不完整，请联系管理员",
+    "oauthEmailRequired": "第三方账号未提供邮箱，无法完成登录",
+    "oauthProfileInvalid": "未获取到第三方账号标识，登录失败",
+    "oauthFailed": "第三方登录失败，请稍后重试",
+    "oldPasswordRequired": "请先输入原密码"
   },
   "common": {
     "notExist": "查询数据不存在",
@@ -498,8 +506,17 @@
       "profile": {
         "tabs": {
           "profile": "个人资料",
-          "password": "修改密码"
+          "password": "修改密码",
+          "setPassword": "设置密码",
+          "thirdParty": "第三方账号"
         },
+        "setPassword": "设置新密码",
+        "thirdPartyTitle": "已绑定的第三方账号",
+        "thirdPartyDesc": "解绑后仍可用同一第三方账号登录，系统会自动重新绑定。",
+        "noThirdParty": "暂无第三方账号绑定",
+        "noThirdPartyDesc": "你还没有绑定任何第三方登录账号。",
+        "thirdPartyPasswordTip": "你正在使用第三方账号登录，原密码为系统随机生成，请直接设置新密码。",
+        "unbindSuccess": "解绑成功",
         "profileInfo": "个人信息",
         "profileInfoDesc": "查看账号资料，也可以切换为编辑状态更新基础信息。",
         "rolePermission": "角色权限",
@@ -927,7 +944,9 @@
           "avatar": "请输入头像地址"
         },
         "addSysOauthAccount": "新增绑定",
-        "editSysOauthAccount": "编辑绑定"
+        "editSysOauthAccount": "编辑绑定",
+        "unbind": "解绑",
+        "unbindConfirm": "确定解除该第三方账号绑定吗？解绑后可用同一账号重新登录并自动重新绑定。"
       },
       "oauthConfig": {
         "title": "第三方登录配置",

@@ -17,7 +17,15 @@
     "forbidden": "No permission",
     "usernameExists": "This user name is already in use",
     "phoneExists": "This phone number is already in use",
-    "registerDisabled": "Registration is currently disabled"
+    "registerDisabled": "Registration is currently disabled",
+    "oauthBindingNotFound": "Third-party binding not found, it may have been unbound",
+    "oauthPlatformDisabled": "This third-party login method is disabled",
+    "oauthPlatformUnsupported": "This third-party login method is not supported yet",
+    "oauthMisconfigured": "Third-party login is not fully configured, please contact the administrator",
+    "oauthEmailRequired": "The third-party account did not provide an email address",
+    "oauthProfileInvalid": "Could not obtain the third-party account identifier",
+    "oauthFailed": "Third-party login failed, please try again later",
+    "oldPasswordRequired": "Please enter your current password first"
   },
   "common": {
     "notExist": "Query data does not exist",
@@ -498,8 +506,17 @@
       "profile": {
         "tabs": {
           "profile": "Profile",
-          "password": "Change Password"
+          "password": "Change Password",
+          "setPassword": "Set Password",
+          "thirdParty": "Third-party Accounts"
         },
+        "setPassword": "Set New Password",
+        "thirdPartyTitle": "Bound third-party accounts",
+        "thirdPartyDesc": "After unbinding you can still sign in with the same third-party account; it will be rebound automatically.",
+        "noThirdParty": "No third-party account bound",
+        "noThirdPartyDesc": "You have not bound any third-party login account yet.",
+        "thirdPartyPasswordTip": "You signed in with a third-party account, so the original password was randomly generated. Please set a new password directly.",
+        "unbindSuccess": "Unbound successfully",
         "profileInfo": "Profile Info",
         "profileInfoDesc": "Review account details and switch to edit mode to update basic information.",
         "rolePermission": "Roles & Permissions",
@@ -927,7 +944,9 @@
           "avatar": "Please enter avatar URL"
         },
         "addSysOauthAccount": "Add Binding",
-        "editSysOauthAccount": "Edit Binding"
+        "editSysOauthAccount": "Edit Binding",
+        "unbind": "Unbind",
+        "unbindConfirm": "Unbind this third-party account? You can sign in with the same account again and it will be rebound automatically."
       },
       "oauthConfig": {
         "title": "OAuth Login Config",

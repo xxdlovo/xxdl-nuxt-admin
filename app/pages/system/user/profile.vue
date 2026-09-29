@@ -4,9 +4,11 @@ import { businessDictCode } from '#shared/constants/business'
 import {
   SysUserChangePasswordSchema,
   SysUserProfileUpdateSchema,
+  SysUserSetPasswordSchema,
   type SysUserChangePasswordDTO,
   type SysUserDto,
-  type SysUserProfileUpdateDTO
+  type SysUserProfileUpdateDTO,
+  type SysUserSetPasswordDTO
 } from '#shared/system/user'
 import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
 
@@ -21,11 +23,14 @@ const { $ts } = useI18n()
 const { user, fetch } = useUserSession()
 const { profile, loadProfile } = useRbacProfile()
 
+/** auth.myProfile 在用户 DTO 之外额外返回 hasPassword */
+type MyProfile = SysUserDto & { hasPassword?: boolean }
+
 const loading = ref(false)
 const isEditing = ref(false)
 const savingProfile = ref(false)
 const savingPassword = ref(false)
-const lastProfileData = ref<SysUserDto | null>(null)
+const lastProfileData = ref<MyProfile | null>(null)
 const avatarFile = ref<File | null>(null)
 const uploadingAvatar = ref(false)
 const avatarProgress = ref(0)
@@ -40,21 +45,127 @@ const profileState = reactive<Partial<SysUserProfileUpdateDTO>>({
   remark: ''
 })
 
-const passwordState = reactive<Partial<SysUserChangePasswordDTO>>({
+// oldPassword 仅在「修改密码」模式下使用；第三方登录用户走「设置密码」，不传该字段。
+// 这里用显式对象类型，避免 DTO 交叉类型让各字段变成必填。
+const passwordState = reactive<{
+  oldPassword?: string
+  password?: string
+  confirmPassword?: string
+}>({
   oldPassword: '',
   password: '',
   confirmPassword: ''
 })
 
-const tabs = computed(() => [{
-  label: $ts('module.system.profile.tabs.profile'),
-  icon: 'i-lucide-user-round',
-  slot: 'profile' as const
-}, {
-  label: $ts('module.system.profile.tabs.password'),
-  icon: 'i-lucide-key-round',
-  slot: 'password' as const
-}])
+/** 当前用户自己的第三方账号绑定 */
+type MyBinding = {
+  id: string
+  provider: string
+  providerLogin: string | null
+  avatar: string | null
+  createdAt: string | null
+}
+
+const myBindings = ref<MyBinding[]>([])
+const loadingBindings = ref(false)
+const unbindingId = ref('')
+
+/**
+ * 是否「已设置过真实密码」。
+ *
+ * 由服务端根据 sys_user.password 是否为 OAuth 占位标记判定：
+ * - false（OAuth 建号、从未设过密码）→ 表单为「设置新密码」，不需要原密码
+ * - true → 恢复为「修改密码」，必须输入原密码
+ * 默认 true 是保守取值：拿不到状态时按「需要原密码」处理。
+ */
+const hasPassword = computed(() => lastProfileData.value?.hasPassword !== false)
+
+/** 仅未设置过密码时才免去原密码 */
+const useSetPasswordMode = computed(() => !hasPassword.value)
+
+const passwordFormSchema = computed(() =>
+  useSetPasswordMode.value ? SysUserSetPasswordSchema : SysUserChangePasswordSchema
+)
+
+const tabs = computed(() => {
+  const bindingCount = myBindings.value.length
+  // 仅在有绑定时展示数量后缀
+  const thirdPartyLabel = bindingCount > 0
+    ? `${$ts('module.system.profile.tabs.thirdParty')} (${bindingCount})`
+    : $ts('module.system.profile.tabs.thirdParty')
+
+  return [{
+    label: $ts('module.system.profile.tabs.profile'),
+    icon: 'i-lucide-user-round',
+    slot: 'profile' as const
+  }, {
+    label: useSetPasswordMode.value
+      ? $ts('module.system.profile.tabs.setPassword')
+      : $ts('module.system.profile.tabs.password'),
+    icon: 'i-lucide-key-round',
+    slot: 'password' as const
+  }, {
+    label: thirdPartyLabel,
+    icon: 'i-lucide-link',
+    slot: 'thirdParty' as const
+  }]
+})
+
+const platformNameMap: Record<string, string> = {
+  github: 'GitHub',
+  gitee: 'Gitee',
+  google: 'Google',
+  gitlab: 'GitLab',
+  microsoft: 'Microsoft'
+}
+
+function platformLabel(provider: string) {
+  const key = String(provider || '').trim().toLowerCase()
+  return platformNameMap[key] || provider || '-'
+}
+
+/** myBindings 的声明式表格列 */
+const bindingColumns = computed(() => [
+  {
+    accessorKey: 'provider',
+    header: $ts('module.system.oauthAccount.provider'),
+    cell: ({ row }: { row: { original: MyBinding } }) => platformLabel(row.original.provider)
+  },
+  {
+    accessorKey: 'providerLogin',
+    header: $ts('module.system.oauthAccount.providerLogin'),
+    cell: ({ row }: { row: { original: MyBinding } }) => row.original.providerLogin || '-'
+  },
+  {
+    accessorKey: 'createdAt',
+    header: $ts('module.system.oauthAccount.createdAt'),
+    cell: ({ row }: { row: { original: MyBinding } }) => row.original.createdAt || '-'
+  }
+])
+
+async function loadThirdPartyBindings() {
+  loadingBindings.value = true
+  try {
+    myBindings.value = await $trpc.sysOauthAccount.myBindings.query()
+  } catch (error) {
+    // 拉取失败不应影响个人中心其它功能
+    myBindings.value = []
+    console.warn('[profile] 第三方绑定加载失败', error)
+  } finally {
+    loadingBindings.value = false
+  }
+}
+
+async function handleUnbind(binding: MyBinding) {
+  unbindingId.value = binding.id
+  try {
+    await $trpc.sysOauthAccount.removeMyBinding.mutate(binding.id)
+    useToastSuccess($ts('module.system.profile.unbindSuccess'))
+    await loadThirdPartyBindings()
+  } finally {
+    unbindingId.value = ''
+  }
+}
 
 const genderItems = useDictOptions(businessDictCode.userGender)
 const roleNames = computed(() => profile.value?.roles.map(role => role.name || role.code).filter(Boolean) ?? [])
@@ -241,10 +352,24 @@ async function handleProfileSubmit(event: FormSubmitEvent<SysUserProfileUpdateDT
   }
 }
 
-async function handlePasswordSubmit(event: FormSubmitEvent<SysUserChangePasswordDTO>) {
+async function handlePasswordSubmit(event: FormSubmitEvent<{ oldPassword?: string; password: string; confirmPassword: string }>) {
   savingPassword.value = true
   try {
-    await $trpc.auth.changePassword.mutate(event.data)
+    // 未设置过密码（OAuth 建号）→ setPassword，无需原密码；
+    // 已设置过真实密码 → changePassword，必须校验原密码。
+    if (useSetPasswordMode.value) {
+      await $trpc.auth.setPassword.mutate({
+        password: event.data.password,
+        confirmPassword: event.data.confirmPassword
+      })
+    } else {
+      await $trpc.auth.setPassword.mutate({
+        oldPassword: event.data.oldPassword as string,
+        password: event.data.password,
+        confirmPassword: event.data.confirmPassword
+      })
+    }
+
     Object.assign(passwordState, {
       oldPassword: '',
       password: '',
@@ -256,7 +381,10 @@ async function handlePasswordSubmit(event: FormSubmitEvent<SysUserChangePassword
   }
 }
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+  await loadThirdPartyBindings()
+})
 onBeforeUnmount(() => {
   avatarUploadXhr.value?.abort()
 })
@@ -453,14 +581,28 @@ onBeforeUnmount(() => {
         <template #password>
           <UCard>
             <UForm
-                :schema="SysUserChangePasswordSchema"
+                :schema="passwordFormSchema"
                 :state="passwordState"
                 class="max-w-xl space-y-5"
                 @submit="handlePasswordSubmit"
             >
-              <UFormField name="oldPassword" :label="$ts('module.system.profile.oldPassword')" required>
+              <!-- 仅当账号已设置过真实密码时才要求输入原密码 -->
+              <UFormField
+                  v-if="hasPassword"
+                  name="oldPassword"
+                  :label="$ts('module.system.profile.oldPassword')"
+                  required
+              >
                 <UInput v-model="passwordState.oldPassword" type="password" autocomplete="current-password" :placeholder="$ts('module.system.profile.form.oldPassword')" class="w-full" />
               </UFormField>
+
+              <UAlert
+                  v-else
+                  color="info"
+                  variant="soft"
+                  icon="i-lucide-info"
+                  :description="$ts('module.system.profile.thirdPartyPasswordTip')"
+              />
 
               <UFormField name="password" :label="$ts('module.system.user.newPassword')" required>
                 <UInput v-model="passwordState.password" type="password" autocomplete="new-password" :placeholder="$ts('module.system.user.form.newPassword')" class="w-full" />
@@ -471,9 +613,86 @@ onBeforeUnmount(() => {
               </UFormField>
 
               <div class="flex justify-end">
-                <UButton type="submit" icon="i-lucide-key-round" :label="$ts('module.system.profile.changePassword')" :loading="savingPassword" />
+                <UButton
+                    type="submit"
+                    icon="i-lucide-key-round"
+                    :label="useSetPasswordMode ? $ts('module.system.profile.setPassword') : $ts('module.system.profile.changePassword')"
+                    :loading="savingPassword"
+                />
               </div>
             </UForm>
+          </UCard>
+        </template>
+
+        <!-- 第三方账号：列出当前用户自己的绑定，任何登录用户都可查看与解绑 -->
+        <template #thirdParty>
+          <UCard>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p class="text-sm font-medium text-default">{{ $ts('module.system.profile.thirdPartyTitle') }}</p>
+                <p class="text-xs text-muted">{{ $ts('module.system.profile.thirdPartyDesc') }}</p>
+              </div>
+              <UButton
+                  icon="i-lucide-refresh-cw"
+                  color="neutral"
+                  variant="outline"
+                  size="xs"
+                  :loading="loadingBindings"
+                  :label="$ts('common.refresh')"
+                  @click="loadThirdPartyBindings"
+              />
+            </div>
+
+            <div v-if="loadingBindings" class="py-8 text-center text-sm text-muted">
+              {{ $ts('common.loading') }}
+            </div>
+
+            <UEmpty
+                v-else-if="myBindings.length === 0"
+                icon="i-lucide-link-off"
+                :title="$ts('module.system.profile.noThirdParty')"
+                :description="$ts('module.system.profile.noThirdPartyDesc')"
+                variant="soft"
+            />
+
+            <div v-else class="flex flex-col divide-y divide-default">
+              <div
+                  v-for="binding in myBindings"
+                  :key="binding.id"
+                  class="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div class="flex min-w-0 items-center gap-3">
+                  <UIcon name="i-lucide-link" class="size-5 shrink-0 text-muted" />
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-default">{{ platformLabel(binding.provider) }}</span>
+                      <UBadge :label="binding.provider" color="neutral" variant="soft" size="sm" />
+                    </div>
+                    <p class="truncate text-xs text-muted">
+                      {{ binding.providerLogin || '-' }}
+                      <span v-if="binding.createdAt"> · {{ binding.createdAt }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <Popconfirm
+                    :content="$ts('module.system.oauthAccount.unbindConfirm')"
+                    :positive-text="$ts('module.system.oauthAccount.unbind')"
+                    :loading="unbindingId === binding.id"
+                    @confirm="handleUnbind(binding)"
+                >
+                  <template #trigger>
+                    <UButton
+                        icon="i-lucide-unlink"
+                        color="error"
+                        variant="outline"
+                        size="xs"
+                        :label="$ts('module.system.oauthAccount.unbind')"
+                    />
+                  </template>
+                </Popconfirm>
+              </div>
+            </div>
           </UCard>
         </template>
       </UTabs>

@@ -1,5 +1,6 @@
 //#server/sys-router/oauthAccount
-import { router, proc } from '~~/server/trpc/init'
+import { router, proc, protectedProcedure } from '~~/server/trpc/init'
+import { AppError } from '#server/utils/appError'
 import { sysOauthAccountService } from './SysOauthAccountService'
 import z from 'zod'
 import {
@@ -42,5 +43,19 @@ export const sysOauthAccountRouter = router({
     page: listProc.input(SysOauthAccountPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOauthAccountService(ctx).page(input)
+        }),
+
+    // 以下两个接口面向「当前登录用户自己」，只需登录态、不要求管理权限，
+    // 因此所有用户都能在个人中心查看并解绑自己的第三方账号。
+    myBindings: protectedProcedure
+        .query(async ({ ctx }) => {
+            return sysOauthAccountService(ctx).listMyBindings()
+        }),
+    removeMyBinding: protectedProcedure.input(z.string())
+        .mutation(async ({ ctx, input }) => {
+            if (!ctx.user) {
+                throw new AppError('auth.unauthorized')
+            }
+            return sysOauthAccountService(ctx).removeMyBinding(input, ctx.user.id)
         })
 })

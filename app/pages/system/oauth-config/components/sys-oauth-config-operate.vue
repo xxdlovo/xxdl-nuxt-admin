@@ -63,6 +63,54 @@ const { schema, validate } = useZodValidation({
 
 const statusItems = useDictOptions(businessDictCode.enableStatus)
 
+/**
+ * 平台快捷选项。第三方登录目前支持 github/gitee/google，
+ * 这里只作为「可搜索的候选项」提供，不限制输入 —— 后端后续扩展平台时
+ * 仍可直接填入新的 platform 值。
+ */
+const platformItems = [
+  { label: 'GitHub', value: 'github' },
+  { label: 'Gitee', value: 'gitee' },
+  { label: 'Google', value: 'google' }
+]
+
+/**
+ * 选定平台后自动回填「平台名称」，避免只填了标识却漏填展示名。
+ * 编辑模式下不覆盖用户既有内容，且仅在新增模式生效。
+ */
+watch(() => state.value.platform, (platform) => {
+  if (props.operateType !== 'add') return
+
+  const matched = platformItems.find(item => item.value === platform)
+  if (matched) {
+    state.value.platformName = matched.label
+  }
+})
+
+/** 默认角色：远端查询 sys_role，用法与系统用户弹窗的角色选择保持一致 */
+const roleItems = ref<{ label: string; value: string }[]>([])
+const loadingRoles = ref(false)
+
+async function loadRoleItems() {
+  loadingRoles.value = true
+  try {
+    const roles = await $trpc.sysRole.list.query({})
+    roleItems.value = (roles ?? [])
+      .filter(role => Boolean(role.id))
+      .map(role => ({
+        label: role.name || role.code || (role.id as string),
+        value: role.id as string
+      }))
+  } catch (error) {
+    // 当前账号无 system:role:list 权限时会 403。此时保留空候选，
+    // 让用户仍可在不设置默认角色的情况下保存配置，不阻断整个弹窗。
+    roleItems.value = []
+    console.warn('[oauth-config] 默认角色候选加载失败', error)
+  } finally {
+    loadingRoles.value = false
+  }
+}
+
 const closeDrawer = () => {
   props.close?.()
 }
@@ -106,10 +154,11 @@ const initFormData = () => {
   }
 }
 
-// 每次打开时重新初始化
+// 每次打开时重新初始化，并刷新默认角色候选（角色可能在别处新增/停用）
 watch(visible, (newVal) => {
   if (newVal) {
     initFormData()
+    void loadRoleItems()
   }
 })
 
@@ -154,7 +203,16 @@ const title = computed(() => {
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
           <UFormField name="platform" required :label="$ts('module.system.oauthConfig.platform')" orientation="horizontal"
             :ui="formItemUi">
-            <UBaseInput v-model="state.platform" :placeholder="$ts('module.system.oauthConfig.form.platform')" trailing="clear" />
+            <!-- 快捷候选：github / gitee / google。
+                 后端后续支持新平台时，这里补一个候选项即可 -->
+            <USelect
+              v-model="state.platform"
+              :items="platformItems"
+              value-key="value"
+              label-key="label"
+              :placeholder="$ts('module.system.oauthConfig.form.platform')"
+              class="w-full"
+            />
           </UFormField>
           <UFormField name="platformName" required :label="$ts('module.system.oauthConfig.platformName')" orientation="horizontal"
             :ui="formItemUi">
@@ -182,7 +240,19 @@ const title = computed(() => {
           </UFormField>
           <UFormField name="defaultRoleId" :label="$ts('module.system.oauthConfig.defaultRoleId')" orientation="horizontal"
             :ui="formItemUi">
-            <UBaseInput v-model="state.defaultRoleId" :placeholder="$ts('module.system.oauthConfig.form.defaultRoleId')" trailing="clear" />
+            <!-- 默认角色改为远端查询 sys_role，避免手填 ID -->
+            <USelectMenu
+              v-model="state.defaultRoleId"
+              :items="roleItems"
+              value-key="value"
+              label-key="label"
+              :filter-fields="['label']"
+              :search-input="{ placeholder: $ts('module.system.oauthConfig.form.defaultRoleId') }"
+              :loading="loadingRoles"
+              :placeholder="$ts('module.system.oauthConfig.form.defaultRoleId')"
+              clear
+              class="w-full"
+            />
           </UFormField>
           <UFormField name="sortOrder" :label="$ts('module.system.oauthConfig.sortOrder')" orientation="horizontal"
             :ui="formItemUi">

@@ -18,7 +18,7 @@ import type {
   SysUserRoleAssignDTO
 } from '#shared/system/userRole'
 import { randomUuid } from '#shared/utils/uuid'
-import { hashUserPassword } from '#server/utils/password'
+import { hashUserPassword, isPlaceholderPassword } from '#server/utils/password'
 import { and, eq } from 'drizzle-orm'
 import { sysDepartment, sysUser } from '#server/drizzle/schema'
 import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
@@ -160,6 +160,25 @@ export function sysUserService(ctx: Context) {
     async getById(id: string): Promise<SysUserDto | null> {
       const pojo = await repo.getByIdWithDept(id)
       return omitPassword(pojo) as SysUserDto | null
+    },
+
+    /**
+     * 只取「是否已设置过密码」这一状态。
+     *
+     * getById 会剔除 password，因此无法据此判断；这里单独查一次 password 列，
+     * 既避免把密码哈希暴露给调用方，也便于个人中心与 setPassword 复用。
+     */
+    async getPasswordStatus(id: string): Promise<{ hasPassword: boolean } | null> {
+      const rows = await ctx.db
+        .select({ password: sysUser.password })
+        .from(sysUser)
+        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      const row = rows[0]
+      if (!row) return null
+
+      return { hasPassword: !isPlaceholderPassword(row.password) }
     },
 
     async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {

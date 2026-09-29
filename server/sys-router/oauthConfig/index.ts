@@ -1,5 +1,5 @@
 //#server/sys-router/oauthConfig
-import { router, proc } from '~~/server/trpc/init'
+import { router, proc, publicProcedure } from '~~/server/trpc/init'
 import { sysOauthConfigService } from './SysOauthConfigService'
 import z from 'zod'
 import {
@@ -42,5 +42,11 @@ export const sysOauthConfigRouter = router({
     page: listProc.input(SysOauthConfigPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysOauthConfigService(ctx).page(input)
+        }),
+    // 登录页在未登录状态下拉取可用的第三方登录方式，必须是 publicProcedure；
+    // 返回结果只含 platform/platformName/icon，不含任何密钥字段。
+    enabledPlatforms: publicProcedure
+        .query(async ({ ctx }) => {
+            return sysOauthConfigService(ctx).listEnabledPlatforms()
         })
 })

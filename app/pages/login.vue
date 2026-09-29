@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {afterUserLogin} from "~/utils/common";
 import { systemOtherLoginEnum } from '#shared/constants/business'
+import type { SysOauthEnabledPlatformDTO } from '#shared/system/oauthConfig'
 definePageMeta({
   layout: false
 })
@@ -33,6 +34,8 @@ const showPassword = ref(false)
 const rememberMe = ref(false)
 // 其他登录配置缺失时默认展示，确保历史部署尚未新增配置项时登录页功能不受影响。
 const otherLoginEnabled = ref(true)
+// 已启用的第三方登录方式，完全由 sys_oauth_config 表决定（图标/名称都取自配置）
+const oauthPlatforms = ref<SysOauthEnabledPlatformDTO[]>([])
 const form = reactive<LoginForm>({
   ...defaultLoginForm
 })
@@ -139,6 +142,30 @@ function fillDemoAccount(account: { username: string, password: string }) {
   form.password = account.password
 }
 
+/**
+ * 发起第三方 OAuth 登录。
+ *
+ * `/auth/{platform}` 是 server/routes 下的服务端接口，不是 Nuxt 页面路由。
+ * 如果把它传给 Nuxt UI 的链接能力（例如 `to`、`href` 或内部的 NuxtLink），
+ * 点击时可能会先交给 Vue Router 处理，于是出现
+ * `No match found for location with path "/auth/github"`。
+ *
+ * 使用 `window.location.assign` 明确执行浏览器整页导航，绕过客户端路由，
+ * 让请求直接进入 Nitro 的 OAuth handler，再由服务端跳转到 GitHub。
+ */
+function startOAuthLogin(platform: string) {
+  if (!import.meta.client) {
+    return
+  }
+
+  const normalizedPlatform = platform.trim().toLowerCase()
+  if (!normalizedPlatform) {
+    return
+  }
+
+  window.location.assign(`/auth/${encodeURIComponent(normalizedPlatform)}`)
+}
+
 onMounted(async () => {
   const rememberedLogin = readRememberedLogin()
 
@@ -155,6 +182,25 @@ onMounted(async () => {
   } catch {
     // 配置接口暂时不可用时保留 true，避免网络波动把验证码和其他账号入口错误隐藏。
     otherLoginEnabled.value = true
+  }
+
+  // 第三方登录方式从 sys_oauth_config 动态获取：表里新增/启用一行，登录页就多一个入口，
+  // 无需改前端代码。接口异常时降级为空数组，不影响账号密码登录。
+  try {
+    oauthPlatforms.value = await $trpc.sysOauthConfig.enabledPlatforms.query()
+  } catch {
+    oauthPlatforms.value = []
+  }
+
+  // OAuth 回调失败时会带 oauthError 回到登录页，这里提示后清理 query，
+  // 避免用户刷新页面重复弹提示。
+  const oauthError = route.query.oauthError
+  if (typeof oauthError === 'string' && oauthError) {
+    toast.add({
+      title: $ts(oauthError),
+      color: 'error'
+    })
+    await navigateTo({ path: route.path, query: {} }, { replace: true })
   }
 })
 
@@ -325,6 +371,23 @@ async function handleLogin() {
             >
               {{ account.label }}
             </UButton>
+          </div>
+
+          <!-- 第三方登录：入口完全由 sys_oauth_config 决定（启用一行即多一个按钮）。
+               OAuth 地址属于服务端接口，点击后必须绕过 Vue Router 进行整页导航。
+               platform 已在接口返回时归一化，点击函数仍会再次转小写，兼容历史数据。 -->
+          <div v-if="oauthPlatforms.length" class="mt-3 flex flex-col gap-2.5">
+            <UButton
+                v-for="item in oauthPlatforms"
+                :key="item.platform"
+                type="button"
+                block
+                color="neutral"
+                variant="outline"
+                :icon="item.icon || 'i-lucide-link'"
+                :label="item.platformName"
+                @click="startOAuthLogin(item.platform)"
+            />
           </div>
         </template>
       </div>

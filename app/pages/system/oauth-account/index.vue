@@ -147,13 +147,15 @@ const columns = computed<TableColumn<SysOauthAccountDto>[]>(() => {
 
       if (permissions.canDel.value) {
         actions.push(h(Popconfirm, {
-          onConfirm: () => handleDelete(row.original.id as string)
+          onConfirm: () => handleDelete(row.original.id as string),
+          content: $ts('module.system.oauthAccount.unbindConfirm'),
+          positiveText: $ts('module.system.oauthAccount.unbind')
         }, {
           trigger: () => h(UButton, {
             variant: 'outline',
             color: 'error',
             size: 'xs'
-          }, { default: () => $ts('common.delete') })
+          }, { default: () => $ts('module.system.oauthAccount.unbind') })
         }))
       }
 
