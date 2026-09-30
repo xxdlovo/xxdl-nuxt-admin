@@ -41,8 +41,8 @@ export const landingContentEn = {
     title: 'Start locally',
     lines: [
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm install', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', style: 'cmd' }] },
-      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/init.sql', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/main/mysql-ddl.sql', style: 'cmd' }] },
+      { segments: [{ text: '$ ', style: 'prompt' }, { text: 'mysql -u <user> -p <database> < doc/main/init.sql', style: 'cmd' }] },
       { segments: [{ text: '$ ', style: 'prompt' }, { text: 'pnpm dev', style: 'cmd' }] },
       { segments: [{ text: 'Demo account ', style: 'success' }, { text: 'admin / adminadmin', style: 'url' }] }
     ]
@@ -117,8 +117,8 @@ export const landingContentEn = {
     copied: 'Copied',
     steps: [
       { command: 'pnpm install', description: 'Install project dependencies' },
-      { command: 'mysql -u <user> -p <database> < doc/mysql-ddl.sql', description: 'Create the database tables' },
-      { command: 'mysql -u <user> -p <database> < doc/init.sql', description: 'Initialize menus, permissions, and the administrator account' },
+      { command: 'mysql -u <user> -p <database> < doc/main/mysql-ddl.sql', description: 'Create the database tables' },
+      { command: 'mysql -u <user> -p <database> < doc/main/init.sql', description: 'Initialize menus, permissions, and the administrator account' },
       { command: 'pnpm dev', description: 'Start the development server' }
     ]
   },
@@ -130,7 +130,7 @@ export const landingContentEn = {
       { label: 'What environment does the project require?', content: 'Node.js 22 is recommended. The project uses pnpm and a MySQL database. Configure the required environment variables before initializing the schema.' },
       { label: 'How does permission control work?', content: 'The RBAC model connects users, roles, menus, data scopes, routes, and button permission codes. Both server procedures and client actions can enforce permissions.' },
       { label: 'Can I use another database?', content: 'The current schema and repository layer target MySQL through Drizzle ORM. Supporting another database requires adapting the Drizzle driver, schema details, and database configuration.' },
-      { label: 'Is it suitable for secondary development?', content: 'Yes. Shared DTOs, reusable CRUD components, tRPC routers, and the code generation guide in doc/4.new-module/ are designed to make business modules consistent to extend.' },
+      { label: 'Is it suitable for secondary development?', content: 'Yes. Shared DTOs, reusable CRUD components, tRPC routers, and the code generation guide in doc/main/4.new-module/ are designed to make business modules consistent to extend.' },
       { label: 'Can I modify data in the demo?', content: 'The demo account is admin / adminadmin. The demo environment is protected, so edit and delete operations are blocked.' },
       { label: 'How can it be deployed?', content: 'Build it as a standard Nuxt application and deploy the generated Nitro server to a Node-compatible environment with access to your MySQL and storage services.' },
       { label: 'How is internationalization organized?', content: 'The admin system uses nuxt-i18n-micro with an extensible locale configuration. Landing-page copy is kept in local typed content files so additional languages can be added without expanding the global translation dictionary.' }
@@ -179,7 +179,7 @@ export const landingContentEn = {
   },
   cta: {
     title: 'Try the demo, then build your own module.',
-    description: 'Log in with admin / adminadmin, inspect the workflows, and use doc/4.new-module/ to extend the system consistently.',
+    description: 'Log in with admin / adminadmin, inspect the workflows, and use doc/main/4.new-module/ to extend the system consistently.',
     links: [
       { label: 'Demo address 1', icon: 'i-lucide-log-in', color: 'primary', to: '#' },
       { label: 'Demo address 2', icon: 'i-lucide-arrow-up-right', color: 'neutral', variant: 'soft', to: '#' }
@@ -194,7 +194,7 @@ export const landingContentEn = {
       { label: 'FAQ', to: '#faq' },
       { label: 'Contact', to: '#contact' },
       // 页脚与顶部导航保持相同的最终地址，避免依赖 /docs 中间重定向页。
-      { label: 'Docs', to: '/docs/getting-started' }
+      { label: 'Docs', to: '/docs/main/getting-started' }
     ],
     copyright: 'Built with Nuxt and Nuxt UI.'
   }

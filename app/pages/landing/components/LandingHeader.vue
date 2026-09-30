@@ -47,7 +47,7 @@ const items = computed<NavigationMenuItem[]>(() => [
     // 客户端重定向。二次重定向会让地址栏已经变化，但异步文档布局仍短暂复用
     // 落地页的旧 VNode，表现为“地址变了、页面内容没有变化”。
     label: page.value.navigation.docs,
-    to: '/docs/getting-started'
+    to: '/docs/main/getting-started'
   }
 ])
 
@@ -168,7 +168,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="soft"
           block
-          to="/docs/getting-started"
+          to="/docs/main/getting-started"
         />
         <UButton
           :label="systemAction.label"
