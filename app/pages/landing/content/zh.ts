@@ -14,10 +14,12 @@ export const landingContentZh = {
     features: '功能特性',
     stack: '技术栈',
     faq: '常见问题',
-    contact: '联系我们'
+    contact: '联系我们',
+    docs: '文档'
   },
   actions: {
     source: '源码',
+    docs: '文档',
     signIn: '登录',
     enterSystem: '进入系统',
     language: '切换语言',
@@ -189,7 +191,8 @@ export const landingContentZh = {
       { label: '功能特性', to: '#features' },
       { label: '技术栈', to: '#stack' },
       { label: '常见问题', to: '#faq' },
-      { label: '联系我们', to: '#contact' }
+      { label: '联系我们', to: '#contact' },
+      { label: '文档', to: '/docs' }
     ],
     copyright: '基于 Nuxt 与 Nuxt UI 构建，参考 SoybeanJS。'
   }

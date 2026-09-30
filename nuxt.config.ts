@@ -40,7 +40,21 @@ export default defineNuxtConfig({
             }
         }
     },
-    modules: ['@nuxt/ui', 'nuxt-echarts', 'nuxt-i18n-micro', 'nuxt-auth-utils', '@pinia/nuxt', 'motion-v/nuxt','pinia-plugin-persistedstate/nuxt'],
+    modules: [
+        '@nuxt/ui',
+        'nuxt-echarts',
+        'nuxt-i18n-micro',
+        'nuxt-auth-utils',
+        '@pinia/nuxt',
+        'motion-v/nuxt',
+        'pinia-plugin-persistedstate/nuxt',
+        // 先从项目根目录注册 MDC。@nuxt/content 随后会复用该实例，
+        // 避免 pnpm 隔离依赖布局下无法从内容模块内部定位 MDC。
+        '@nuxtjs/mdc',
+        // @nuxt/content 负责扫描 content.config.ts 并注册 Markdown 查询与渲染能力。
+        // @nuxtjs/mdc 同样在 package.json 中显式声明，以适配 pnpm 的严格依赖解析。
+        '@nuxt/content'
+    ],
     // trpc-nuxt 2.1.x 的产物内部使用了 Nuxt 虚拟模块 #imports，
     // 该虚拟模块只能在 Nuxt 构建管线中解析。若不 transpile 该包，
     // Nitro 会把 node_modules 中的 ESM 直接交给 Node 解析，

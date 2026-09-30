@@ -2,6 +2,13 @@
   "name": "xxdl-nuxt-admin",
   "type": "module",
   "private": true,
+  "description": "A full-stack Nuxt 4 admin system",
+  "keywords": [
+    "nuxt",
+    "admin panel",
+    "full stack",
+    "admin crud"
+  ],
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
@@ -19,10 +26,13 @@
   "dependencies": {
     "@adonisjs/hash": "^10.1.1",
     "@internationalized/date": "3.12.4",
+    "@nuxt/content": "^3.16.1",
     "@nuxt/ui": "4.11.1",
+    "@nuxtjs/mdc": "^0.23.1",
     "@pinia/nuxt": "^1.0.2",
     "@trpc/client": "11.19.0",
     "@trpc/server": "11.19.0",
+    "better-sqlite3": "^13.0.3",
     "dotenv": "^18.0.2",
     "drizzle-orm": "^0.45.3",
     "klona": "^2.0.6",
@@ -40,6 +50,7 @@
     "tailwindcss": "^4.3.3",
     "trpc-nuxt": "2.1.3",
     "vue": "3.5.43",
+    "vue-echarts": "^8.3.1",
     "vue-router": "^5.3.1",
     "zod": "^4.6.5"
   },

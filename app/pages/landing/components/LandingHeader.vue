@@ -40,6 +40,12 @@ const items = computed<NavigationMenuItem[]>(() => [
     to: '#contact',
     exactHash: true,
     active: activeSection.value === 'contact'
+  },
+  {
+    // 独立页面而非页内锚点，因此不参与 activeSection 的滚动高亮；
+    // 保持硬编码路径与 systemAction 的 /system/home、/login 写法一致。
+    label: page.value.navigation.docs,
+    to: '/docs'
   }
 ])
 
@@ -155,9 +161,18 @@ onBeforeUnmount(() => {
           to="#"
         />
         <UButton
+          :label="page.actions.docs"
+          icon="i-lucide-book-open"
+          color="neutral"
+          variant="soft"
+          block
+          to="/docs"
+        />
+        <UButton
           :label="systemAction.label"
           icon="i-lucide-log-in"
           block
+          class="col-span-2"
           :to="systemAction.to"
         />
       </div>

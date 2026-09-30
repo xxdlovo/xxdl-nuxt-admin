@@ -30,9 +30,11 @@ export interface LandingContent {
     stack: string
     faq: string
     contact: string
+    docs: string
   }
   actions: {
     source: string
+    docs: string
     signIn: string
     enterSystem: string
     language: string

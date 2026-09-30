@@ -1,5 +1,5 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  const publicPaths = ['/', '/landing', '/login', '/register'];
+  const publicPaths = ['/', '/landing', '/login', '/register', '/docs'];
   const { loggedIn, fetch } = useUserSession()
 
   if (!loggedIn.value) {

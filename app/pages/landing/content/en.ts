@@ -14,10 +14,12 @@ export const landingContentEn = {
     features: 'Features',
     stack: 'Tech stack',
     faq: 'FAQ',
-    contact: 'Contact'
+    contact: 'Contact',
+    docs: 'Docs'
   },
   actions: {
     source: 'Source',
+    docs: 'Docs',
     signIn: 'Sign in',
     enterSystem: 'Enter system',
     language: 'Language',
@@ -190,7 +192,8 @@ export const landingContentEn = {
       { label: 'Features', to: '#features' },
       { label: 'Tech stack', to: '#stack' },
       { label: 'FAQ', to: '#faq' },
-      { label: 'Contact', to: '#contact' }
+      { label: 'Contact', to: '#contact' },
+      { label: 'Docs', to: '/docs' }
     ],
     copyright: 'Built with Nuxt and Nuxt UI.'
   }
