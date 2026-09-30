@@ -193,7 +193,8 @@ export const landingContentEn = {
       { label: 'Tech stack', to: '#stack' },
       { label: 'FAQ', to: '#faq' },
       { label: 'Contact', to: '#contact' },
-      { label: 'Docs', to: '/docs' }
+      // 页脚与顶部导航保持相同的最终地址，避免依赖 /docs 中间重定向页。
+      { label: 'Docs', to: '/docs/getting-started' }
     ],
     copyright: 'Built with Nuxt and Nuxt UI.'
   }

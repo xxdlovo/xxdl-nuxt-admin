@@ -192,7 +192,8 @@ export const landingContentZh = {
       { label: '技术栈', to: '#stack' },
       { label: '常见问题', to: '#faq' },
       { label: '联系我们', to: '#contact' },
-      { label: '文档', to: '/docs' }
+      // 页脚与顶部导航保持相同的最终地址，避免通过 /docs 中间页重定向。
+      { label: '文档', to: '/docs/getting-started' }
     ],
     copyright: '基于 Nuxt 与 Nuxt UI 构建，参考 SoybeanJS。'
   }

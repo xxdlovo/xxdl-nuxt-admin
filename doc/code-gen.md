@@ -1,3 +1,7 @@
+---
+navigation: false
+---
+
 # xxdl-nuxt-admin 代码生成指南
 
 > 本文档用于指导 AI 根据已有 demo 模板生成新的业务模块代码。

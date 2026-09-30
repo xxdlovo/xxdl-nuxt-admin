@@ -42,10 +42,12 @@ const items = computed<NavigationMenuItem[]>(() => [
     active: activeSection.value === 'contact'
   },
   {
-    // 独立页面而非页内锚点，因此不参与 activeSection 的滚动高亮；
-    // 保持硬编码路径与 systemAction 的 /system/home、/login 写法一致。
+    // 文档是独立页面而不是页内锚点，因此不参与 activeSection 的滚动高亮。
+    // 这里直接使用第一个文档分组的最终地址，避免先进入 /docs 再执行一次
+    // 客户端重定向。二次重定向会让地址栏已经变化，但异步文档布局仍短暂复用
+    // 落地页的旧 VNode，表现为“地址变了、页面内容没有变化”。
     label: page.value.navigation.docs,
-    to: '/docs'
+    to: '/docs/getting-started'
   }
 ])
 
@@ -166,7 +168,7 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="soft"
           block
-          to="/docs"
+          to="/docs/getting-started"
         />
         <UButton
           :label="systemAction.label"

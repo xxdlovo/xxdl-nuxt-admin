@@ -1,12 +1,15 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-  const publicPaths = ['/', '/landing', '/login', '/register', '/docs'];
+  // 文档及其子页面都是公开的演示内容；使用前缀判断避免新增文档后被登录拦截。
+  const isPublicPath = ['/', '/landing', '/login', '/register'].includes(to.path)
+    || to.path === '/docs'
+    || to.path.startsWith('/docs/')
   const { loggedIn, fetch } = useUserSession()
 
   if (!loggedIn.value) {
     await fetch()
   }
 
-  if (publicPaths.includes(to.path)) {
+  if (isPublicPath) {
     if (to.path === '/login' && loggedIn.value) {
       return navigateTo('/system/home')
     }

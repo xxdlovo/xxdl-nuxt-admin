@@ -48,6 +48,14 @@ const themeColor = computed(() => {
 })
 const canonicalPath = computed(() => route.path.replace(/\/+$/, '') || '/')
 const pageTransition = computed(() => {
+  // 文档页使用异步 Markdown 查询、ContentRenderer 和嵌套 UPage。
+  // 根组件会把该值显式传给 NuxtPage，因此仅在页面元数据中关闭过渡还不够；
+  // 这里直接排除 /docs 路由，避免 out-in 动画在内容切换期间重复卸载旧 VNode，
+  // 导致 parentNode/nextSibling 错误以及正文区域消失。后台页面继续沿用原动画。
+  if (route.path === '/docs' || route.path.startsWith('/docs/')) {
+    return false
+  }
+
   if (!themeStore.content.pageAnimate || themeStore.content.pageAnimateMode === 'none') {
     return false
   }
