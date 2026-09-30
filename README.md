@@ -74,7 +74,7 @@ Create and initialize the database:
 
 ```bash
 mysql -u <user> -p <database> < doc/mysql-ddl.sql
-mysql -u <user> -p <database> < doc/init-self.sql
+mysql -u <user> -p <database> < doc/init.sql
 ```
 
 Start the development server:
@@ -102,27 +102,27 @@ Database initialization scripts:
 
 ```bash
 mysql -u <user> -p <database> < doc/mysql-ddl.sql
-mysql -u <user> -p <database> < doc/init-self.sql
+mysql -u <user> -p <database> < doc/init.sql
 ```
 
 ## Code Generation
 
-The project includes a module generation guide: [doc/code-gen.md](doc/code-gen.md).
+The project includes a module generation guide: [doc/4.new-module/](doc/4.new-module/).
 
 Use it when adding a new business module after the database table has been created. A typical prompt is:
 
 ```text
-我已建好 <table_name> 表，模块名 <module>，业务名 <BusinessName>，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 <table_name> 表，模块名 <module>，业务名 <BusinessName>，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 Examples:
 
 ```text
-我已建好 demo 表，模块名 demo，业务名 Demo，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 demo 表，模块名 demo，业务名 Demo，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 ```text
-我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 The guide covers Drizzle schema generation, shared Zod DTOs, repository/service/router files, tRPC registration, frontend pages, search forms, operation modals, i18n keys, and RBAC permission codes.
@@ -182,9 +182,9 @@ Only representative files are shown below. Repeated system modules follow the sa
 |   |-- system/
 |   `-- types/
 |-- doc/
-|   |-- code-gen.md
+|   |-- 4.new-module/
 |   |-- mysql-ddl.sql
-|   `-- init-self.sql
+|   `-- init.sql
 |-- public/
 |   `-- images/
 |-- nuxt.config.ts

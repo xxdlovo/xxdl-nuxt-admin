@@ -78,9 +78,12 @@ useSeoMeta({
       <div class="mb-6 lg:hidden">
         <details class="rounded-lg border border-default bg-elevated p-3">
           <summary class="cursor-pointer font-medium text-highlighted">文档目录</summary>
+          <!--
+            与桌面端导航使用相同的可展开规则。不能传入 collapsible=false，
+            否则 Nuxt UI 会禁用每个有 children 的目录分组，使非当前分组无法展开。
+          -->
           <UContentNavigation
             :navigation="docsNavigation"
-            :collapsible="false"
             :default-open="true"
             variant="link"
             highlight

@@ -74,7 +74,7 @@ pnpm install
 
 ```bash
 mysql -u <user> -p <database> < doc/mysql-ddl.sql
-mysql -u <user> -p <database> < doc/init-self.sql
+mysql -u <user> -p <database> < doc/init.sql
 ```
 
 启动开发服务：
@@ -102,27 +102,27 @@ pnpm db:pull
 
 ```bash
 mysql -u <user> -p <database> < doc/mysql-ddl.sql
-mysql -u <user> -p <database> < doc/init-self.sql
+mysql -u <user> -p <database> < doc/init.sql
 ```
 
 ## 代码生成
 
-项目提供了模块生成指南：[doc/code-gen.md](doc/code-gen.md)。
+项目提供了模块生成指南：[doc/4.new-module/](doc/4.new-module/)。
 
 当你已经创建好数据库表，并准备新增业务模块时，可以按下面的提示词让 AI 生成代码：
 
 ```text
-我已建好 <table_name> 表，模块名 <module>，业务名 <BusinessName>，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 <table_name> 表，模块名 <module>，业务名 <BusinessName>，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 示例：
 
 ```text
-我已建好 demo 表，模块名 demo，业务名 Demo，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 demo 表，模块名 demo，业务名 Demo，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 ```text
-我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 doc/code-gen.md 帮我生成代码。
+我已建好 sys_user 表，模块名 system/user，业务名 SysUser，请根据 doc/4.new-module/ 帮我生成代码。
 ```
 
 该指南覆盖 Drizzle Schema 生成、共享 Zod DTO、Repo、Service、Router、tRPC 注册、前端页面、搜索表单、操作弹窗、i18n key 和 RBAC 权限码。
@@ -182,9 +182,9 @@ mysql -u <user> -p <database> < doc/init-self.sql
 |   |-- system/
 |   `-- types/
 |-- doc/
-|   |-- code-gen.md
+|   |-- 4.new-module/
 |   |-- mysql-ddl.sql
-|   `-- init-self.sql
+|   `-- init.sql
 |-- public/
 |   `-- images/
 |-- nuxt.config.ts

@@ -92,7 +92,7 @@ export const landingContentZh = {
       { icon: 'i-lucide-key-round', title: '完整 RBAC', description: '用户、角色、菜单、数据范围、路由和按钮权限使用统一模型。' },
       { icon: 'i-lucide-settings-2', title: '系统管理', description: '内置部门、字典、通知、登录日志、系统日志与常用 CRUD 流程。' },
       { icon: 'i-lucide-cloud-upload', title: 'OSS 与文件', description: '管理存储配置、校验连接、上传文件并维护文件记录。' },
-      { icon: 'i-lucide-braces', title: '代码生成规范', description: '参考 doc/code-gen.md，按统一模式生成 Schema、DTO、路由和页面。' },
+      { icon: 'i-lucide-braces', title: '代码生成规范', description: '参考 doc/4.new-module/，按统一模式生成 Schema、DTO、路由和页面。' },
       { icon: 'i-lucide-palette', title: '可配置界面', description: '支持明暗主题、主题色、布局、圆角、标签页、页脚与水印设置。' }
     ]
   },
@@ -130,7 +130,7 @@ export const landingContentZh = {
       { label: '项目需要什么运行环境？', content: '推荐使用 Node.js 22。项目使用 pnpm 和 MySQL 数据库，初始化数据库结构前需要先配置必要的环境变量。' },
       { label: '权限控制是如何实现的？', content: 'RBAC 模型串联用户、角色、菜单、数据范围、路由和按钮权限码，服务端过程与客户端操作都可以进行权限校验。' },
       { label: '可以修改演示环境的数据吗？', content: '演示账号为 admin / adminadmin。演示环境开启只读保护，编辑和删除操作会被限制。' },
-      { label: '如何生成新的业务模块？', content: '参考 doc/code-gen.md。文档约定了 Drizzle Schema、共享 DTO、Repo、Service、tRPC Router、页面、搜索表单、操作弹窗、翻译 key 和 RBAC 权限码的生成方式。' },
+      { label: '如何生成新的业务模块？', content: '参考 doc/4.new-module/。文档约定了 Drizzle Schema、共享 DTO、Repo、Service、tRPC Router、页面、搜索表单、操作弹窗、翻译 key 和 RBAC 权限码的生成方式。' },
       { label: '可以更换其他数据库吗？', content: '当前数据库结构与仓储层通过 Drizzle ORM 面向 MySQL 实现。更换数据库需要调整 Drizzle 驱动、部分结构定义和数据库配置。' },
       { label: '项目应该如何部署？', content: '按照标准 Nuxt 应用完成构建，将生成的 Nitro 服务部署到可运行 Node.js 的环境，并确保能访问 MySQL 与对象存储服务。' }
     ]
@@ -178,7 +178,7 @@ export const landingContentZh = {
   },
   cta: {
     title: '先体验演示系统，再生成自己的业务模块。',
-    description: '使用 admin / adminadmin 登录演示环境，查看现有流程，再参考 doc/code-gen.md 扩展系统。',
+    description: '使用 admin / adminadmin 登录演示环境，查看现有流程，再参考 doc/4.new-module/ 扩展系统。',
     links: [
       { label: '演示地址 1', icon: 'i-lucide-log-in', color: 'primary', to: '#' },
       { label: '演示地址 2', icon: 'i-lucide-arrow-up-right', color: 'neutral', variant: 'soft', to: '#' }

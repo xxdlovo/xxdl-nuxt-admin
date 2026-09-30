@@ -63,7 +63,7 @@ const docsSearchSections = computed(() => {
           <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-white">
             <UIcon name="i-lucide-book-marked" class="size-5" />
           </span>
-          <span class="truncate">Nuxt Content Demo</span>
+          <span class="truncate">Nuxt Admin</span>
         </NuxtLink>
 
         <nav aria-label="文档导航" class="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
@@ -106,9 +106,14 @@ const docsSearchSections = computed(() => {
                 <UIcon name="i-lucide-panel-left" class="size-4 text-primary" />
                 <span>文档目录</span>
               </div>
+              <!--
+                不要设置 collapsible=false：Nuxt UI 会把该值解释为“多分组目录不可折叠”，
+                并禁用所有分组触发器。default-open=true 只会自动展开当前页面所属分组，
+                其他分组会因此保持折叠且无法点击，看起来像是目录没有加载。
+                保留组件默认的 collapsible=true 后，当前分组仍自动展开，其他分组也可手动展开。
+              -->
               <UContentNavigation
                 :navigation="docsNavigation"
-                :collapsible="false"
                 :default-open="true"
                 variant="link"
                 highlight
