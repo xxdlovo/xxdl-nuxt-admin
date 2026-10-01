@@ -1,3 +1,7 @@
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 // session Cookie 是否要求 HTTPS。
 //
 // h3 的默认值为 secure: true。这个默认值在 HTTPS 域名下是正确的，
@@ -11,6 +15,34 @@ const sessionCookieSecure = process.env.NUXT_SESSION_COOKIE_SECURE !== undefined
     ? process.env.NUXT_SESSION_COOKIE_SECURE === 'true'
     : process.env.NODE_ENV === 'production'
 
+// Swagger UI（/api/docs）渲染所需的两个文件。
+//
+// 为什么不直接用 nitro.serverAssets 读 node_modules：
+// dev 模式下 serverAssets 不做全量挂载（实测 assets: 存储里只有被 rollup 引用过的条目），
+// 文档页会因为读不到文件而 404；而 nitro.publicAssets 在 dev 由 Vite 接管静态资源，
+// 同样不生效。复制到 public/ 后，dev 由 Vite 提供、构建时随 public 进入 .output/public，
+// 两种环境行为一致，也不依赖生产镜像里的 node_modules（Dockerfile 只 COPY .output）。
+//
+// 注意：这些静态资源是匿名可访问的（开源 JS/CSS，不含业务数据）；
+// 接口文档本身（/api/openapi.json 与 /api/docs 页面）依旧要求登录。
+const swaggerUiFiles = ['swagger-ui-bundle.js', 'swagger-ui.css']
+// 用配置文件自身的位置定位项目根目录，避免依赖启动时的工作目录
+const projectRoot = fileURLToPath(new URL('.', import.meta.url))
+const swaggerUiSourceDir = resolve(projectRoot, 'node_modules/swagger-ui-dist')
+const swaggerUiPublicDir = resolve(projectRoot, 'public/swagger-ui')
+
+function syncSwaggerUiAssets() {
+    mkdirSync(swaggerUiPublicDir, { recursive: true })
+
+    for (const file of swaggerUiFiles) {
+        const source = resolve(swaggerUiSourceDir, file)
+
+        if (existsSync(source)) {
+            copyFileSync(source, resolve(swaggerUiPublicDir, file))
+        }
+    }
+}
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
     compatibilityDate: '2025-07-15',
@@ -22,6 +54,10 @@ export default defineNuxtConfig({
     },
     // 忽略/app/layouts/modules/的文件导入但保留hmr. 更推荐的方法是放到components目录中
     hooks: {
+        // dev 与 build 之前都把 Swagger UI 资源同步到 public/（见文件顶部说明）
+        'build:before'() {
+            syncSwaggerUiAssets()
+        },
         'app:resolve'(app) {
             for (const [name, layout] of Object.entries(app.layouts)) {
                 if (layout.file.replace(/\\/g, '/').includes('/app/layouts/modules/')) {
@@ -69,6 +105,9 @@ export default defineNuxtConfig({
     },
     runtimeConfig: {
         demoMode: process.env.NUXT_DEMO_MODE === 'true',
+        // OpenAPI 文档端点开关（/api/openapi.json、/api/docs）。
+        // 默认开启；设置 NUXT_OPENAPI_ENABLED=false 可整体关闭并返回 404。
+        openapiEnabled: process.env.NUXT_OPENAPI_ENABLED !== 'false',
         // nuxt-auth-utils 会把该配置传给 h3 的 useSession，
         // 登录接口 setUserSession 和客户端 /api/_auth/session 会共用这些 Cookie 规则。
         session: {

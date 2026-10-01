@@ -4,6 +4,8 @@ doc/mock_sql/*.sql
 # i18n 翻译文件
 server/assets/_locales
 app/locales/pages
+# Swagger UI 静态资源（由 nuxt.config.ts 的 build:before 钩子从 swagger-ui-dist 复制）
+/public/swagger-ui
 # Nuxt dev/build outputs
 .output
 .data
@@ -31,6 +33,9 @@ logs
 
 # drizzle orm
 server/drizzle/out
+
+# OpenAPI 导出产物（pnpm openapi:export）
+/openapi/
 
 # ai
 .agents

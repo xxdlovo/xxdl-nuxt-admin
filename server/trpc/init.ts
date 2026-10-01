@@ -14,7 +14,14 @@ export const t = initTRPC.context<Context>().create({
 
 export const createCallerFactory = t.createCallerFactory
 export const router = t.router
-export const publicProcedure = t.procedure
+
+/**
+ * meta 会同时被中间件和 OpenAPI 文档生成器读取（server/openapi/buildDocument.ts）：
+ * - `auth` 决定文档里 security 是否为空数组；
+ * - `permission` 会写进接口文档，方便对接方知道需要哪个权限码。
+ * 注意 tRPC 的 .meta() 是合并语义，后续 .meta({ openapi }) 不会覆盖这里的字段。
+ */
+export const publicProcedure = t.procedure.meta({ auth: 'public' })
 
 /**
  * Requires a valid user session, but does not check business permissions.
@@ -22,6 +29,7 @@ export const publicProcedure = t.procedure
  * 只需登录, 无需权限
  */
 export const protectedProcedure = publicProcedure.use(loggerMiddleware).use(authMiddleware)
+  .meta({ auth: 'login' })
 
 /**
  * Requires login and one explicit permission code.
@@ -35,6 +43,7 @@ export const protectedProcedure = publicProcedure.use(loggerMiddleware).use(auth
  */
 export const permissionProcedure = (permissionCode: string) =>
   protectedProcedure.use(permissionMiddleware(permissionCode))
+    .meta({ auth: 'login', permission: permissionCode })
 
 /**
  * demo 模式开关。
@@ -75,7 +84,15 @@ export const proc = (options: ProcOptions = {}) =>
     .use(permissionMiddleware(options.permission))
     .use(demoReadonlyMiddleware(demoMode || options.readonly === true))
     .use(dataScopeMiddleware(options.dataScope !== false))
-    .meta({ log: options.log})
+    .meta({
+      auth: 'login',
+      // 以下字段供 OpenAPI 文档生成器读取（server/openapi/buildDocument.ts），
+      // 不影响中间件行为；log 仍由 loggerMiddleware 使用。
+      permission: options.permission,
+      log: options.log,
+      dataScope: options.dataScope !== false,
+      readonly: demoMode || options.readonly === true
+    })
 
 /**
  * Creates the standard CRUD permission procedures for one resource.

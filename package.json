@@ -19,6 +19,7 @@
     "db:push": "drizzle-kit push  --config=./server/drizzle/drizzle.config.ts",
     "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
     "seed:admin": "tsx scripts/seed-admin.ts",
+    "openapi:export": "node scripts/export-openapi.mjs",
     "test": "vitest",
     "test:type": "tsx scripts/typecheck-tests.ts",
     "typecheck": "nuxt typecheck"
@@ -68,6 +69,7 @@
     "drizzle-kit": "^0.31.11",
     "happy-dom": "20.14.5",
     "playwright-core": "1.63.0",
+    "swagger-ui-dist": "^5.33.0",
     "tsx": "4.23.15",
     "typescript": "5.7.3",
     "vitest": "5.0.1",
