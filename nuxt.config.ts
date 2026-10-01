@@ -108,6 +108,10 @@ export default defineNuxtConfig({
         // OpenAPI 文档端点开关（/api/openapi.json、/api/docs）。
         // 默认开启；设置 NUXT_OPENAPI_ENABLED=false 可整体关闭并返回 404。
         openapiEnabled: process.env.NUXT_OPENAPI_ENABLED !== 'false',
+        // 支付渠道密钥的 AES-256-GCM 主密钥：32 字节，base64 或 64 位 hex。
+        // 这里必须留空字符串占位，真实值由运行时环境变量 NUXT_PAY_CONFIG_KEY 覆盖
+        // （dev 从 .env 读取，生产由部署环境注入），不能把密钥写进仓库。
+        payConfigKey: '',
         // nuxt-auth-utils 会把该配置传给 h3 的 useSession，
         // 登录接口 setUserSession 和客户端 /api/_auth/session 会共用这些 Cookie 规则。
         session: {

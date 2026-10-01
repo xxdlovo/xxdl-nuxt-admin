@@ -1037,6 +1037,7 @@
         "providerConfig": "Channel Credentials",
         "secretKeepHint": "Leave empty to keep the stored secret",
         "encryptionMissing": "NUXT_PAY_CONFIG_KEY is not configured, secrets cannot be saved",
+        "encryptionInvalid": "NUXT_PAY_CONFIG_KEY format is invalid: 32 bytes are required (base64 or 64-char hex). Regenerate it with openssl rand -base64 32 and restart the server",
         "testConfig": "Test Config",
         "verifyFailed": "Verification failed",
         "setDefault": "Set Default",

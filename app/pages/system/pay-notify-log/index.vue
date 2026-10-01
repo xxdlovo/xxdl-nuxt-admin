@@ -18,16 +18,14 @@
             v-if="tableRef?.tableRef"
             :table-ref="tableRef.tableRef"
             :loading="loading"
-            :disabled-delete="checkedRowKeys.length === 0 || loading"
-            :selected-count="checkedRowKeys.length"
-            :delete-permission="logPermissions.codes.del"
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
-            @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
               <span>{{ $ts('module.system.payNotifyLog.title') }}</span>
             </template>
+            <!-- 空默认插槽：回调日志只读，不展示新增/批量删除（同 sys-log 的处理方式） -->
+            <template #default />
           </TableHeaderOperation>
         </template>
       </TableWithPagination>
@@ -53,7 +51,7 @@ import {
   payNotifyResultConfig,
   payNotifySourceRecord
 } from '#shared/constants/business'
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
+import { usePaginatedTable, useBadgeColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import SysPayNotifyLogSearch from './components/sys-pay-notify-log-search.vue'
 import SysPayNotifyLogDetail from './components/sys-pay-notify-log-detail.vue'
@@ -82,19 +80,6 @@ const {
   pageSizeOptions: [10, 20, 50, 100]
 })
 
-const { checkedRowKeys, onBatchDeleted } = useTableOperate<SysPayNotifyLogDto>({
-  data,
-  idKey: 'id',
-  refresh
-})
-
-const UCheckbox = resolveComponent('UCheckbox')
-const { selectionColumn } = useSelectionColumn<SysPayNotifyLogDto>({
-  data,
-  checkedRowKeys,
-  checkboxComponent: UCheckbox as Component
-})
-
 const translate = (record: Record<string, string>, value?: string | null) => {
   if (!value) return '-'
   const key = record[value]
@@ -111,14 +96,6 @@ const handleDelete = async (id: string) => {
   await $trpc.sysPayNotifyLog.remove.mutate(id)
   useToastSuccess($ts('common.deleteSuccess'))
   await refresh()
-}
-
-const handleBatchDelete = async () => {
-  if (loading.value || checkedRowKeys.value.length === 0) {
-    return
-  }
-  await $trpc.sysPayNotifyLog.batchDelete.mutate(checkedRowKeys.value)
-  await onBatchDeleted()
 }
 
 const columns = computed<TableColumn<SysPayNotifyLogDto>[]>(() => {
@@ -154,7 +131,6 @@ const columns = computed<TableColumn<SysPayNotifyLogDto>[]>(() => {
   }
 
   return [
-    ...(logPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
       header: () => $ts('common.index'),

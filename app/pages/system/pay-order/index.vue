@@ -18,16 +18,15 @@
             v-if="tableRef?.tableRef"
             :table-ref="tableRef.tableRef"
             :loading="loading"
-            :disabled-delete="checkedRowKeys.length === 0 || loading"
-            :selected-count="checkedRowKeys.length"
-            :delete-permission="orderPermissions.codes.del"
+            :add-permission="orderPermissions.codes.add"
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
-            @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
               <span>{{ $ts('module.system.payOrder.title') }}</span>
             </template>
+            <!-- 空默认插槽：支付记录由支付链路写入，不展示新增/批量删除（同 sys-log 的处理方式） -->
+            <template #default />
           </TableHeaderOperation>
         </template>
       </TableWithPagination>
@@ -48,7 +47,7 @@ import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysPayOrderDto, SysPayOrderQueryDTO } from '#shared/system/payOrder'
 import { payChannelCodeRecord, payOrderStatusConfig } from '#shared/constants/business'
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
+import { usePaginatedTable, useBadgeColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import SysPayOrderSearch from './components/sys-pay-order-search.vue'
 import SysPayOrderDetail from './components/sys-pay-order-detail.vue'
@@ -78,19 +77,6 @@ const {
 } = usePaginatedTable<SysPayOrderDto>({
   query: params => $trpc.sysPayOrder.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
-})
-
-const { checkedRowKeys, onBatchDeleted } = useTableOperate<SysPayOrderDto>({
-  data,
-  idKey: 'id',
-  refresh
-})
-
-const UCheckbox = resolveComponent('UCheckbox')
-const { selectionColumn } = useSelectionColumn<SysPayOrderDto>({
-  data,
-  checkedRowKeys,
-  checkboxComponent: UCheckbox as Component
 })
 
 const channelLabel = (code?: string | null) => {
@@ -125,14 +111,6 @@ const handleDelete = async (id: string) => {
   await $trpc.sysPayOrder.remove.mutate(id)
   useToastSuccess($ts('common.deleteSuccess'))
   await refresh()
-}
-
-const handleBatchDelete = async () => {
-  if (loading.value || checkedRowKeys.value.length === 0) {
-    return
-  }
-  await $trpc.sysPayOrder.batchDelete.mutate(checkedRowKeys.value)
-  await onBatchDeleted()
 }
 
 /** 统一状态 → 本地化文案（复用徽标配置，避免出现拼不出来的动态 key） */
@@ -192,7 +170,6 @@ const columns = computed<TableColumn<SysPayOrderDto>[]>(() => {
   }
 
   return [
-    ...(orderPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
       header: () => $ts('common.index'),

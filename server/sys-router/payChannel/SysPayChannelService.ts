@@ -6,8 +6,8 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import { toChannelRuntime } from '#server/pay/PayChannelResolver'
 import {
+    describePayConfigKey,
     encryptConfigSecrets,
-    hasPayConfigKey,
     isSecretEnvelope,
     isUnchangedSecretInput,
     maskConfigSecrets
@@ -108,14 +108,22 @@ export function sysPayChannelService(ctx: Context) {
             })
         }
 
-        // 本次提交包含新的密钥值时必须先确认服务端已配置加密密钥，避免落库后无法解密
+        // 本次提交包含新的密钥值时必须先确认服务端已配置可用的加密密钥，避免落库后无法解密
         const hasNewSecret = Object.entries(inputConfig).some(([key, value]) => {
             const field = provider.fields.find(item => item.key === key)
             return Boolean(field?.secret && !isUnchangedSecretInput(value))
         })
 
-        if (hasNewSecret && !hasPayConfigKey()) {
-            throw new AppError('module.system.payChannel.configKeyMissing')
+        if (hasNewSecret) {
+            const keyState = describePayConfigKey()
+
+            if (!keyState.ready) {
+                throw new AppError(
+                    keyState.reason === 'invalid'
+                        ? 'module.system.payChannel.configKeyInvalid'
+                        : 'module.system.payChannel.configKeyMissing'
+                )
+            }
         }
 
         return encryptConfigSecrets(provider.fields, next)
@@ -258,9 +266,12 @@ export function sysPayChannelService(ctx: Context) {
 
         /** 渠道类型元数据：前端据此渲染「渠道类型」下拉与动态表单 */
         providerMetas() {
+            const keyState = describePayConfigKey()
+
             return {
                 providers: listPayProviderMetas(),
-                encryptionReady: hasPayConfigKey()
+                encryptionReady: keyState.ready,
+                encryptionReason: keyState.reason
             }
         },
 

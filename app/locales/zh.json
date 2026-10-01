@@ -1037,6 +1037,7 @@
         "providerConfig": "渠道凭据",
         "secretKeepHint": "留空表示不修改已保存的密钥",
         "encryptionMissing": "当前环境未配置 NUXT_PAY_CONFIG_KEY，无法保存密钥字段",
+        "encryptionInvalid": "NUXT_PAY_CONFIG_KEY 格式不正确：需要 32 字节（base64 或 64 位 hex），请用 openssl rand -base64 32 重新生成并重启服务",
         "testConfig": "测试配置",
         "verifyFailed": "验证失败",
         "setDefault": "设为默认",

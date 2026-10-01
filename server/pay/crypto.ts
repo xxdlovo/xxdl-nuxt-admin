@@ -24,32 +24,69 @@ const ALGORITHM = 'aes-256-gcm'
 const ENVELOPE_VERSION = 1 as const
 const MASK_PREFIX = '****'
 
-function resolveKey(): Buffer {
-  const raw = (process.env.NUXT_PAY_CONFIG_KEY ?? '').trim()
+export type PayConfigKeyReason = 'ok' | 'missing' | 'invalid'
 
-  if (!raw) {
-    throw new AppError('module.system.payChannel.configKeyMissing')
+/**
+ * 读取主密钥原文。
+ * 优先 runtimeConfig.payConfigKey（nuxt.config.ts 中声明占位、由 NUXT_PAY_CONFIG_KEY 运行时覆盖），
+ * 兜底直接读 process.env，兼容脚本/定时任务等没有 Nitro 运行时的场景。
+ */
+function readRawKey(): string {
+  let fromRuntimeConfig = ''
+
+  try {
+    const config = useRuntimeConfig() as unknown as Record<string, unknown>
+    const value = config.payConfigKey
+
+    if (typeof value === 'string') {
+      fromRuntimeConfig = value.trim()
+    }
+  } catch {
+    fromRuntimeConfig = ''
   }
 
-  const key = /^[0-9a-fA-F]{64}$/.test(raw)
-    ? Buffer.from(raw, 'hex')
-    : Buffer.from(raw, 'base64')
-
-  if (key.length !== 32) {
-    throw new AppError('module.system.payChannel.configKeyInvalid')
-  }
-
-  return key
+  return fromRuntimeConfig || (process.env.NUXT_PAY_CONFIG_KEY ?? '').trim()
 }
 
-/** 供渠道配置页提示用：当前环境是否具备加密密钥 */
-export function hasPayConfigKey() {
-  try {
-    resolveKey()
-    return true
-  } catch {
-    return false
+function decodeKey(raw: string): Buffer {
+  return /^[0-9a-fA-F]{64}$/.test(raw)
+    ? Buffer.from(raw, 'hex')
+    : Buffer.from(raw, 'base64')
+}
+
+/**
+ * 供渠道配置页提示用：密钥是否可用，以及不可用的具体原因。
+ * 区分 missing / invalid 很重要——否则「格式不对」会被误报成「没配置」。
+ */
+export function describePayConfigKey(): { ready: boolean; reason: PayConfigKeyReason } {
+  const raw = readRawKey()
+
+  if (!raw) {
+    return { ready: false, reason: 'missing' }
   }
+
+  return decodeKey(raw).length === 32
+    ? { ready: true, reason: 'ok' }
+    : { ready: false, reason: 'invalid' }
+}
+
+function resolveKey(): Buffer {
+  const { ready, reason } = describePayConfigKey()
+
+  if (ready) {
+    return decodeKey(readRawKey())
+  }
+
+  throw new AppError(
+    reason === 'invalid'
+      ? 'module.system.payChannel.configKeyInvalid'
+      : 'module.system.payChannel.configKeyMissing'
+  )
+}
+
+/** 供渠道配置页提示用：当前环境是否具备可用的加密密钥 */
+export function hasPayConfigKey() {
+  return describePayConfigKey().ready
 }
 
 export function isSecretEnvelope(value: unknown): value is SecretEnvelope {

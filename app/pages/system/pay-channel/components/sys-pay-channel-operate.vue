@@ -62,6 +62,8 @@ const configModel = ref<Record<string, any>>({})
 
 const providerMetas = ref<SysPayProviderMetaDTO[]>([])
 const encryptionReady = ref(true)
+/** 'missing' 未配置 / 'invalid' 格式不对，提示文案不同 */
+const encryptionReason = ref<'ok' | 'missing' | 'invalid'>('ok')
 
 const { validate } = useZodValidation({
   schema: () => props.operateType === 'add' ? SysPayChannelAddSchema : SysPayChannelUpdateSchema
@@ -148,6 +150,7 @@ const loadProviderMetas = async () => {
   const result = await $trpc.sysPayChannel.providerMetas.query()
   providerMetas.value = result.providers
   encryptionReady.value = result.encryptionReady
+  encryptionReason.value = result.encryptionReason
 }
 
 const closeDrawer = () => {
@@ -296,7 +299,9 @@ const title = computed(() => {
             color="warning"
             variant="subtle"
             icon="i-lucide-triangle-alert"
-            :title="$ts('module.system.payChannel.encryptionMissing')"
+            :title="encryptionReason === 'invalid'
+              ? $ts('module.system.payChannel.encryptionInvalid')
+              : $ts('module.system.payChannel.encryptionMissing')"
             class="mb-4"
           />
 

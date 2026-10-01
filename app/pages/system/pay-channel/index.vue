@@ -30,18 +30,19 @@
             <template #prefix>
               <span>{{ $ts('module.system.payChannel.title') }}</span>
             </template>
-
-            <SysPayChannelOperate
-              v-model:visible="drawerVisible"
-              :operate-type="operateType"
-              :data="editingData ?? undefined"
-              :close="closeVisible"
-              :refresh="refresh"
-            />
           </TableHeaderOperation>
         </template>
       </TableWithPagination>
     </UCard>
+
+    <!-- 弹窗放在 TableHeaderOperation 之外：填了默认插槽会顶掉组件内置的新增/批量删除按钮 -->
+    <SysPayChannelOperate
+      v-model:visible="drawerVisible"
+      :operate-type="operateType"
+      :data="editingData ?? undefined"
+      :close="closeVisible"
+      :refresh="refresh"
+    />
   </div>
 </template>
 

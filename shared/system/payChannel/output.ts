@@ -71,10 +71,12 @@ export type SysPayVerifyResultDTO = z.infer<typeof SysPayVerifyResultSchema>
 
 /**
  * 渠道类型元数据列表：驱动前端的渠道类型下拉与动态表单。
- * encryptionReady 表示服务端是否已配置 NUXT_PAY_CONFIG_KEY（未配置时不能保存密钥字段）。
+ * encryptionReady 表示服务端是否已配置可用的 NUXT_PAY_CONFIG_KEY；
+ * encryptionReason 区分「没配置」与「格式不对」，便于界面给出准确提示。
  */
 export const SysPayProviderMetasSchema = z.object({
     providers: z.array(SysPayProviderMetaSchema),
     encryptionReady: z.boolean(),
+    encryptionReason: z.enum(['ok', 'missing', 'invalid']),
 })
 export type SysPayProviderMetasDTO = z.infer<typeof SysPayProviderMetasSchema>
