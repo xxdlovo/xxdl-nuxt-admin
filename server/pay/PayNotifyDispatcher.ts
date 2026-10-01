@@ -1,0 +1,465 @@
+/**
+ * 统一回调处理：验签 → 定位渠道与订单 → 金额/币种核对 → 幂等更新 → 写日志 → 决定响应体。
+ *
+ * 真实回调（/api/pay/notify/{channel}）与本地模拟回调（测试界面）共用这里的实现，
+ * 保证两条链路的行为完全一致。
+ */
+import { createHash } from 'node:crypto'
+import { and, eq, ne, sql } from 'drizzle-orm'
+import { sysPayNotifyLog, sysPayOrder } from '#server/drizzle/schema'
+import { AppError } from '#server/utils/appError'
+import { randomUuid } from '#shared/utils/uuid'
+import { buildEnvFallbackChannel, listEnabledChannelsByCode } from './PayChannelResolver'
+import type { PayDb } from './db'
+import { getPayProvider } from './providers'
+import { canApplyStatusChange, isPaidStatus } from './statusMap'
+import {
+  PaySignError,
+  type PayChannelRuntime,
+  type PayNotifyInput,
+  type PayNotifyResponse,
+  type PayNotifyResult,
+  type PayNotifySource,
+  type PayOrderRow,
+  type PayProcessResult
+} from './types'
+import { asJsonValue, isIpAllowed, nowForMysql, sameAmount, toErrorMessage, truncateText } from './utils'
+
+export type PayNotifyMeta = {
+  clientIp?: string | null
+  userAgent?: string | null
+  source?: PayNotifySource
+}
+
+export type PayNotifyOutcome = {
+  processResult: PayProcessResult
+  orderId: string | null
+  response: PayNotifyResponse
+}
+
+function affectedRows(result: unknown) {
+  const first = Array.isArray(result) ? result[0] : result
+  return Number((first as { affectedRows?: number } | undefined)?.affectedRows ?? 0)
+}
+
+function sha256(value: string) {
+  return createHash('sha256').update(value, 'utf8').digest('hex')
+}
+
+function isDuplicateKeyError(error: unknown) {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && ((error as { code?: string }).code === 'ER_DUP_ENTRY'
+      || (error as { errno?: number }).errno === 1062)
+  )
+}
+
+function textResponse(statusCode: number, body: string): PayNotifyResponse {
+  return { statusCode, contentType: 'text/plain; charset=utf-8', body }
+}
+
+export function payNotifyDispatcher(db: PayDb) {
+  type LogInsert = typeof sysPayNotifyLog.$inferInsert
+
+  /** 日志失败不能影响回调响应，否则平台会一直重试 */
+  async function writeLog(values: LogInsert) {
+    try {
+      await db.insert(sysPayNotifyLog).values(values)
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        console.error('[pay] 写回调日志失败', error)
+      }
+    }
+  }
+
+  function baseLog(
+    input: PayNotifyInput,
+    meta: PayNotifyMeta,
+    source: PayNotifySource
+  ): Omit<LogInsert, 'id' | 'channelCode' | 'outTradeNo' | 'processResult'> {
+    return {
+      channelId: null,
+      orderId: null,
+      providerOrderId: null,
+      transactionId: null,
+      amount: null,
+      currency: null,
+      providerStatus: null,
+      status: null,
+      source,
+      dedupKey: null,
+      signValid: 0,
+      message: null,
+      rawBody: truncateText(input.rawBody, 60000),
+      rawHeaders: asJsonValue(input.headers) as object | null,
+      clientIp: meta.clientIp ?? null,
+      userAgent: truncateText(meta.userAgent, 255),
+      createdBy: null
+    }
+  }
+
+  /**
+   * 逐个候选渠道验签（同一 channelCode 允许多个账户配置），第一个通过者即为来源渠道。
+   * 缺少渠道配置时回退到环境变量渠道。
+   */
+  async function verifyAgainstChannels(channelCode: string, input: PayNotifyInput) {
+    const candidates: PayChannelRuntime[] = await listEnabledChannelsByCode(db, channelCode)
+
+    if (candidates.length === 0) {
+      const fallback = buildEnvFallbackChannel()
+      if (fallback && fallback.channelCode === channelCode) {
+        candidates.push(fallback)
+      }
+    }
+
+    for (const channel of candidates) {
+      const provider = getPayProvider(channel.channelCode)
+      if (!provider) {
+        continue
+      }
+
+      try {
+        const result = await provider.verifyAndParseNotify(channel, input)
+        return { channel, provider, result }
+      } catch (error) {
+        if (error instanceof PaySignError) {
+          continue
+        }
+        throw error
+      }
+    }
+
+    return null
+  }
+
+  async function findOrder(outTradeNo: string): Promise<PayOrderRow | null> {
+    const rows = await db
+      .select()
+      .from(sysPayOrder)
+      .where(and(eq(sysPayOrder.outTradeNo, outTradeNo), eq(sysPayOrder.isDeleted, 0)))
+      .limit(1)
+
+    return rows[0] ?? null
+  }
+
+  async function isEventProcessed(dedupKey: string) {
+    const rows = await db
+      .select({ id: sysPayNotifyLog.id })
+      .from(sysPayNotifyLog)
+      .where(eq(sysPayNotifyLog.dedupKey, dedupKey))
+      .limit(1)
+
+    return Boolean(rows[0])
+  }
+
+  async function bumpNotifyCount(orderId: string, now: string) {
+    await db
+      .update(sysPayOrder)
+      .set({ notifyCount: sql`${sysPayOrder.notifyCount} + 1`, lastNotifyAt: now })
+      .where(eq(sysPayOrder.id, orderId))
+  }
+
+  async function handleNotify(
+    channelCode: string,
+    input: PayNotifyInput,
+    meta: PayNotifyMeta = {}
+  ): Promise<PayNotifyOutcome> {
+    const source = meta.source ?? 'notify'
+    const normalizedCode = channelCode.trim().toLowerCase()
+    const logBase = baseLog(input, meta, source)
+
+    let verified: Awaited<ReturnType<typeof verifyAgainstChannels>> = null
+
+    try {
+      verified = await verifyAgainstChannels(normalizedCode, input)
+    } catch (error) {
+      const message = toErrorMessage(error, '回调处理异常')
+      await writeLog({
+        ...logBase,
+        id: randomUuid(),
+        channelCode: normalizedCode,
+        outTradeNo: '',
+        processResult: 'error',
+        message: truncateText(message, 500)
+      })
+      return { processResult: 'error', orderId: null, response: textResponse(500, 'error') }
+    }
+
+    if (!verified) {
+      // 签名不匹配的报文用摘要做去重键，避免被伪造请求刷爆日志表
+      await writeLog({
+        ...logBase,
+        id: randomUuid(),
+        channelCode: normalizedCode,
+        outTradeNo: '',
+        processResult: 'invalid_sign',
+        signValid: 0,
+        dedupKey: `invalid:${sha256(input.rawBody)}`,
+        message: '签名校验未通过'
+      })
+
+      return { processResult: 'invalid_sign', orderId: null, response: textResponse(400, 'invalid sign') }
+    }
+
+    const { channel, provider, result } = verified
+    const resultLog: LogInsert = {
+      id: randomUuid(),
+      channelId: channel.id,
+      channelCode: channel.channelCode,
+      outTradeNo: result.outTradeNo,
+      providerOrderId: result.providerOrderId ?? null,
+      transactionId: result.transactionId ?? null,
+      amount: result.amount ?? null,
+      currency: result.currency ?? channel.currency ?? null,
+      providerStatus: result.providerStatus ?? null,
+      status: result.status,
+      source,
+      dedupKey: null,
+      signValid: 1,
+      processResult: 'success',
+      message: null,
+      rawBody: logBase.rawBody,
+      rawHeaders: logBase.rawHeaders,
+      clientIp: logBase.clientIp,
+      userAgent: logBase.userAgent,
+      createdBy: null
+    }
+
+    // 1) IP 白名单（验签通过后再校验，作为额外加固）
+    if (!isIpAllowed(meta.clientIp, channel.ipAllowlist)) {
+      await writeLog({
+        ...resultLog,
+        processResult: 'ip_blocked',
+        message: truncateText(`来源 IP ${meta.clientIp ?? 'unknown'} 不在渠道白名单内`, 500)
+      })
+
+      return { processResult: 'ip_blocked', orderId: null, response: textResponse(403, 'ip blocked') }
+    }
+
+    // 2) 订单必须存在，否则只记日志（订单稍后创建由主动查询补齐）
+    const order = await findOrder(result.outTradeNo)
+
+    if (!order) {
+      await writeLog({
+        ...resultLog,
+        processResult: 'order_not_found',
+        message: '本地未找到该商户订单号'
+      })
+
+      return {
+        processResult: 'order_not_found',
+        orderId: null,
+        response: provider.buildNotifyResponse(result, true)
+      }
+    }
+
+    resultLog.orderId = order.id
+    resultLog.channelId = order.channelId ?? resultLog.channelId
+
+    // 3) 金额与币种核对：不一致绝不改单
+    const amountMatched = result.amount === null || result.amount === undefined
+      ? true
+      : sameAmount(result.amount, order.amount)
+    const currencyMatched = !result.currency || result.currency === order.currency
+
+    if (!amountMatched || !currencyMatched) {
+      await writeLog({
+        ...resultLog,
+        processResult: 'amount_mismatch',
+        message: truncateText(
+          `金额/币种不一致：通知 ${result.amount ?? '-'} ${result.currency ?? '-'}，订单 ${order.amount} ${order.currency}`,
+          500
+        )
+      })
+
+      return {
+        processResult: 'amount_mismatch',
+        orderId: order.id,
+        response: provider.buildNotifyResponse(result, true)
+      }
+    }
+
+    const now = nowForMysql()
+
+    // 4) 支付成功：条件更新保证并发/重复回调只生效一次
+    if (result.status === 'OD') {
+      const previousStatus = order.status
+
+      if (await isEventProcessed(result.dedupKey)) {
+        await bumpNotifyCount(order.id, now)
+        await writeLog({
+          ...resultLog,
+          status: previousStatus,
+          processResult: 'duplicate',
+          message: '该事件已处理过（幂等键命中）'
+        })
+
+        return {
+          processResult: 'duplicate',
+          orderId: order.id,
+          response: provider.buildNotifyResponse(result, true)
+        }
+      }
+
+      const updateResult: unknown = await db
+        .update(sysPayOrder)
+        .set({
+          status: 'OD',
+          paidAt: result.paidAt || now,
+          lastNotifyAt: now,
+          notifyCount: sql`${sysPayOrder.notifyCount} + 1`,
+          providerStatus: result.providerStatus ?? null,
+          providerOrderId: result.providerOrderId || order.providerOrderId,
+          transactionId: result.transactionId || order.transactionId,
+          providerData: asJsonValue(result.raw) as object | null
+        })
+        .where(and(eq(sysPayOrder.id, order.id), ne(sysPayOrder.status, 'OD')))
+
+      if (affectedRows(updateResult) === 0) {
+        await writeLog({
+          ...resultLog,
+          status: previousStatus,
+          processResult: 'duplicate',
+          message: '订单已是已支付状态，本次回调仅计数'
+        })
+
+        return {
+          processResult: 'duplicate',
+          orderId: order.id,
+          response: provider.buildNotifyResponse(result, true)
+        }
+      }
+
+      const processResult: PayProcessResult = previousStatus === 'CD' || previousStatus === 'CL'
+        ? 'status_mismatch'
+        : 'success'
+
+      try {
+        await db.insert(sysPayNotifyLog).values({
+          ...resultLog,
+          dedupKey: result.dedupKey,
+          processResult,
+          message: processResult === 'status_mismatch'
+            ? truncateText(`资金已到账，订单由 ${previousStatus} 置为已支付`, 500)
+            : null
+        })
+      } catch (error) {
+        if (isDuplicateKeyError(error)) {
+          await writeLog({
+            ...resultLog,
+            status: previousStatus,
+            processResult: 'duplicate',
+            message: '并发回调重复处理'
+          })
+        } else {
+          console.error('[pay] 写回调日志失败', error)
+        }
+      }
+
+      return {
+        processResult,
+        orderId: order.id,
+        response: provider.buildNotifyResponse(result, true)
+      }
+    }
+
+    // 5) 非支付成功通知：只同步平台状态，不改变资金结论
+    const updates: Record<string, unknown> = {
+      lastNotifyAt: now,
+      notifyCount: sql`${sysPayOrder.notifyCount} + 1`,
+      providerStatus: result.providerStatus ?? order.providerStatus
+    }
+
+    if (canApplyStatusChange(order.status, result.status)) {
+      updates.status = result.status
+      if (result.status === 'CD') {
+        updates.cancelledAt = now
+      }
+    }
+
+    await db.update(sysPayOrder).set(updates).where(eq(sysPayOrder.id, order.id))
+    await writeLog(resultLog)
+
+    return {
+      processResult: 'success',
+      orderId: order.id,
+      response: provider.buildNotifyResponse(result, true)
+    }
+  }
+
+  /** 本地模拟支付成功：用配置里的密钥现算签名，走与真实回调完全相同的处理链路 */
+  async function simulatePaid(orderId: string, meta: PayNotifyMeta = {}): Promise<PayNotifyOutcome> {
+    const rows = await db
+      .select()
+      .from(sysPayOrder)
+      .where(and(eq(sysPayOrder.id, orderId), eq(sysPayOrder.isDeleted, 0)))
+      .limit(1)
+
+    const order = rows[0]
+
+    if (!order) {
+      throw new AppError('common.notExist')
+    }
+
+    if (order.bizType !== 'test') {
+      throw new AppError('module.system.payTest.simulateOnlyTest')
+    }
+
+    if (isPaidStatus(order.status)) {
+      throw new AppError('module.system.payTest.alreadyPaid')
+    }
+
+    const channel = await listEnabledChannelsByCodeForOrder(db, order)
+
+    if (!channel) {
+      throw new AppError('module.system.payChannel.notConfigured')
+    }
+
+    const provider = getPayProvider(channel.channelCode)
+
+    if (!provider) {
+      throw new AppError('module.system.payChannel.providerUnsupported', { message: channel.channelCode })
+    }
+
+    if (!provider.buildSimulatedNotify) {
+      throw new AppError('module.system.payTest.simulateUnsupported', { message: channel.channelCode })
+    }
+
+    const input = await provider.buildSimulatedNotify(channel, order)
+
+    return await handleNotify(channel.channelCode, input, { ...meta, source: 'simulate' })
+  }
+
+  return { handleNotify, simulatePaid }
+}
+
+/** 模拟回调时定位订单所用渠道：优先订单上的渠道配置行 */
+async function listEnabledChannelsByCodeForOrder(
+  db: PayDb,
+  order: PayOrderRow
+): Promise<PayChannelRuntime | null> {
+  const channels = await listEnabledChannelsByCode(db, order.channelCode)
+
+  if (order.channelId) {
+    const matched = channels.find(channel => channel.id === order.channelId)
+
+    if (matched) {
+      return matched
+    }
+  }
+
+  if (channels[0]) {
+    return channels[0]
+  }
+
+  const fallback = buildEnvFallbackChannel()
+  if (fallback && fallback.channelCode === order.channelCode) {
+    return fallback
+  }
+
+  return null
+}
+
+export type PayNotifyDispatcher = ReturnType<typeof payNotifyDispatcher>
+export type { PayNotifyResult }

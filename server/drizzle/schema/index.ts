@@ -13,6 +13,9 @@ import { sysOauthAccount } from "./system/oauthAccount"
 import { sysOauthConfig } from "./system/oauthConfig"
 import { sysOss } from "./system/oss"
 import { sysOssConfig } from "./system/ossConfig"
+import { sysPayChannel } from "./system/payChannel"
+import { sysPayNotifyLog } from "./system/payNotifyLog"
+import { sysPayOrder } from "./system/payOrder"
 import { sysRole } from "./system/role"
 import { sysRoleMenu } from "./system/roleMenu"
 import { sysSystemLog } from "./system/systemLog"
@@ -36,6 +39,9 @@ export {
   sysOauthConfig,
   sysOss,
   sysOssConfig,
+  sysPayChannel,
+  sysPayNotifyLog,
+  sysPayOrder,
   sysRole,
   sysRoleMenu,
   sysSystemLog,

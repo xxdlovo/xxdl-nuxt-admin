@@ -14,6 +14,10 @@ import { sysOauthAccountRouter } from '#server/sys-router/oauthAccount'
 import { sysOauthConfigRouter } from '#server/sys-router/oauthConfig'
 import { sysOssRouter } from '#server/sys-router/oss'
 import { sysOssConfigRouter } from '#server/sys-router/ossConfig'
+import { sysPayChannelRouter } from '#server/sys-router/payChannel'
+import { sysPayNotifyLogRouter } from '#server/sys-router/payNotifyLog'
+import { sysPayOrderRouter } from '#server/sys-router/payOrder'
+import { sysPayTestRouter } from '#server/sys-router/payTest'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
 import { authRouter } from '#server/sys-router/auth'
@@ -43,6 +47,10 @@ export const appRouter = router({
     sysOauthConfig: sysOauthConfigRouter,
     sysOss: sysOssRouter,
     sysOssConfig: sysOssConfigRouter,
+    sysPayChannel: sysPayChannelRouter,
+    sysPayNotifyLog: sysPayNotifyLogRouter,
+    sysPayOrder: sysPayOrderRouter,
+    sysPayTest: sysPayTestRouter,
     systemLog: sysSystemLogRouter,
     sysUserRole: sysUserRoleRouter,
 });
