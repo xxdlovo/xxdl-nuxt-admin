@@ -8,6 +8,7 @@
     "dbError": "dataBase error",
     "zodError": "Validation error",
     "serverError": "server error",
+    "businessError": "Business error",
     "demoReadonly": "Demo environment does not allow this operation"
   },
   "auth": {

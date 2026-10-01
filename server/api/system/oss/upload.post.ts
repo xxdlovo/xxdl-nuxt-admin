@@ -2,7 +2,7 @@ import { createContext } from '#server/trpc/context'
 import { authService } from '#server/sys-router/auth/AuthService'
 import { sysOssService } from '#server/sys-router/oss/SysOssService'
 import { apiOperationLog } from '#server/utils/apiOperationLog'
-import { AppError } from '#server/utils/appError'
+import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
 import { createServerT } from '#server/utils/serverI18n'
 import { crudPermissionCodes } from '#shared/auth'
 
@@ -83,8 +83,9 @@ export default defineEventHandler(async (event) => {
             requestParams
         })
 
+        // 与 tRPC 的 errorFormatter 共用同一份 AppError 状态映射，避免两处规则漂移
         const statusCode = error instanceof AppError
-            ? error.i18nKey === 'auth.unauthorized' ? 401 : error.i18nKey === 'auth.forbidden' ? 403 : 400
+            ? resolveAppErrorStatus(error.i18nKey).httpStatus
             : 500
         const message = error instanceof AppError
             ? t(error.i18nKey)

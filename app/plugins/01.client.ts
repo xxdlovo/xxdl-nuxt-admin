@@ -1,8 +1,7 @@
-import { createTRPCNuxtClient , httpBatchLink, httpLink } from 'trpc-nuxt/client'
+import { createTRPCNuxtClient , httpLink } from 'trpc-nuxt/client'
 import type { AppRouter } from '#server/trpc/routers'
 import {  TRPCClientError  } from '@trpc/client'
 import type{ TRPCLink   } from '@trpc/client'
-import {  retryLink   } from '@trpc/client'
 import { observable } from '@trpc/server/observable';
 import type {TRPCFormattedError} from "#shared/types/common";
 
@@ -12,29 +11,6 @@ type TypedTRPCError = TRPCClientError<AppRouter> & {
   data: TRPCFormattedError;
 };
 
-/**
- * 重试机制
- * trpc对于500错误会自动重试, 所以需要在trpc的后端路由抛出400错误
- */
-const retry = retryLink({
-      retry(opts) {
-        if (
-          opts.error.data &&
-          opts.error.data.code !== 'INTERNAL_SERVER_ERROR'
-        ) {
-          // Don't retry on non-500s
-          return false;
-        }
-        if (opts.op.type !== 'query') {
-          // Only retry queries
-          return false;
-        }
-        // Retry up to 1 times
-        return opts.attempts <= 0;
-      },
-      // Double every attempt, with max of 30 seconds (starting at 1 second)
-      retryDelayMs: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    })
 // 异常处理
 const customLink: TRPCLink<AppRouter> = () => {
   const toast = useToast()
@@ -92,7 +68,8 @@ const getHeader =  ()=>{
 
 export default defineNuxtPlugin(() => {
   const trpc = createTRPCNuxtClient<AppRouter>({
-    links: [retry,customLink,httpBatchLink({
+    // 使用 httpLink：一次调用一个请求，不做批量合并
+    links: [customLink, httpLink({
       url:'/api/trpc',
       headers: () => getHeader(),
       fetch(url, options){
@@ -101,7 +78,7 @@ export default defineNuxtPlugin(() => {
           credentials: 'include'
         })
       } 
-    }),],
+    })],
   })
   return {
     provide: {
