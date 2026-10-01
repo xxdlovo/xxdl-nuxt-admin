@@ -64,8 +64,11 @@ export function sysPayChannelService(ctx: Context) {
 
     /**
      * 组装要落库的 config：
-     * - 新增：密钥字段必须显式提供，校验必填与类型；
-     * - 修改：留空或掩码值表示保留原密钥，其余字段以新值覆盖。
+     * - 新增：必填字段必须提供，并校验类型；
+     * - 修改：密钥留空/掩码、可选字段留空都表示「不修改」（保留原值），其余字段以新值覆盖。
+     *
+     * 注意：只有「本次真正提交的新值」才参与 configSchema 校验，
+     * 拿整个 inputConfig 去校验会把「留空表示不修改」误判成校验失败。
      */
     function buildConfigForWrite(
         provider: PayProvider,
@@ -74,22 +77,35 @@ export function sysPayChannelService(ctx: Context) {
     ): Record<string, unknown> {
         const inputConfig = asConfigRecord(incoming)
         const next: Record<string, unknown> = { ...(existing ?? {}) }
+        /**
+         * 本次真正要写入的新值（留空/掩码的密钥已被剔除）。
+         * 校验必须用它而不是 inputConfig：密钥留空表示「不修改」，
+         * 而 configSchema 里的 min(1) 会把空字符串判成校验失败。
+         */
+        const validationInput: Record<string, unknown> = {}
 
         for (const [key, value] of Object.entries(inputConfig)) {
             const field = provider.fields.find(item => item.key === key)
 
+            // 1) 密钥留空/掩码 → 保留原密文，不参与校验也不覆盖
             if (field?.secret && isUnchangedSecretInput(value)) {
+                continue
+            }
+            // 2) 可选字段留空 → 视为不修改（保留原值；新增时由 configSchema 的默认值兜底），
+            //    否则 min(1) 这类规则会把「清空 gateway」判成校验失败
+            if (field && !field.required && (value === undefined || value === null || value === '')) {
                 continue
             }
             if (value === undefined) {
                 continue
             }
 
+            validationInput[key] = value
             next[key] = value
         }
 
-        // 类型校验只针对本次提交的新值；保留的密文不参与校验
-        const parseResult = provider.configSchema.partial().safeParse(inputConfig)
+        // 类型校验只针对本次提交的新值；留空的密钥与保留的密文都不参与校验
+        const parseResult = provider.configSchema.partial().safeParse(validationInput)
 
         if (!parseResult.success) {
             throw new AppError('module.system.payChannel.configInvalid', {
@@ -109,9 +125,9 @@ export function sysPayChannelService(ctx: Context) {
         }
 
         // 本次提交包含新的密钥值时必须先确认服务端已配置可用的加密密钥，避免落库后无法解密
-        const hasNewSecret = Object.entries(inputConfig).some(([key, value]) => {
+        const hasNewSecret = Object.keys(validationInput).some((key) => {
             const field = provider.fields.find(item => item.key === key)
-            return Boolean(field?.secret && !isUnchangedSecretInput(value))
+            return Boolean(field?.secret)
         })
 
         if (hasNewSecret) {
@@ -234,6 +250,7 @@ export function sysPayChannelService(ctx: Context) {
             const row = await repo.getById(id) as ChannelRow | null
 
             if (!row) {
+                // 查不到渠道行会返回 404 NOT_FOUND，排查时注意与「tRPC 路由 404」区分
                 throw new AppError('common.notExist')
             }
 

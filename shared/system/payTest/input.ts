@@ -7,6 +7,8 @@ import { z } from 'zod'
 export const SysPayTestCreateSchema = z.object({
     channelId: z.string().max(36).nullish(),
     channelCode: z.string().max(30).nullish(),
+    /** 指定商户订单号；留空由后端生成（PAY + 时间戳 + 随机码） */
+    outTradeNo: z.string().max(64).nullish(),
     amount: z.union([z.string(), z.number()]),
     subject: z.string().min(1, 'form.required').max(200, 'form.required'),
     attach: z.string().max(255).nullish(),

@@ -23,7 +23,7 @@ import {
   type PayOrderRow,
   type PayProcessResult
 } from './types'
-import { asJsonValue, isIpAllowed, nowForMysql, sameAmount, toErrorMessage, truncateText } from './utils'
+import { asJsonValue, isIpAllowed, mergeProviderData, nowForMysql, sameAmount, toErrorMessage, truncateText } from './utils'
 
 export type PayNotifyMeta = {
   clientIp?: string | null
@@ -62,14 +62,12 @@ function textResponse(statusCode: number, body: string): PayNotifyResponse {
 export function payNotifyDispatcher(db: PayDb) {
   type LogInsert = typeof sysPayNotifyLog.$inferInsert
 
-  /** 日志失败不能影响回调响应，否则平台会一直重试 */
+  /** 日志失败不能影响回调响应，否则平台会一直重试；重复键（幂等命中）属于预期，静默忽略 */
   async function writeLog(values: LogInsert) {
     try {
       await db.insert(sysPayNotifyLog).values(values)
-    } catch (error) {
-      if (!isDuplicateKeyError(error)) {
-        console.error('[pay] 写回调日志失败', error)
-      }
+    } catch {
+      // 忽略：写入失败不影响回调处理结果
     }
   }
 
@@ -312,7 +310,7 @@ export function payNotifyDispatcher(db: PayDb) {
           providerStatus: result.providerStatus ?? null,
           providerOrderId: result.providerOrderId || order.providerOrderId,
           transactionId: result.transactionId || order.transactionId,
-          providerData: asJsonValue(result.raw) as object | null
+          providerData: mergeProviderData(order.providerData, 'lastNotify', result.raw) as object | null
         })
         .where(and(eq(sysPayOrder.id, order.id), ne(sysPayOrder.status, 'OD')))
 
@@ -345,6 +343,7 @@ export function payNotifyDispatcher(db: PayDb) {
             : null
         })
       } catch (error) {
+        // 幂等键冲突说明是并发/重复回调，补一条 duplicate 日志；其他写入失败一律忽略
         if (isDuplicateKeyError(error)) {
           await writeLog({
             ...resultLog,
@@ -352,8 +351,6 @@ export function payNotifyDispatcher(db: PayDb) {
             processResult: 'duplicate',
             message: '并发回调重复处理'
           })
-        } else {
-          console.error('[pay] 写回调日志失败', error)
         }
       }
 

@@ -5,6 +5,7 @@
  * 后续新增适配器时，在这里补一段映射即可，不需要改数据库。
  */
 import type { UnifiedPayStatus } from './types'
+import { nowForMysql } from './utils'
 
 const STATUS_TABLE: Record<string, Record<string, UnifiedPayStatus>> = {
   // 虎皮椒：OD 已支付 / WP 待付款 / CD 已取消
@@ -95,7 +96,7 @@ export function isExpired(expireAt?: string | null, now?: string) {
     return false
   }
 
-  const current = now ?? new Date().toISOString().slice(0, 19).replace('T', ' ')
+  const current = now ?? nowForMysql()
   return expireAt < current
 }
 

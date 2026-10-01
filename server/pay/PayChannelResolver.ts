@@ -38,6 +38,8 @@ export function toChannelRuntime(row: ChannelRow): PayChannelRuntime {
     })
   }
 
+  const config = decryptConfigSecrets(provider.fields, asConfigRecord(row.config))
+
   return {
     id: row.id,
     configKey: row.configKey,
@@ -45,7 +47,7 @@ export function toChannelRuntime(row: ChannelRow): PayChannelRuntime {
     channelCode: String(row.channelCode).trim().toLowerCase(),
     mode: row.mode,
     currency: row.currency,
-    config: decryptConfigSecrets(provider.fields, asConfigRecord(row.config)),
+    config,
     notifyUrl: row.notifyUrl ?? null,
     returnUrl: row.returnUrl ?? null,
     cancelUrl: row.cancelUrl ?? null,

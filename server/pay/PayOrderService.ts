@@ -17,9 +17,11 @@ import {
   addMinutes,
   asJsonValue,
   buildOutTradeNo,
+  mergeProviderData,
   normalizeAmount,
   nowForMysql,
   resolveNotifyUrl,
+  secondsSinceMysqlDateTime,
   toErrorMessage,
   truncateText
 } from './utils'
@@ -29,6 +31,9 @@ export type PayOperatorMeta = {
   clientIp?: string | null
   userAgent?: string | null
 }
+
+/** 主动查询的最小间隔（秒）：轮询会反复触发，避免把平台查询接口打爆 */
+const MIN_ACTIVE_QUERY_INTERVAL_SECONDS = 3
 
 export type CreatePayOrderInput = {
   channelId?: string | null
@@ -177,7 +182,7 @@ export function payOrderService(db: PayDb) {
           qrContent: result.qrContent ?? null,
           payUrl: result.payUrl ?? null,
           notifyCount: 0,
-          providerData: asJsonValue(result.raw) as object | null
+          providerData: mergeProviderData(null, 'create', result.raw) as object | null
         })
       } catch (error) {
         const message = toErrorMessage(error, '发起支付失败')
@@ -214,9 +219,14 @@ export function payOrderService(db: PayDb) {
         return await getByIdOrThrow(orderId)
       }
 
+      // 节流：测试页轮询会周期性触发主动查询，这里保证对平台的调用不高于每 3 秒一次。
+      // 命中节流时直接用本地快照返回，不请求平台。
+      if (secondsSinceMysqlDateTime(order.lastQueryAt) < MIN_ACTIVE_QUERY_INTERVAL_SECONDS) {
+        return order
+      }
+
       const channel = await getPayChannelRuntimeById(db, order.channelId)
       const provider = getPayProvider(order.channelCode)
-
       if (!provider) {
         throw new AppError('module.system.payChannel.providerUnsupported', { message: order.channelCode })
       }
@@ -231,7 +241,8 @@ export function payOrderService(db: PayDb) {
         updatedBy: meta.operatorId ?? null,
         providerStatus: result.providerStatus ?? order.providerStatus,
         providerOrderId: result.providerOrderId || order.providerOrderId,
-        transactionId: result.transactionId || order.transactionId
+        transactionId: result.transactionId || order.transactionId,
+        providerData: mergeProviderData(order.providerData, 'lastQuery', result.raw) as object | null
       }
 
       let statusChanged = false
@@ -279,8 +290,8 @@ export function payOrderService(db: PayDb) {
             userAgent: truncateText(meta.userAgent, 255),
             createdBy: meta.operatorId ?? null
           })
-        } catch (error) {
-          console.error('[pay] 写查询日志失败', error)
+        } catch {
+          // 查询日志写入失败不能影响状态推进，这里直接忽略
         }
       }
 

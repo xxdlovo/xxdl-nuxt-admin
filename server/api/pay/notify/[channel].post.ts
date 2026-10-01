@@ -57,6 +57,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const { ip, userAgent } = getRequestInfo(event)
+
     const outcome = await payNotifyDispatcher(useDb()).handleNotify(
         channelCode,
         { headers, rawBody, body: parseNotifyBody(rawBody, contentType) },

@@ -7,8 +7,18 @@
  */
 import { AppError } from '#server/utils/appError'
 
+/**
+ * 生成与 MySQL 同处一个时区的「本地墙钟时间」字符串。
+ *
+ * 不能用 toISOString()：它按 UTC 输出，而 sys_pay_order.created_at / updated_at
+ * 由 MySQL 的 CURRENT_TIMESTAMP（会话时区，本机是 +08:00）写入，
+ * 两者混用会让 paid_at / expire_at / last_query_at 比 created_at 整整差 8 小时。
+ */
 export function nowForMysql(date: Date = new Date()) {
-  return date.toISOString().slice(0, 19).replace('T', ' ')
+  const pad = (value: number) => String(value).padStart(2, '0')
+
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+    + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
 export function toMysqlDateTime(date: Date) {
@@ -96,6 +106,25 @@ export function asJsonValue(value: unknown): unknown {
   return value
 }
 
+/**
+ * provider_data 的累加写入。
+ *
+ * 不要再整体覆盖：下单原始响应一旦被回调/查询的报文覆盖，就再也看不到
+ * 「平台到底返回了哪些字段」了（排查二维码/链接为空这类问题全靠它）。
+ * 结构：{ create, lastQuery, lastNotify }
+ */
+export function mergeProviderData(
+  existing: unknown,
+  key: 'create' | 'lastQuery' | 'lastNotify',
+  value: unknown
+): Record<string, unknown> {
+  const base = existing && typeof existing === 'object' && !Array.isArray(existing)
+    ? { ...(existing as Record<string, unknown>) }
+    : {}
+
+  return { ...base, [key]: asJsonValue(value) }
+}
+
 export function toErrorMessage(error: unknown, fallback = 'unknown error') {
   if (error instanceof Error) {
     return error.message || fallback
@@ -113,6 +142,24 @@ export function truncateText(value: unknown, maxLength = 500): string | null {
   }
   const text = String(value)
   return text.length > maxLength ? text.slice(0, maxLength) : text
+}
+
+/**
+ * 距离某个 'YYYY-MM-DD HH:mm:ss'（本地墙钟，与 MySQL 写入格式一致）过去了多少秒。
+ * 用于主动查询的节流；无法解析的值一律当作「很久以前」，不阻塞查询。
+ */
+export function secondsSinceMysqlDateTime(value?: string | null) {
+  if (!value) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  const timestamp = new Date(String(value).replace(' ', 'T')).getTime()
+
+  if (Number.isNaN(timestamp)) {
+    return Number.POSITIVE_INFINITY
+  }
+
+  return (Date.now() - timestamp) / 1000
 }
 
 /** 本次下单实际使用的回调地址：渠道配置优先，其次按请求 origin 推导 */
