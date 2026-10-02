@@ -1234,7 +1234,7 @@
         "notifyCount": "Notify Count",
         "qrContentTip": "This channel returns QR content only. No local rendering dependency is bundled, please copy it and render elsewhere",
         "noQrcode": "No QR code returned, use the payment URL instead",
-        "noQrcodeNoUrl": "The channel returned neither a QR code nor a payment URL: check the order's Provider Raw Data in Payment Records, or the response body in the server [pay] logs",
+        "noQrcodeNoUrl": "The channel returned neither a QR code nor a payment URL: check the order's Provider Raw Data in Payment Records (provider_data.create)",
         "createFailedTip": "A failed creation is still recorded as a Failed order in Payment Records, see its detail for the reason",
         "openPayUrl": "Open payment URL",
         "notifyUrlWarning": "This notify URL is not publicly reachable, so the platform cannot call back; use Query Status or Simulate Paid instead",
