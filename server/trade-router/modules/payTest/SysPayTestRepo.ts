@@ -2,11 +2,11 @@
  * payTest 模块的 mapper。
  *
  * payTest 自己没有数据表，它读的是支付模块的渠道表与订单表，
- * 因此这里把 `Context` 适配成 `PayDb`，复用 server/pay/repo/*（同一张表只保留一份 SQL）。
+ * 因此这里把 `Context` 适配成 `AppDb`，复用 server/trade-router/domain/pay/repo/*（同一张表只保留一份 SQL）。
  */
 import type { Context } from '#server/trpc/context'
-import { payChannelRepo, type PayChannelFindOptions, type PayChannelPublicRow } from '#server/pay/repo/payChannelRepo'
-import { payOrderRepo, type PayOrderRow } from '#server/pay/repo/payOrderRepo'
+import { payChannelRepo, type PayChannelFindOptions, type PayChannelPublicRow } from '#server/trade-router/domain/pay/repo/payChannelRepo'
+import { payOrderRepo, type PayOrderRow } from '#server/trade-router/domain/pay/repo/payOrderRepo'
 
 export const sysPayTestRepo = (ctx: Context) => {
   const channels = payChannelRepo(ctx.db)

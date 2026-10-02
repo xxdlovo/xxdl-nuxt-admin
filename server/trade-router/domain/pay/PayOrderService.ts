@@ -6,9 +6,9 @@
  * 取数写数一律通过 repo/payOrderRepo、repo/payNotifyLogRepo（mapper 层）。
  */
 import { AppError } from '#server/utils/appError'
+import type { AppExecutor } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { getPayChannelRuntimeById, resolvePayChannel } from './PayChannelResolver'
-import type { PayDb } from './db'
 import { getPayProvider } from './providers'
 import { payNotifyLogRepo } from './repo/payNotifyLogRepo'
 import { payOrderRepo } from './repo/payOrderRepo'
@@ -52,9 +52,9 @@ export type CreatePayOrderInput = {
   outTradeNo?: string | null
 }
 
-export function payOrderService(db: PayDb) {
-  const orderRepo = payOrderRepo(db)
-  const logRepo = payNotifyLogRepo(db)
+export function payOrderService(executor: AppExecutor) {
+  const orderRepo = payOrderRepo(executor)
+  const logRepo = payNotifyLogRepo(executor)
 
   async function getByIdOrThrow(orderId: string): Promise<PayOrderRow> {
     const row = await orderRepo.findById(orderId)
@@ -97,7 +97,7 @@ export function payOrderService(db: PayDb) {
         throw new AppError('module.system.payOrder.subjectRequired')
       }
 
-      const channel = await resolvePayChannel(db, {
+      const channel = await resolvePayChannel(executor, {
         channelId: input.channelId,
         channelCode: input.channelCode
       })
@@ -206,7 +206,7 @@ export function payOrderService(db: PayDb) {
         return order
       }
 
-      const channel = await getPayChannelRuntimeById(db, order.channelId)
+      const channel = await getPayChannelRuntimeById(executor, order.channelId)
       const provider = getPayProvider(order.channelCode)
       if (!provider) {
         throw new AppError('module.system.payChannel.providerUnsupported', { message: order.channelCode })

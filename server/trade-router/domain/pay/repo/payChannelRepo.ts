@@ -1,13 +1,13 @@
 /**
  * 支付渠道 mapper（数据访问层）。
  *
- * 与 payOrderRepo 同样接收 `PayDb`：
+ * 与 payOrderRepo 同样接收 `AppExecutor`（连接或事务）：
  * - PayChannelResolver（下单/查询/回调都要用）、payTest 模块、渠道配置模块共用同一份查询；
  * - 只做查询，不做「渠道是否可用/是否已验证」这类业务判断。
  */
 import { and, asc, desc, eq, ne } from 'drizzle-orm'
 import { sysPayChannel } from '#server/drizzle/schema'
-import type { PayDb } from '../db'
+import { asDb, type AppExecutor } from '#server/drizzle/db'
 
 export type PayChannelRow = typeof sysPayChannel.$inferSelect
 
@@ -29,7 +29,9 @@ export type PayChannelFindOptions = {
   currency?: string | null
 }
 
-export function payChannelRepo(db: PayDb) {
+export function payChannelRepo(executor: AppExecutor) {
+  const db = asDb(executor)
+
   return {
     /** 按主键取（不过滤 status，保持「已停用渠道的历史订单仍可查询」的语义） */
     async findById(channelId: string): Promise<PayChannelRow | null> {

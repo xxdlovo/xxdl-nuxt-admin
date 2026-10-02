@@ -1,4 +1,4 @@
-//#server/sys-router/payNotifyLog
+//#server/trade-router/modules/payNotifyLog
 import { router, proc } from '~~/server/trpc/init'
 import { sysPayNotifyLogService } from './SysPayNotifyLogService'
 import z from 'zod'

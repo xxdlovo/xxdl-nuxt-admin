@@ -2,7 +2,7 @@
  * 支付模块统一契约。
  *
  * 设计目标：业务侧只依赖本文件里的 DTO，不感知具体平台。
- * 新增一个支付平台 = 在 server/pay/providers/ 下实现 PayProvider + 在注册表登记一行，
+ * 新增一个支付平台 = 在 server/trade-router/domain/pay/providers/ 下实现 PayProvider + 在注册表登记一行，
  * 不需要改表结构、不需要改路由、不需要改前端页面。
  */
 import type { ZodObject } from 'zod'

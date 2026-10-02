@@ -7,8 +7,8 @@
  * 数据访问全部走 repo/payChannelRepo（mapper 层），本文件只做「选哪个渠道 + 解密 + 拼运行时对象」。
  */
 import { AppError } from '#server/utils/appError'
+import type { AppExecutor } from '#server/drizzle/db'
 import { decryptConfigSecrets } from './crypto'
-import type { PayDb } from './db'
 import { getPayProvider } from './providers'
 import { payChannelRepo, type PayChannelRow } from './repo/payChannelRepo'
 import type { PayChannelRuntime } from './types'
@@ -86,7 +86,7 @@ export function buildEnvFallbackChannel(): PayChannelRuntime | null {
 
 /** 按渠道配置行 id 取运行时配置（下单、查询、模拟回调都走这里） */
 export async function getPayChannelRuntimeById(
-  db: PayDb,
+  executor: AppExecutor,
   channelId?: string | null
 ): Promise<PayChannelRuntime> {
   if (!channelId) {
@@ -97,7 +97,7 @@ export async function getPayChannelRuntimeById(
     throw new AppError('module.system.payChannel.notConfigured')
   }
 
-  const row = await payChannelRepo(db).findById(channelId)
+  const row = await payChannelRepo(executor).findById(channelId)
 
   if (!row) {
     throw new AppError('common.notExist')
@@ -111,14 +111,14 @@ export async function getPayChannelRuntimeById(
  * 排序为「默认渠道优先 → sortOrder 升序 → 创建时间升序」。
  */
 export async function resolvePayChannel(
-  db: PayDb,
+  executor: AppExecutor,
   options: ResolvePayChannelOptions = {}
 ): Promise<PayChannelRuntime> {
   if (options.channelId) {
-    return await getPayChannelRuntimeById(db, options.channelId)
+    return await getPayChannelRuntimeById(executor, options.channelId)
   }
 
-  const row = await payChannelRepo(db).findEnabled({
+  const row = await payChannelRepo(executor).findEnabled({
     channelCode: options.channelCode,
     currency: options.currency
   })
@@ -140,8 +140,8 @@ export async function resolvePayChannel(
  * 回调路由用：同一个 channelCode 可能配置了多个账户，
  * 逐个验签，第一个通过的就是来源渠道。
  */
-export async function listEnabledChannelsByCode(db: PayDb, channelCode: string): Promise<PayChannelRuntime[]> {
-  const rows = await payChannelRepo(db).listEnabledByCode(channelCode)
+export async function listEnabledChannelsByCode(executor: AppExecutor, channelCode: string): Promise<PayChannelRuntime[]> {
+  const rows = await payChannelRepo(executor).listEnabledByCode(channelCode)
 
   return rows
     .map(row => {

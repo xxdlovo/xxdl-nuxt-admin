@@ -1,4 +1,4 @@
-//#server/sys-router/payOrder
+//#server/trade-router/modules/payOrder
 import { router, proc } from '~~/server/trpc/init'
 import { sysPayOrderService } from './SysPayOrderService'
 import z from 'zod'

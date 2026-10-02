@@ -1,4 +1,4 @@
-//#server/sys-router/payTest
+//#server/trade-router/modules/payTest
 import { getRequestURL } from 'h3'
 import { router, proc } from '~~/server/trpc/init'
 import { getRequestInfo } from '#server/utils/requestInfo'

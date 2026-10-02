@@ -8,9 +8,9 @@
  */
 import { createHash } from 'node:crypto'
 import { AppError } from '#server/utils/appError'
+import type { AppExecutor } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { buildEnvFallbackChannel, listEnabledChannelsByCode } from './PayChannelResolver'
-import type { PayDb } from './db'
 import { getPayProvider } from './providers'
 import { payNotifyLogRepo, type PayNotifyLogInsert } from './repo/payNotifyLogRepo'
 import { payOrderRepo } from './repo/payOrderRepo'
@@ -56,9 +56,9 @@ function textResponse(statusCode: number, body: string): PayNotifyResponse {
   return { statusCode, contentType: 'text/plain; charset=utf-8', body }
 }
 
-export function payNotifyDispatcher(db: PayDb) {
-  const orderRepo = payOrderRepo(db)
-  const logRepo = payNotifyLogRepo(db)
+export function payNotifyDispatcher(executor: AppExecutor) {
+  const orderRepo = payOrderRepo(executor)
+  const logRepo = payNotifyLogRepo(executor)
 
   type LogInsert = PayNotifyLogInsert
 
@@ -102,7 +102,7 @@ export function payNotifyDispatcher(db: PayDb) {
    * 缺少渠道配置时回退到环境变量渠道。
    */
   async function verifyAgainstChannels(channelCode: string, input: PayNotifyInput) {
-    const candidates: PayChannelRuntime[] = await listEnabledChannelsByCode(db, channelCode)
+    const candidates: PayChannelRuntime[] = await listEnabledChannelsByCode(executor, channelCode)
 
     if (candidates.length === 0) {
       const fallback = buildEnvFallbackChannel()
@@ -364,7 +364,7 @@ export function payNotifyDispatcher(db: PayDb) {
       throw new AppError('module.system.payTest.alreadyPaid')
     }
 
-    const channel = await listEnabledChannelsByCodeForOrder(db, order)
+    const channel = await listEnabledChannelsByCodeForOrder(executor, order)
 
     if (!channel) {
       throw new AppError('module.system.payChannel.notConfigured')
@@ -390,10 +390,10 @@ export function payNotifyDispatcher(db: PayDb) {
 
 /** 模拟回调时定位订单所用渠道：优先订单上的渠道配置行 */
 async function listEnabledChannelsByCodeForOrder(
-  db: PayDb,
+  executor: AppExecutor,
   order: PayOrderRow
 ): Promise<PayChannelRuntime | null> {
-  const channels = await listEnabledChannelsByCode(db, order.channelCode)
+  const channels = await listEnabledChannelsByCode(executor, order.channelCode)
 
   if (order.channelId) {
     const matched = channels.find(channel => channel.id === order.channelId)

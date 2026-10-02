@@ -3,13 +3,13 @@
  *
  * 职责边界：
  * - 这是支付模块里唯一允许出现 drizzle 查询 / 原生 SQL 的地方（「SQL 统一放 mapper 层」）；
- * - 接收 `PayDb` 而不是 tRPC `Context`：回调路由 /api/pay/notify 没有 tRPC 上下文，
+ * - 接收 `AppExecutor`（连接或事务）而不是 tRPC `Context`：回调路由 /api/pay/notify 没有 tRPC 上下文，
  *   领域层与路由层都复用同一份 mapper，避免同一张表出现第二份 SQL；
  * - 只负责取数与写数，不做业务判断（状态能否流转、金额是否一致等在 Service / Dispatcher）。
  */
 import { and, asc, desc, eq, ne, sql } from 'drizzle-orm'
 import { sysPayOrder } from '#server/drizzle/schema'
-import type { PayDb } from '../db'
+import { asDb, type AppExecutor } from '#server/drizzle/db'
 
 export type PayOrderRow = typeof sysPayOrder.$inferSelect
 export type PayOrderInsert = typeof sysPayOrder.$inferInsert
@@ -31,7 +31,9 @@ function affectedRows(result: unknown) {
   return Number((first as { affectedRows?: number } | undefined)?.affectedRows ?? 0)
 }
 
-export function payOrderRepo(db: PayDb) {
+export function payOrderRepo(executor: AppExecutor) {
+  const db = asDb(executor)
+
   return {
     async findById(orderId: string): Promise<PayOrderRow | null> {
       const rows = await db

@@ -16,7 +16,7 @@ import {
     setResponseStatus
 } from 'h3'
 import { useDb } from '#server/drizzle/db'
-import { payNotifyDispatcher } from '#server/pay/PayNotifyDispatcher'
+import { payNotifyDispatcher } from '#server/trade-router/domain/pay/PayNotifyDispatcher'
 import { getRequestInfo } from '#server/utils/requestInfo'
 
 /** 原始报文 → 对象：JSON 走 JSON.parse，其余按表单解析 */

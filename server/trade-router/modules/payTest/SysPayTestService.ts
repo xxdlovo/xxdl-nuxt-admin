@@ -2,15 +2,15 @@
  * 扫码支付测试模块的 Service：渠道可用性校验、统一下单、状态查询、模拟回调。
  *
  * 分层约定：
- * - 取数写数走 SysPayTestRepo → server/pay/repo/*（mapper 层）；
- * - 真正的支付实现走 server/pay（领域层），本文件只做「测试场景的业务编排」；
+ * - 取数写数走 SysPayTestRepo → server/trade-router/domain/pay/repo/*（mapper 层）；
+ * - 真正的支付实现走 server/trade-router/domain/pay（领域层），本文件只做「测试场景的业务编排」；
  * - 控制层（index.ts）只负责权限、入参 schema 与调用这里的方法。
  */
 import { AppError } from '#server/utils/appError'
-import { payNotifyDispatcher } from '#server/pay/PayNotifyDispatcher'
-import { payOrderService, type PayOperatorMeta } from '#server/pay/PayOrderService'
-import { getPayProvider } from '#server/pay/providers'
-import type { PayOrderRow } from '#server/pay/types'
+import { payNotifyDispatcher } from '#server/trade-router/domain/pay/PayNotifyDispatcher'
+import { payOrderService, type PayOperatorMeta } from '#server/trade-router/domain/pay/PayOrderService'
+import { getPayProvider } from '#server/trade-router/domain/pay/providers'
+import type { PayOrderRow } from '#server/trade-router/domain/pay/types'
 import type { Context } from '#server/trpc/context'
 import type { SysPayTestCreateDTO, SysPayTestStatusDTO } from '#shared/system/payTest'
 import { sysPayTestRepo } from './SysPayTestRepo'

@@ -2,18 +2,18 @@ import { sysPayChannelRepo } from './SysPayChannelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
-import { toChannelRuntime } from '#server/pay/PayChannelResolver'
+import { toChannelRuntime } from '#server/trade-router/domain/pay/PayChannelResolver'
 import {
     describePayConfigKey,
     encryptConfigSecrets,
     isSecretEnvelope,
     isUnchangedSecretInput,
     maskConfigSecrets
-} from '#server/pay/crypto'
-import { getPayProvider, listPayProviderMetas } from '#server/pay/providers'
-import type { PayChannelRow } from '#server/pay/repo/payChannelRepo'
-import { nowForMysql, truncateText } from '#server/pay/utils'
-import type { PayProvider } from '#server/pay/types'
+} from '#server/trade-router/domain/pay/crypto'
+import { getPayProvider, listPayProviderMetas } from '#server/trade-router/domain/pay/providers'
+import type { PayChannelRow } from '#server/trade-router/domain/pay/repo/payChannelRepo'
+import { nowForMysql, truncateText } from '#server/trade-router/domain/pay/utils'
+import type { PayProvider } from '#server/trade-router/domain/pay/types'
 import type {
     SysPayChannelAddDTO,
     SysPayChannelDto,

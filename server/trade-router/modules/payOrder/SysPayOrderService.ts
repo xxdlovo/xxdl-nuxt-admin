@@ -2,8 +2,8 @@ import { sysPayOrderRepo } from './SysPayOrderRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
-import { payOrderService } from '#server/pay/PayOrderService'
-import { normalizeAmount } from '#server/pay/utils'
+import { payOrderService } from '#server/trade-router/domain/pay/PayOrderService'
+import { normalizeAmount } from '#server/trade-router/domain/pay/utils'
 import type {
     SysPayOrderAddDTO,
     SysPayOrderDto,

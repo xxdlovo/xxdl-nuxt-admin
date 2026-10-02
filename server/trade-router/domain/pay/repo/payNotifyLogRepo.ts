@@ -7,12 +7,14 @@
  */
 import { eq } from 'drizzle-orm'
 import { sysPayNotifyLog } from '#server/drizzle/schema'
-import type { PayDb } from '../db'
+import { asDb, type AppExecutor } from '#server/drizzle/db'
 
 export type PayNotifyLogInsert = typeof sysPayNotifyLog.$inferInsert
 export type PayNotifyLogRow = typeof sysPayNotifyLog.$inferSelect
 
-export function payNotifyLogRepo(db: PayDb) {
+export function payNotifyLogRepo(executor: AppExecutor) {
+  const db = asDb(executor)
+
   return {
     async insert(values: PayNotifyLogInsert) {
       return await db.insert(sysPayNotifyLog).values(values)
