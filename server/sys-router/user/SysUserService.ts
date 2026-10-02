@@ -21,6 +21,7 @@ import { randomUuid } from '#shared/utils/uuid'
 import { hashUserPassword, isPlaceholderPassword } from '#server/utils/password'
 import { sysDeptRepo } from '#server/sys-router/dept/SysDeptRepo'
 import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
+import { memberService } from '#server/trade-router/domain/member/MemberService'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
   if (!user) {
@@ -62,8 +63,10 @@ export function sysUserService(ctx: Context) {
         throw new AppError('auth.phoneExists')
       }
 
+      const userId = randomUuid()
+
       await repo.create({
-        id: randomUuid(),
+        id: userId,
         username: data.username,
         password: await hashUserPassword(data.password),
         email: `${data.username}@registered.local`,
@@ -73,6 +76,24 @@ export function sysUserService(ctx: Context) {
         isAdmin: 0,
         status: 1
       })
+
+      /**
+       * 注册即开会员档案（含注册赠金与邀请绑定）。
+       *
+       * 会员域失败**不回滚用户注册**：用户已经建好，档案可以由
+       * `member:backfill-profile` 任务补齐，避免因为赠金配置等问题挡注册。
+       * 失败原因写入日志，便于排查。
+       */
+      try {
+        await memberService(ctx.db).onboard({
+          userId,
+          inviteCode: data.inviteCode ?? null,
+          source: 'register',
+          operatorId: userId
+        })
+      } catch (error) {
+        console.error(`[member] 注册后开通会员档案失败 userId=${userId}`, error)
+      }
 
       return true
     },

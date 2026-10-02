@@ -98,7 +98,9 @@ export type SysUserSetPasswordDTO = z.infer<typeof SysUserSetPasswordSchema>
 export const SysUserRegisterSchema = withMatchingPasswords(
   SysUserPasswordFieldsSchema.extend({
     phone: z.string().min(1, 'form.phone.required').max(20, 'form.phone.invalid'),
-    username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid')
+    username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
+    /** 邀请码（选填）：注册时绑定单级邀请关系，并给新会员发放注册赠金 */
+    inviteCode: z.string().max(20).nullish()
   })
 )
 export type SysUserRegisterDTO = z.infer<typeof SysUserRegisterSchema>
