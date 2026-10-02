@@ -1303,6 +1303,26 @@
         "couponMinAmount": "Minimum order amount for this coupon is {message} CNY",
         "couponUserLimit": "You have reached the per-user usage limit for this coupon",
         "couponNotApplicable": "Coupon discount leaves no payable amount, cannot be used"
+      },
+      "memberRecharge": {
+        "outTradeNoExists": "This merchant order number already exists; change it or leave it empty",
+        "creditedReadonly": "This recharge has already been credited and cannot be modified or deleted",
+        "notClosable": "Only pending recharges can be closed",
+        "createFailed": "Failed to create recharge: {message}",
+        "notFound": "Recharge record not found"
+      },
+      "memberFreeze": {
+        "cannotDeleteFrozen": "A frozen record cannot be deleted, please confirm or release it first"
+      },
+      "memberBalanceLog": {
+        "exportTooLarge": "Export exceeds {message} rows, please narrow the filters and retry"
+      },
+      "memberLevel": {
+        "codeExists": "This level code already exists"
+      },
+      "memberCoupon": {
+        "codeExists": "This coupon code already exists",
+        "rateInvalid": "Discount rate must be a decimal between 0 and 1 (e.g. 0.90 = 10% off)"
       }
     }
   },

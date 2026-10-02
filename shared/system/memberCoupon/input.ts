@@ -48,7 +48,7 @@ export const SysMemberCouponUpdateSchema = SysMemberCouponAddSchema.extend({
 export type SysMemberCouponUpdateDTO = z.infer<typeof SysMemberCouponUpdateSchema>
 
 /**
- * 作废优惠码：status 置 -1，已使用次数不回退。
+ * 作废优惠码：status 置 2（与 DDL 注释、couponRepo.markVoid 一致），已使用次数不回退。
  * remark 作为作废原因写入备注。
  */
 export const SysMemberCouponVoidSchema = z.object({

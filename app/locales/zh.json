@@ -1303,6 +1303,26 @@
         "couponMinAmount": "未达到优惠码使用门槛（最低 {message} 元）",
         "couponUserLimit": "你已使用过该优惠码，超过每人可用次数",
         "couponNotApplicable": "该优惠码抵扣后金额不足，无法使用"
+      },
+      "memberRecharge": {
+        "outTradeNoExists": "商户充值单号已存在，请更换或留空由系统生成",
+        "creditedReadonly": "该充值单已到账，不能修改或删除",
+        "notClosable": "只有待支付的充值单可以关闭",
+        "createFailed": "发起充值失败：{message}",
+        "notFound": "充值单不存在"
+      },
+      "memberFreeze": {
+        "cannotDeleteFrozen": "冻结中的单据不能删除，请先确认或释放"
+      },
+      "memberBalanceLog": {
+        "exportTooLarge": "本次导出超过 {message} 行，请收窄筛选条件后重试"
+      },
+      "memberLevel": {
+        "codeExists": "等级编码已存在"
+      },
+      "memberCoupon": {
+        "codeExists": "优惠码已存在",
+        "rateInvalid": "折扣率必须是大于 0 且小于 1 的小数（例如 0.90 表示九折）"
       }
     }
   },

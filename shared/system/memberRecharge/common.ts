@@ -20,7 +20,7 @@ export const SysMemberRechargeBaseSchema = z.object({
     payAmount: z.union([z.string(), z.number()]).nullish(),
     couponId: z.string().nullish(),
     couponCode: z.string().nullish(),
-    /** 状态：WP 待支付 / OD 已支付 / CD 已关闭 / FL 发起失败 */
+    /** 状态：WP 待支付 / OD 已支付（已到账）/ CL 已关闭 / FL 发起失败 */
     status: z.string().nullish(),
     /** 关联的 sys_pay_order.id */
     payOrderId: z.string().nullish(),

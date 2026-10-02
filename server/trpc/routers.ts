@@ -18,6 +18,12 @@ import { sysPayChannelRouter } from '#server/trade-router/modules/payChannel'
 import { sysPayNotifyLogRouter } from '#server/trade-router/modules/payNotifyLog'
 import { sysPayOrderRouter } from '#server/trade-router/modules/payOrder'
 import { sysPayTestRouter } from '#server/trade-router/modules/payTest'
+import { sysMemberRouter } from '#server/trade-router/modules/member'
+import { sysMemberBalanceLogRouter } from '#server/trade-router/modules/memberBalanceLog'
+import { sysMemberCouponRouter } from '#server/trade-router/modules/memberCoupon'
+import { sysMemberFreezeRouter } from '#server/trade-router/modules/memberFreeze'
+import { sysMemberLevelRouter } from '#server/trade-router/modules/memberLevel'
+import { sysMemberRechargeRouter } from '#server/trade-router/modules/memberRecharge'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
 import { authRouter } from '#server/sys-router/auth'
@@ -51,6 +57,12 @@ export const appRouter = router({
     sysPayNotifyLog: sysPayNotifyLogRouter,
     sysPayOrder: sysPayOrderRouter,
     sysPayTest: sysPayTestRouter,
+    sysMember: sysMemberRouter,
+    sysMemberBalanceLog: sysMemberBalanceLogRouter,
+    sysMemberCoupon: sysMemberCouponRouter,
+    sysMemberFreeze: sysMemberFreezeRouter,
+    sysMemberLevel: sysMemberLevelRouter,
+    sysMemberRecharge: sysMemberRechargeRouter,
     systemLog: sysSystemLogRouter,
     sysUserRole: sysUserRoleRouter,
 });

@@ -26,19 +26,21 @@ export const SysMemberRechargeAddSchema =
         remark: true,
     }).extend({
         id: SysMemberRechargeBaseSchema.shape.id.nonoptional(),
-        outTradeNo: z.string().min(1, 'form.required').max(64, 'form.required'),
+        /** 商户订单号：留空由服务端生成（补录线下转账时可留空） */
+        outTradeNo: z.string().max(64).nullish(),
         userId: z.string().min(1, 'form.required').max(36, 'form.required'),
         amount: z.union([z.string(), z.number()]),
         giftAmount: z.union([z.string(), z.number()]).default('0.00'),
         discountAmount: z.union([z.string(), z.number()]).default('0.00'),
-        payAmount: z.union([z.string(), z.number()]),
+        /** 实付金额：留空由服务端按「充值额 - 优惠抵扣」计算 */
+        payAmount: z.union([z.string(), z.number()]).nullish(),
         couponId: z.string().max(36).nullish(),
         couponCode: z.string().max(32).nullish(),
         status: z.string().max(10).default('WP'),
         payChannelCode: z.string().max(30).nullish(),
-        paidAt: z.string().max(19).nullish(),
-        creditedAt: z.string().max(19).nullish(),
-        expireAt: z.string().max(19).nullish(),
+        paidAt: z.string().max(30).nullish(),
+        creditedAt: z.string().max(30).nullish(),
+        expireAt: z.string().max(30).nullish(),
         failReason: z.string().max(500).nullish(),
         remark: z.string().max(255).nullish(),
     })

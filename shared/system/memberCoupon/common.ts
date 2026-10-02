@@ -11,7 +11,7 @@ export const SysMemberCouponBaseSchema = z.object({
     /** 优惠码，全表唯一（uk_member_coupon_code） */
     code: z.string().nullish().meta({ query: 'like' }),
     name: z.string().nullish().meta({ query: 'like' }),
-    /** 优惠类型：amount 固定金额 / discount 折扣 / gift 赠送金额 */
+    /** 优惠类型：amount 固定金额抵扣 / rate 折扣率（0.90 表示九折，即便宜 10%） */
     type: z.string().nullish(),
     value: z.union([z.string(), z.number()]).nullish(),
     minAmount: z.union([z.string(), z.number()]).nullish(),
@@ -27,7 +27,7 @@ export const SysMemberCouponBaseSchema = z.object({
     usedCount: z.number().nullish(),
     perUserLimit: z.number().nullish(),
     batchNo: z.string().nullish().meta({ query: 'like' }),
-    /** 状态：1 启用 / 0 停用 / -1 已作废 */
+    /** 状态：1 启用 / 0 停用 / 2 已作废（与 DDL 注释、couponRepo.markVoid 一致） */
     status: z.number().nullish(),
     remark: z.string().nullish(),
     createdBy: z.string().nullish(),

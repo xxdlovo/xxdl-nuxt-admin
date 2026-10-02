@@ -6,12 +6,52 @@
  *   由领域层捕获并解释为「已入账」；
  * - 汇总查询用于对账（按账户汇总净额）与财务看板。
  */
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, like, lte, sql } from 'drizzle-orm'
 import { sysMemberBalanceLog } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 
 export type BalanceLogRow = typeof sysMemberBalanceLog.$inferSelect
 export type BalanceLogInsert = typeof sysMemberBalanceLog.$inferInsert
+
+/** 流水筛选条件（后台列表、自助查询与导出共用） */
+export type BalanceLogFilters = {
+  userId?: string | null
+  account?: string | null
+  direction?: string | null
+  bizType?: string | null
+  bizNo?: string | null
+  createdFrom?: string | null
+  createdTo?: string | null
+}
+
+/** 组装筛选条件（导出为独立函数，避免 Repo 返回类型自引用导致 TS 循环推导） */
+function buildBalanceLogConditions(filters: BalanceLogFilters) {
+  const conditions = [eq(sysMemberBalanceLog.isDeleted, 0)]
+
+  if (filters.userId) {
+    conditions.push(eq(sysMemberBalanceLog.userId, filters.userId))
+  }
+  if (filters.account) {
+    conditions.push(eq(sysMemberBalanceLog.account, filters.account))
+  }
+  if (filters.direction) {
+    conditions.push(eq(sysMemberBalanceLog.direction, filters.direction))
+  }
+  if (filters.bizType) {
+    conditions.push(eq(sysMemberBalanceLog.bizType, filters.bizType))
+  }
+  if (filters.bizNo) {
+    conditions.push(like(sysMemberBalanceLog.bizNo, `%${filters.bizNo}%`))
+  }
+  if (filters.createdFrom) {
+    conditions.push(gte(sysMemberBalanceLog.createdAt, filters.createdFrom))
+  }
+  if (filters.createdTo) {
+    conditions.push(lte(sysMemberBalanceLog.createdAt, filters.createdTo))
+  }
+
+  return conditions
+}
 
 export function balanceLogRepo(executor: AppExecutor) {
   const db = asDb(executor)
@@ -96,6 +136,43 @@ export function balanceLogRepo(executor: AppExecutor) {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /** 组合筛选条件（后台流水列表与自助查询共用） */
+    buildConditions(filters: BalanceLogFilters) {
+      return buildBalanceLogConditions(filters)
+    },
+
+    /** 分页查询（时间倒序） */
+    async pageByFilters(filters: BalanceLogFilters, page: number, pageSize: number) {
+      const conditions = buildBalanceLogConditions(filters)
+
+      const totalRows = await db
+        .select({ total: count() })
+        .from(sysMemberBalanceLog)
+        .where(and(...conditions))
+
+      const list = await db
+        .select()
+        .from(sysMemberBalanceLog)
+        .where(and(...conditions))
+        .orderBy(desc(sysMemberBalanceLog.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+
+      return { total: Number(totalRows[0]?.total ?? 0), page, pageSize, list }
+    },
+
+    /** 导出用：按条件取一页（上限由调用方控制） */
+    async listByFilters(filters: BalanceLogFilters, limit: number) {
+      const conditions = buildBalanceLogConditions(filters)
+
+      return await db
+        .select()
+        .from(sysMemberBalanceLog)
+        .where(and(...conditions))
+        .orderBy(desc(sysMemberBalanceLog.createdAt))
+        .limit(limit)
     }
   }
 }

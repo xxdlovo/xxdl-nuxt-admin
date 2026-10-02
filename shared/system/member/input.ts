@@ -53,6 +53,12 @@ export const SysMemberQuerySchema = SysMemberBaseSchema.pick({
     invitedAt: true,
     status: true,
     remark: true,
+}).extend({
+    /** 关键字：匹配昵称 / 用户名 / 手机号 / 邀请码（非表字段，由 Repo 消费） */
+    keyword: z.string().max(50).nullish(),
+    /** 注册时间区间，格式 YYYY-MM-DD HH:mm:ss（非表字段，由 Repo 消费） */
+    createdFrom: z.string().max(30).nullish(),
+    createdTo: z.string().max(30).nullish(),
 })
 export type SysMemberQueryDTO = z.infer<typeof SysMemberQuerySchema>
 
@@ -77,12 +83,16 @@ export const SysMemberAdjustSchema = z.object({
 })
 export type SysMemberAdjustDTO = z.infer<typeof SysMemberAdjustSchema>
 
-/** 发放赠送金：source 区分系统手动发放与活动发放，expireAt 格式 YYYY-MM-DD HH:mm:ss，留空表示永久有效 */
+/**
+ * 发放赠送金：source 区分系统手动发放与活动发放，expireAt 格式 YYYY-MM-DD HH:mm:ss，留空表示永久有效。
+ * requestId 为幂等键（前端每次提交生成），避免连点或重试造成重复发放。
+ */
 export const SysMemberGrantSchema = z.object({
     userId: z.string().min(1, 'form.required').max(36, 'form.required'),
     amount: z.union([z.string(), z.number()]),
     source: z.enum(['system', 'campaign']),
     expireAt: z.string().max(30).nullish(),
+    requestId: z.string().min(1, 'form.required').max(64, 'form.required'),
     remark: z.string().max(255).nullish(),
 })
 export type SysMemberGrantDTO = z.infer<typeof SysMemberGrantSchema>
@@ -95,22 +105,11 @@ export const SysMemberChangeLevelSchema = z.object({
 })
 export type SysMemberChangeLevelDTO = z.infer<typeof SysMemberChangeLevelSchema>
 
-/** 给会员发券：couponId 与 couponCode 至少填其一（优惠券表 id 36 位，code 32 位） */
-export const SysMemberCouponGrantSchema = z
-    .object({
-        userId: z.string().min(1, 'form.required').max(36, 'form.required'),
-        couponId: z.string().max(36).nullish(),
-        couponCode: z.string().max(32).nullish(),
-        remark: z.string().max(255).nullish(),
-    })
-    .refine(
-        data => Boolean(data.couponId?.trim()) || Boolean(data.couponCode?.trim()),
-        {
-            message: 'form.required',
-            path: ['couponId'],
-        }
-    )
-export type SysMemberCouponGrantDTO = z.infer<typeof SysMemberCouponGrantSchema>
+/**
+ * 关于「给会员发券」：当前数据模型里优惠码是**凭码使用**（不绑定持有关系），
+ * 因此「发券」等价于在优惠码模块创建一枚码（可设置 perUserLimit=1），
+ * 不存在会员-券的持有表，故这里不提供发券 Schema。
+ */
 
 /** 查询条件：本人资金流水（自助） */
 export const SysMemberMyLogFilterSchema = z.object({

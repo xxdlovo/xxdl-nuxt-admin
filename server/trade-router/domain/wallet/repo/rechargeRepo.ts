@@ -119,8 +119,7 @@ export function rechargeRepo(executor: AppExecutor) {
     /**
      * 需要补偿的充值单：本地仍是待支付，但对应的支付单已经支付成功。
      * 用于「回调丢了 / 到账中断」的自愈（幂等键保证不会重复到账）。
-     */
-    async listPendingWithPaidOrder(limit: number) {
+     */    async listPendingWithPaidOrder(limit: number) {
       return await db
         .select({
           rechargeId: sysMemberRecharge.id,
@@ -137,6 +136,19 @@ export function rechargeRepo(executor: AppExecutor) {
           eq(sysMemberRecharge.isDeleted, 0),
           eq(sysPayOrder.status, 'OD'),
           eq(sysPayOrder.isDeleted, 0)
+        ))
+        .orderBy(desc(sysMemberRecharge.createdAt))
+        .limit(limit)
+    },
+
+    /** 某会员的充值记录（自助页用） */
+    async listByUser(userId: string, limit = 100) {
+      return await db
+        .select()
+        .from(sysMemberRecharge)
+        .where(and(
+          eq(sysMemberRecharge.userId, userId),
+          eq(sysMemberRecharge.isDeleted, 0)
         ))
         .orderBy(desc(sysMemberRecharge.createdAt))
         .limit(limit)
