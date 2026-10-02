@@ -11,6 +11,10 @@ import {
     SysMemberQuerySchema,
     SysMemberUpdateSchema
 } from '#shared/system/member'
+import {
+    SysMemberRechargeCreateSchema,
+    SysMemberRechargeOutTradeNoSchema
+} from '#shared/system/memberRecharge'
 import { sysMemberService } from './SysMemberService'
 
 const listProc = proc({ permission: 'system:member:list' })
@@ -105,6 +109,24 @@ export const sysMemberRouter = router({
     myRecharges: protectedProcedure
         .query(async ({ ctx }) => {
             return sysMemberService(ctx).myRecharges()
+        }),
+
+    /** 自助发起充值：返回二维码/支付链接，到账由回调或 myRechargeSync 触发 */
+    myRecharge: protectedProcedure.input(SysMemberRechargeCreateSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myRecharge(input)
+        }),
+
+    /** 查询充值单状态（只读本地库，供页面轮询） */
+    myRechargeStatus: protectedProcedure.input(SysMemberRechargeOutTradeNoSchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myRechargeStatus(input)
+        }),
+
+    /** 主动同步充值状态（向渠道查询，已支付则到账） */
+    myRechargeSync: protectedProcedure.input(SysMemberRechargeOutTradeNoSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myRechargeSync(input)
         }),
     myCoupons: protectedProcedure
         .query(async ({ ctx }) => {

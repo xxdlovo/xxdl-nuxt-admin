@@ -39,6 +39,20 @@ export type PayNotifyOutcome = {
   response: PayNotifyResponse
 }
 
+/**
+ * 回调处理的扩展点。
+ *
+ * `onPaid` 在该笔订单**首次**被置为已支付（`markPaidIfPending` 影响行数 > 0）后调用，
+ * 用于把「已支付」这个事实告知业务域（例如 `bizType = 'recharge'` 时给会员充值到账）。
+ *
+ * 约定：
+ * - 抛错会中断回调处理并让调用方返回 5xx，平台会重试；业务侧必须幂等（唯一键兜底）；
+ * - 业务侧漏处理时，由对账/补偿任务按「支付单已支付但业务单未完成」补齐。
+ */
+export type PayNotifyOptions = {
+  onPaid?: (order: PayOrderRow) => Promise<void>
+}
+
 function sha256(value: string) {
   return createHash('sha256').update(value, 'utf8').digest('hex')
 }
@@ -56,7 +70,7 @@ function textResponse(statusCode: number, body: string): PayNotifyResponse {
   return { statusCode, contentType: 'text/plain; charset=utf-8', body }
 }
 
-export function payNotifyDispatcher(executor: AppExecutor) {
+export function payNotifyDispatcher(executor: AppExecutor, options: PayNotifyOptions = {}) {
   const orderRepo = payOrderRepo(executor)
   const logRepo = payNotifyLogRepo(executor)
 
@@ -300,6 +314,13 @@ export function payNotifyDispatcher(executor: AppExecutor) {
       const processResult: PayProcessResult = previousStatus === 'CD' || previousStatus === 'CL'
         ? 'status_mismatch'
         : 'success'
+
+      // 首次置为已支付：把事实交给业务域（失败即抛出，让平台重试；业务侧靠幂等键保证不重复）
+      if (options.onPaid) {
+        const paidOrder = await orderRepo.findById(order.id) ?? order
+
+        await options.onPaid(paidOrder)
+      }
 
       try {
         await logRepo.insert({

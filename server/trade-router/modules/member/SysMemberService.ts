@@ -9,9 +9,12 @@
  */
 import { AppError } from '#server/utils/appError'
 import { requireLogin } from '#server/utils/routeGuard'
+import { getRequestURL } from 'h3'
 import { balanceLogRepo } from '#server/trade-router/domain/wallet/repo/balanceLogRepo'
 import { rechargeRepo } from '#server/trade-router/domain/wallet/repo/rechargeRepo'
+import { payOrderService } from '#server/trade-router/domain/pay/PayOrderService'
 import { memberService } from '#server/trade-router/domain/member/MemberService'
+import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
 import { walletService } from '#server/trade-router/domain/wallet/WalletService'
 import { sysUserRepo } from '#server/sys-router/user/SysUserRepo'
 import type { Context } from '#server/trpc/context'
@@ -26,6 +29,10 @@ import type {
     SysMemberQueryDTO,
     SysMemberUpdateDTO
 } from '#shared/system/member'
+import type {
+    SysMemberRechargeCreateDTO,
+    SysMemberRechargeOutTradeNoDTO
+} from '#shared/system/memberRecharge'
 import { sysMemberRepo, type SysMemberListFilters } from './SysMemberRepo'
 
 /** 自助查询分页（我的充值记录 / 我的下级） */
@@ -37,6 +44,8 @@ export function sysMemberService(ctx: Context) {
     const wallet = walletService(ctx.db)
     const logs = balanceLogRepo(ctx.db)
     const recharges = rechargeRepo(ctx.db)
+    const rechargeOrders = rechargeService(ctx.db)
+    const payOrders = payOrderService(ctx.db)
     const users = sysUserRepo(ctx)
 
     const operatorId = () => ctx.user?.id ?? null
@@ -252,6 +261,80 @@ export function sysMemberService(ctx: Context) {
             const user = requireLogin(ctx)
 
             return await recharges.listByUser(user.id, SELF_PAGE_LIMIT)
+        },
+
+        /**
+         * 自助发起充值：落充值单 → 调支付模块下单 → 返回二维码信息。
+         * 到账由支付回调或主动同步触发（见 myRechargeSync），本方法不直接改余额。
+         */
+        async myRecharge(input: SysMemberRechargeCreateDTO) {
+            const user = requireLogin(ctx)
+
+            return await rechargeOrders.create({
+                userId: user.id,
+                amount: input.amount,
+                couponCode: input.couponCode ?? null,
+                notifyUrl: input.notifyUrl ?? null,
+                origin: getRequestURL(ctx.event).origin,
+                operatorId: user.id
+            })
+        },
+
+        /** 查询充值单状态（只读本地库，供页面轮询展示） */
+        async myRechargeStatus(input: SysMemberRechargeOutTradeNoDTO) {
+            const user = requireLogin(ctx)
+            const row = await rechargeOrders.findRecharge(input.outTradeNo)
+
+            if (!row || row.userId !== user.id) {
+                throw new AppError('module.system.memberRecharge.notFound')
+            }
+
+            return {
+                outTradeNo: row.outTradeNo,
+                status: row.status,
+                amount: row.amount,
+                payAmount: row.payAmount,
+                giftAmount: row.giftAmount,
+                paidAt: row.paidAt ?? null,
+                creditedAt: row.creditedAt ?? null,
+                failReason: row.failReason ?? null
+            }
+        },
+
+        /**
+         * 主动同步充值状态：向渠道查询支付单，若已支付则触发到账（幂等）。
+         * 回调不可达（内网/本地开发）时，页面靠它把余额补上。
+         */
+        async myRechargeSync(input: SysMemberRechargeOutTradeNoDTO) {
+            const user = requireLogin(ctx)
+            const row = await rechargeOrders.findRecharge(input.outTradeNo)
+
+            if (!row || row.userId !== user.id) {
+                throw new AppError('module.system.memberRecharge.notFound')
+            }
+
+            if (row.status === 'OD') {
+                return { outTradeNo: row.outTradeNo, status: 'OD', credited: false, reused: true }
+            }
+
+            if (!row.payOrderId) {
+                return { outTradeNo: row.outTradeNo, status: row.status, credited: false, reused: false }
+            }
+
+            const order = await payOrders.queryPayment(row.payOrderId, { operatorId: user.id })
+
+            if (order.status !== 'OD') {
+                return { outTradeNo: row.outTradeNo, status: order.status, credited: false, reused: false }
+            }
+
+            const credited = await rechargeOrders.credit(row.outTradeNo, user.id)
+
+            return {
+                outTradeNo: row.outTradeNo,
+                status: 'OD',
+                credited: credited.credited,
+                reused: credited.reused
+            }
         },
 
         /** 我的优惠码使用记录 */
