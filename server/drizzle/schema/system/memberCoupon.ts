@@ -1,0 +1,31 @@
+import { mysqlTable, primaryKey, unique, index, varchar, tinyint, int, timestamp, decimal } from "drizzle-orm/mysql-core"
+
+export const sysMemberCoupon = mysqlTable("sys_member_coupon", {
+	id: varchar({ length: 36 }).notNull(),
+	code: varchar({ length: 32 }).notNull(),
+	name: varchar({ length: 50 }),
+	type: varchar({ length: 20 }).default('amount').notNull(),
+	value: decimal({ precision: 12, scale: 2 }).notNull(),
+	minAmount: decimal("min_amount", { precision: 12, scale: 2 }).default('0.00').notNull(),
+	scene: varchar({ length: 20 }).default('all').notNull(),
+	giftAmount: decimal("gift_amount", { precision: 12, scale: 2 }).default('0.00').notNull(),
+	validFrom: timestamp("valid_from", { mode: 'string' }),
+	validTo: timestamp("valid_to", { mode: 'string' }),
+	maxUse: int("max_use").default(0).notNull(),
+	usedCount: int("used_count").default(0).notNull(),
+	perUserLimit: int("per_user_limit").default(1).notNull(),
+	batchNo: varchar("batch_no", { length: 50 }),
+	status: tinyint().default(1),
+	remark: varchar({ length: 255 }),
+	createdBy: varchar("created_by", { length: 36 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedBy: varchar("updated_by", { length: 36 }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	isDeleted: tinyint("is_deleted").default(0),
+},
+(table) => [
+	index("idx_member_coupon_batch").on(table.batchNo),
+	index("idx_member_coupon_scene").on(table.scene, table.status, table.isDeleted),
+	primaryKey({ columns: [table.id], name: "sys_member_coupon_id" }),
+	unique("uk_member_coupon_code").on(table.code),
+]);

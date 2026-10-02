@@ -1,0 +1,32 @@
+import { mysqlTable, primaryKey, unique, index, varchar, tinyint, timestamp, decimal } from "drizzle-orm/mysql-core"
+
+export const sysMemberRecharge = mysqlTable("sys_member_recharge", {
+	id: varchar({ length: 36 }).notNull(),
+	outTradeNo: varchar("out_trade_no", { length: 64 }).notNull(),
+	userId: varchar("user_id", { length: 36 }).notNull(),
+	amount: decimal({ precision: 12, scale: 2 }).notNull(),
+	giftAmount: decimal("gift_amount", { precision: 12, scale: 2 }).default('0.00').notNull(),
+	discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default('0.00').notNull(),
+	payAmount: decimal("pay_amount", { precision: 12, scale: 2 }).notNull(),
+	couponId: varchar("coupon_id", { length: 36 }),
+	couponCode: varchar("coupon_code", { length: 32 }),
+	status: varchar({ length: 10 }).default('WP').notNull(),
+	payOrderId: varchar("pay_order_id", { length: 36 }),
+	payChannelCode: varchar("pay_channel_code", { length: 30 }),
+	paidAt: timestamp("paid_at", { mode: 'string' }),
+	creditedAt: timestamp("credited_at", { mode: 'string' }),
+	expireAt: timestamp("expire_at", { mode: 'string' }),
+	failReason: varchar("fail_reason", { length: 500 }),
+	remark: varchar({ length: 255 }),
+	createdBy: varchar("created_by", { length: 36 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedBy: varchar("updated_by", { length: 36 }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	isDeleted: tinyint("is_deleted").default(0),
+},
+(table) => [
+	index("idx_member_recharge_status").on(table.status, table.createdAt),
+	index("idx_member_recharge_user").on(table.userId, table.createdAt),
+	primaryKey({ columns: [table.id], name: "sys_member_recharge_id" }),
+	unique("uk_member_recharge_out").on(table.outTradeNo),
+]);
