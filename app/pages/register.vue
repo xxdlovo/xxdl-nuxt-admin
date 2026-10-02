@@ -24,7 +24,9 @@ const form = reactive({
   phone: '',
   username: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  /** 邀请码（选填）：注册时绑定单级邀请关系并获得注册赠金 */
+  inviteCode: ''
 })
 
 const isDarkMode = computed(() => colorMode.value === 'dark')
@@ -41,6 +43,9 @@ const text = computed(() => {
     username: $ts('form.userName.required'),
     password: $ts('page.login.common.passwordPlaceholder'),
     confirmPassword: $ts('page.login.common.confirmPasswordPlaceholder'),
+    inviteCode: $ts('page.login.register.inviteCode'),
+    inviteCodePlaceholder: $ts('page.login.register.inviteCodePlaceholder'),
+    inviteCodeHelp: $ts('page.login.register.inviteCodeHelp'),
     submit: $ts('page.login.register.title'),
     back: $ts('page.login.common.back'),
     success: isZh ? '注册成功，请登录' : 'Registration successful. Please log in.',
@@ -84,7 +89,8 @@ async function handleRegister() {
       phone: form.phone,
       username: form.username,
       password: form.password,
-      confirmPassword: form.confirmPassword
+      confirmPassword: form.confirmPassword,
+      inviteCode: form.inviteCode.trim() || null
     })
     toast.add({
       title: text.value.success,
@@ -97,6 +103,13 @@ async function handleRegister() {
 }
 
 onMounted(async () => {
+  // 邀请链接（/register?inviteCode=XXXX）自动带入，减少手填错误
+  const fromQuery = useRoute().query.inviteCode
+
+  if (typeof fromQuery === 'string' && fromQuery.trim()) {
+    form.inviteCode = fromQuery.trim()
+  }
+
   try {
     const value = await getConfigValue(systemRegisterEnum.key, systemRegisterEnum.no)
     enableReg.value = value === systemRegisterEnum.yes
@@ -219,6 +232,18 @@ onMounted(async () => {
               />
             </template>
           </UInput>
+
+          <UInput
+            v-model="form.inviteCode"
+            icon="i-lucide-ticket"
+            :aria-label="text.inviteCode"
+            :placeholder="text.inviteCodePlaceholder"
+            size="lg"
+            variant="outline"
+            class="w-full"
+          />
+
+          <p class="-mt-2 text-xs text-muted">{{ text.inviteCodeHelp }}</p>
 
           <UButton type="submit" block :loading="loading" size="lg" class="min-h-[2.55rem] rounded-full font-semibold">
             {{ text.submit }}

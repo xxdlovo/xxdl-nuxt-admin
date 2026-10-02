@@ -1727,7 +1727,10 @@
         "disabled": "Registration is currently disabled.",
         "agreement": "I have read and agree to",
         "protocol": "《User Agreement》",
-        "policy": "《Privacy Policy》"
+        "policy": "《Privacy Policy》",
+        "inviteCode": "Invite code",
+        "inviteCodePlaceholder": "Invite code (optional)",
+        "inviteCodeHelp": "Enter a valid invite code to receive the sign-up bonus"
       },
       "resetPwd": {
         "title": "Reset Password"
