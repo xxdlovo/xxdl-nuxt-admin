@@ -112,3 +112,77 @@ export const payNotifyResultConfig: Readonly<Record<string, BadgeConfig>> = {
     ip_blocked: { i18nKey: 'module.system.payNotifyLog.result.ipBlocked', color: 'error' },
     error: { i18nKey: 'module.system.payNotifyLog.result.error', color: 'error' }
 }
+
+// ── 会员 / 余额 ──────────────────────────────────────────────────────────
+
+/** 会员状态徽标（与 sys_member.status 一致） */
+export const memberStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    '0': { i18nKey: 'module.system.member.status.disabled', color: 'neutral' },
+    '1': { i18nKey: 'module.system.member.status.enabled', color: 'success' }
+}
+
+/** 余额账户（双账） */
+export const memberAccountRecord: Record<string, string> = {
+    recharge: 'module.system.member.account.recharge',
+    gift: 'module.system.member.account.gift'
+}
+
+/** 资金方向 */
+export const memberDirectionRecord: Record<string, string> = {
+    in: 'module.system.member.direction.in',
+    out: 'module.system.member.direction.out'
+}
+
+/** 余额流水业务类型 */
+export const memberBizTypeRecord: Record<string, string> = {
+    recharge: 'module.system.member.bizType.recharge',
+    register_bonus: 'module.system.member.bizType.registerBonus',
+    gift_system: 'module.system.member.bizType.giftSystem',
+    gift_campaign: 'module.system.member.bizType.giftCampaign',
+    adjust: 'module.system.member.bizType.adjust',
+    consume_confirm: 'module.system.member.bizType.consumeConfirm',
+    gift_expire: 'module.system.member.bizType.giftExpire'
+}
+
+/** 赠送金来源 */
+export const memberGiftSourceRecord: Record<string, string> = {
+    register: 'module.system.member.giftSource.register',
+    system: 'module.system.member.giftSource.system',
+    campaign: 'module.system.member.giftSource.campaign'
+}
+
+/** 消费冻结单状态徽标 */
+export const memberFreezeStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    FROZEN: { i18nKey: 'module.system.memberFreeze.status.frozen', color: 'warning' },
+    CONFIRMED: { i18nKey: 'module.system.memberFreeze.status.confirmed', color: 'success' },
+    RELEASED: { i18nKey: 'module.system.memberFreeze.status.released', color: 'neutral' },
+    EXPIRED: { i18nKey: 'module.system.memberFreeze.status.expired', color: 'neutral' }
+}
+
+/** 充值单状态徽标（与 sys_member_recharge.status 一致） */
+export const memberRechargeStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    WP: { i18nKey: 'module.system.memberRecharge.status.pending', color: 'warning' },
+    OD: { i18nKey: 'module.system.memberRecharge.status.credited', color: 'success' },
+    CL: { i18nKey: 'module.system.memberRecharge.status.closed', color: 'neutral' },
+    FL: { i18nKey: 'module.system.memberRecharge.status.failed', color: 'error' }
+}
+
+/** 优惠码类型 */
+export const memberCouponTypeRecord: Record<string, string> = {
+    amount: 'module.system.memberCoupon.type.amount',
+    rate: 'module.system.memberCoupon.type.rate'
+}
+
+/** 优惠码适用场景 */
+export const memberCouponSceneRecord: Record<string, string> = {
+    all: 'module.system.memberCoupon.scene.all',
+    recharge: 'module.system.memberCoupon.scene.recharge',
+    consume: 'module.system.memberCoupon.scene.consume'
+}
+
+/** 优惠码使用记录状态徽标 */
+export const memberCouponUseStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    locked: { i18nKey: 'module.system.memberCoupon.useStatus.locked', color: 'warning' },
+    used: { i18nKey: 'module.system.memberCoupon.useStatus.used', color: 'success' },
+    released: { i18nKey: 'module.system.memberCoupon.useStatus.released', color: 'neutral' }
+}

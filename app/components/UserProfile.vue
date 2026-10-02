@@ -19,6 +19,12 @@ const items = computed(() => [[
     label: $ts('common.userCenter'),
     icon: 'i-lucide-id-card',
     to: '/system/user/profile'
+  },
+  {
+    // 会员自助：余额、充值、流水与邀请码
+    label: $ts('module.system.wallet.title'),
+    icon: 'i-lucide-wallet',
+    to: '/system/wallet'
   }
 ], [
   {

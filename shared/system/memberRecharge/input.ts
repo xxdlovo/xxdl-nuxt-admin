@@ -67,6 +67,15 @@ export const SysMemberRechargeCreateSchema = z.object({
 })
 export type SysMemberRechargeCreateDTO = z.infer<typeof SysMemberRechargeCreateSchema>
 
+/**
+ * 按商户单号定位充值单（自助查询到账状态 / 主动同步用）。
+ * 归属校验在服务端按当前登录用户做，前端只传单号。
+ */
+export const SysMemberRechargeOutTradeNoSchema = z.object({
+    outTradeNo: z.string().min(1, 'form.required').max(64, 'form.required'),
+})
+export type SysMemberRechargeOutTradeNoDTO = z.infer<typeof SysMemberRechargeOutTradeNoSchema>
+
 /** 关闭充值单：未支付/发起失败的单据置为 CD，reason 写入备注 */
 export const SysMemberRechargeCloseSchema = z.object({
     id: z.string().nonempty('form.id.required'),
