@@ -98,6 +98,99 @@ export const sysUserRepo = (ctx: Context) => {
         .update(sysUser)
         .set({ password })
         .where(eq(sysUser.id, id))
+    },
+
+    /** 按 id 取未软删用户（第三方登录绑定流程用，不走数据权限过滤） */
+    async getActiveById(id: string) {
+      const rows = await ctx.db
+        .select()
+        .from(sysUser)
+        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return rows[0] ?? null
+    },
+
+    /** 按邮箱取未软删用户（邮箱在库中唯一） */
+    async getActiveByEmail(email: string) {
+      const rows = await ctx.db
+        .select()
+        .from(sysUser)
+        .where(and(eq(sysUser.email, email), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return rows[0] ?? null
+    },
+
+    /** 用户名是否已被占用 */
+    async existsUsername(username: string) {
+      const rows = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(eq(sysUser.username, username))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
+    /** 新建用户（第三方首次登录建号用：密码写入占位标记） */
+    async createUser(values: typeof sysUser.$inferInsert) {
+      return await ctx.db.insert(sysUser).values(values)
+    },
+
+    /** 用户名是否已存在（注册查重） */
+    async existsByUsername(username: string) {
+      const rows = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(eq(sysUser.username, username))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
+    /** 手机号是否已存在（注册查重） */
+    async existsByPhone(phone: string) {
+      const rows = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(eq(sysUser.phone, phone))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
+    /** 只取所属部门 id（保存后回读校验用） */
+    async getDeptIdById(id: string) {
+      const rows = await ctx.db
+        .select({ deptId: sysUser.deptId })
+        .from(sysUser)
+        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return rows[0]?.deptId ?? null
+    },
+
+    /** 只取密码列（判断是否已设置过真实密码，避免把哈希暴露给调用方） */
+    async getPasswordById(id: string) {
+      const rows = await ctx.db
+        .select({ password: sysUser.password })
+        .from(sysUser)
+        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return rows[0]?.password ?? null
+    },
+
+    /** 登录用：按用户名取未软删用户（含密码，仅登录流程使用） */
+    async getLoginUserByUsername(username: string) {
+      const rows = await ctx.db
+        .select()
+        .from(sysUser)
+        .where(and(eq(sysUser.username, username), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return rows[0] ?? null
     }
   }
 }

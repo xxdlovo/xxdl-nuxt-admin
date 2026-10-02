@@ -1,6 +1,6 @@
 //#server/sys-router/oauthAccount
 import { router, proc, protectedProcedure } from '~~/server/trpc/init'
-import { AppError } from '#server/utils/appError'
+import { requireLogin } from '#server/utils/routeGuard'
 import { sysOauthAccountService } from './SysOauthAccountService'
 import z from 'zod'
 import {
@@ -53,9 +53,6 @@ export const sysOauthAccountRouter = router({
         }),
     removeMyBinding: protectedProcedure.input(z.string())
         .mutation(async ({ ctx, input }) => {
-            if (!ctx.user) {
-                throw new AppError('auth.unauthorized')
-            }
-            return sysOauthAccountService(ctx).removeMyBinding(input, ctx.user.id)
+            return sysOauthAccountService(ctx).removeMyBinding(input, requireLogin(ctx).id)
         })
 })

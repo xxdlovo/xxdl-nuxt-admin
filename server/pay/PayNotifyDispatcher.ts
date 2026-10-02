@@ -3,15 +3,17 @@
  *
  * 真实回调（/api/pay/notify/{channel}）与本地模拟回调（测试界面）共用这里的实现，
  * 保证两条链路的行为完全一致。
+ *
+ * 数据访问全部走 repo/payOrderRepo、repo/payNotifyLogRepo（mapper 层），本文件只做业务判断。
  */
 import { createHash } from 'node:crypto'
-import { and, eq, ne, sql } from 'drizzle-orm'
-import { sysPayNotifyLog, sysPayOrder } from '#server/drizzle/schema'
 import { AppError } from '#server/utils/appError'
 import { randomUuid } from '#shared/utils/uuid'
 import { buildEnvFallbackChannel, listEnabledChannelsByCode } from './PayChannelResolver'
 import type { PayDb } from './db'
 import { getPayProvider } from './providers'
+import { payNotifyLogRepo, type PayNotifyLogInsert } from './repo/payNotifyLogRepo'
+import { payOrderRepo } from './repo/payOrderRepo'
 import { canApplyStatusChange, isPaidStatus } from './statusMap'
 import {
   PaySignError,
@@ -37,11 +39,6 @@ export type PayNotifyOutcome = {
   response: PayNotifyResponse
 }
 
-function affectedRows(result: unknown) {
-  const first = Array.isArray(result) ? result[0] : result
-  return Number((first as { affectedRows?: number } | undefined)?.affectedRows ?? 0)
-}
-
 function sha256(value: string) {
   return createHash('sha256').update(value, 'utf8').digest('hex')
 }
@@ -60,12 +57,15 @@ function textResponse(statusCode: number, body: string): PayNotifyResponse {
 }
 
 export function payNotifyDispatcher(db: PayDb) {
-  type LogInsert = typeof sysPayNotifyLog.$inferInsert
+  const orderRepo = payOrderRepo(db)
+  const logRepo = payNotifyLogRepo(db)
+
+  type LogInsert = PayNotifyLogInsert
 
   /** 日志失败不能影响回调响应，否则平台会一直重试；重复键（幂等命中）属于预期，静默忽略 */
   async function writeLog(values: LogInsert) {
     try {
-      await db.insert(sysPayNotifyLog).values(values)
+      await logRepo.insert(values)
     } catch {
       // 忽略：写入失败不影响回调处理结果
     }
@@ -129,33 +129,6 @@ export function payNotifyDispatcher(db: PayDb) {
     }
 
     return null
-  }
-
-  async function findOrder(outTradeNo: string): Promise<PayOrderRow | null> {
-    const rows = await db
-      .select()
-      .from(sysPayOrder)
-      .where(and(eq(sysPayOrder.outTradeNo, outTradeNo), eq(sysPayOrder.isDeleted, 0)))
-      .limit(1)
-
-    return rows[0] ?? null
-  }
-
-  async function isEventProcessed(dedupKey: string) {
-    const rows = await db
-      .select({ id: sysPayNotifyLog.id })
-      .from(sysPayNotifyLog)
-      .where(eq(sysPayNotifyLog.dedupKey, dedupKey))
-      .limit(1)
-
-    return Boolean(rows[0])
-  }
-
-  async function bumpNotifyCount(orderId: string, now: string) {
-    await db
-      .update(sysPayOrder)
-      .set({ notifyCount: sql`${sysPayOrder.notifyCount} + 1`, lastNotifyAt: now })
-      .where(eq(sysPayOrder.id, orderId))
   }
 
   async function handleNotify(
@@ -236,7 +209,7 @@ export function payNotifyDispatcher(db: PayDb) {
     }
 
     // 2) 订单必须存在，否则只记日志（订单稍后创建由主动查询补齐）
-    const order = await findOrder(result.outTradeNo)
+    const order = await orderRepo.findByOutTradeNo(result.outTradeNo)
 
     if (!order) {
       await writeLog({
@@ -284,8 +257,8 @@ export function payNotifyDispatcher(db: PayDb) {
     if (result.status === 'OD') {
       const previousStatus = order.status
 
-      if (await isEventProcessed(result.dedupKey)) {
-        await bumpNotifyCount(order.id, now)
+      if (await logRepo.existsByDedupKey(result.dedupKey)) {
+        await orderRepo.applyNotifyCountUpdate(order.id, { lastNotifyAt: now })
         await writeLog({
           ...resultLog,
           status: previousStatus,
@@ -300,21 +273,16 @@ export function payNotifyDispatcher(db: PayDb) {
         }
       }
 
-      const updateResult: unknown = await db
-        .update(sysPayOrder)
-        .set({
-          status: 'OD',
-          paidAt: result.paidAt || now,
-          lastNotifyAt: now,
-          notifyCount: sql`${sysPayOrder.notifyCount} + 1`,
-          providerStatus: result.providerStatus ?? null,
-          providerOrderId: result.providerOrderId || order.providerOrderId,
-          transactionId: result.transactionId || order.transactionId,
-          providerData: mergeProviderData(order.providerData, 'lastNotify', result.raw) as object | null
-        })
-        .where(and(eq(sysPayOrder.id, order.id), ne(sysPayOrder.status, 'OD')))
+      const affected = await orderRepo.markPaidIfPending(order.id, {
+        paidAt: result.paidAt || now,
+        lastNotifyAt: now,
+        providerStatus: result.providerStatus ?? null,
+        providerOrderId: result.providerOrderId || order.providerOrderId,
+        transactionId: result.transactionId || order.transactionId,
+        providerData: mergeProviderData(order.providerData, 'lastNotify', result.raw)
+      })
 
-      if (affectedRows(updateResult) === 0) {
+      if (affected === 0) {
         await writeLog({
           ...resultLog,
           status: previousStatus,
@@ -334,7 +302,7 @@ export function payNotifyDispatcher(db: PayDb) {
         : 'success'
 
       try {
-        await db.insert(sysPayNotifyLog).values({
+        await logRepo.insert({
           ...resultLog,
           dedupKey: result.dedupKey,
           processResult,
@@ -362,20 +330,15 @@ export function payNotifyDispatcher(db: PayDb) {
     }
 
     // 5) 非支付成功通知：只同步平台状态，不改变资金结论
-    const updates: Record<string, unknown> = {
+    const statusChange = canApplyStatusChange(order.status, result.status)
+
+    await orderRepo.applyNotifyCountUpdate(order.id, {
       lastNotifyAt: now,
-      notifyCount: sql`${sysPayOrder.notifyCount} + 1`,
-      providerStatus: result.providerStatus ?? order.providerStatus
-    }
+      providerStatus: result.providerStatus ?? order.providerStatus,
+      ...(statusChange ? { status: result.status } : {}),
+      ...(statusChange && result.status === 'CD' ? { cancelledAt: now } : {})
+    })
 
-    if (canApplyStatusChange(order.status, result.status)) {
-      updates.status = result.status
-      if (result.status === 'CD') {
-        updates.cancelledAt = now
-      }
-    }
-
-    await db.update(sysPayOrder).set(updates).where(eq(sysPayOrder.id, order.id))
     await writeLog(resultLog)
 
     return {
@@ -387,13 +350,7 @@ export function payNotifyDispatcher(db: PayDb) {
 
   /** 本地模拟支付成功：用配置里的密钥现算签名，走与真实回调完全相同的处理链路 */
   async function simulatePaid(orderId: string, meta: PayNotifyMeta = {}): Promise<PayNotifyOutcome> {
-    const rows = await db
-      .select()
-      .from(sysPayOrder)
-      .where(and(eq(sysPayOrder.id, orderId), eq(sysPayOrder.isDeleted, 0)))
-      .limit(1)
-
-    const order = rows[0]
+    const order = await orderRepo.findById(orderId)
 
     if (!order) {
       throw new AppError('common.notExist')

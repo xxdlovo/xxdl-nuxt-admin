@@ -12,8 +12,9 @@ import type {
 import { randomUuid } from '#shared/utils/uuid'
 import { sysConfigService } from '#server/sys-router/config/SysConfigService'
 import { systemRegisterEnum, OAUTH_PLACEHOLDER_PASSWORD } from '#shared/constants/business'
-import { and, desc, eq } from 'drizzle-orm'
-import { sysOauthAccount, sysRole, sysUser, sysUserRole } from '#server/drizzle/schema'
+import { sysUserRepo } from '#server/sys-router/user/SysUserRepo'
+import { sysRoleRepo } from '#server/sys-router/role/SysRoleRepo'
+import { sysUserRoleRepo } from '#server/sys-router/userRole/SysUserRoleRepo'
 
 /** 第三方登录回调传入的、已归一化的用户资料 */
 export type OAuthLoginProfile = {
@@ -77,40 +78,25 @@ export type MyOauthBinding = {
 
 export function sysOauthAccountService(ctx: Context) {
     const repo = sysOauthAccountRepo(ctx)
+    const userRepo = sysUserRepo(ctx)
+    const roleRepo = sysRoleRepo(ctx)
+    const userRoleRepo = sysUserRoleRepo(ctx)
 
     /** 按 id 取未软删的系统用户 */
     async function findUserById(id: string) {
-        const rows = await ctx.db
-            .select()
-            .from(sysUser)
-            .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
-            .limit(1)
-
-        return rows[0] ?? null
+        return await userRepo.getActiveById(id)
     }
 
     /** 按邮箱取未软删的系统用户（邮箱在库中唯一） */
     async function findUserByEmail(email: string) {
-        const rows = await ctx.db
-            .select()
-            .from(sysUser)
-            .where(and(eq(sysUser.email, email), eq(sysUser.isDeleted, 0)))
-            .limit(1)
-
-        return rows[0] ?? null
+        return await userRepo.getActiveByEmail(email)
     }
 
     /** 生成不冲突的 username：与已有用户冲突时追加 _gh_{providerUserId} */
     async function resolveUsername(login: string, providerUserId: string) {
         const base = (login || `oauth_${providerUserId}`).trim().slice(0, 50)
 
-        const existing = await ctx.db
-            .select({ id: sysUser.id })
-            .from(sysUser)
-            .where(eq(sysUser.username, base))
-            .limit(1)
-
-        if (!existing[0]) {
+        if (!(await userRepo.existsUsername(base))) {
             return base
         }
 
@@ -119,44 +105,17 @@ export function sysOauthAccountService(ctx: Context) {
     }
 
     /** 首次建号时按配置分配默认角色；角色不存在或已禁用时跳过，不阻断登录 */
-    async function assignDefaultRole(userId: string, roleId?: string | null) {        if (!roleId) return
+    async function assignDefaultRole(userId: string, roleId?: string | null) {
+        if (!roleId) return
 
-        const roles = await ctx.db
-            .select({ id: sysRole.id })
-            .from(sysRole)
-            .where(and(
-                eq(sysRole.id, roleId),
-                eq(sysRole.status, 1),
-                eq(sysRole.isDeleted, 0)
-            ))
-            .limit(1)
-
-        if (!roles[0]) {
+        if (!(await roleRepo.findEnabledById(roleId))) {
             console.warn(`[oauth] 默认角色不存在或已禁用，跳过分配: ${roleId}`)
             return
         }
 
-        const linked = await ctx.db
-            .select({ id: sysUserRole.id })
-            .from(sysUserRole)
-            .where(and(
-                eq(sysUserRole.userId, userId),
-                eq(sysUserRole.roleId, roleId),
-                eq(sysUserRole.isDeleted, 0)
-            ))
-            .limit(1)
+        if (await userRoleRepo.existsLink(userId, roleId)) return
 
-        if (linked[0]) return
-
-        await ctx.db.insert(sysUserRole).values({
-            id: randomUuid(),
-            userId,
-            roleId,
-            status: 1,
-            createdBy: userId,
-            updatedBy: userId,
-            isDeleted: 0
-        })
+        await userRoleRepo.createLink(userId, roleId, userId)
     }
 
     /**
@@ -260,20 +219,7 @@ export function sysOauthAccountService(ctx: Context) {
                 throw new AppError('auth.unauthorized')
             }
 
-            const rows = await ctx.db
-                .select({
-                    id: sysOauthAccount.id,
-                    provider: sysOauthAccount.provider,
-                    providerLogin: sysOauthAccount.providerLogin,
-                    avatar: sysOauthAccount.avatar,
-                    createdAt: sysOauthAccount.createdAt
-                })
-                .from(sysOauthAccount)
-                .where(and(
-                    eq(sysOauthAccount.userId, userId),
-                    eq(sysOauthAccount.isDeleted, 0)
-                ))
-                .orderBy(desc(sysOauthAccount.createdAt))
+            const rows = await repo.listByUserId(userId)
 
             return rows.map(row => ({
                 id: row.id,
@@ -295,17 +241,9 @@ export function sysOauthAccountService(ctx: Context) {
                 throw new AppError('auth.unauthorized')
             }
 
-            const owned = await ctx.db
-                .select({ id: sysOauthAccount.id })
-                .from(sysOauthAccount)
-                .where(and(
-                    eq(sysOauthAccount.id, bindingId),
-                    eq(sysOauthAccount.userId, operatorUserId),
-                    eq(sysOauthAccount.isDeleted, 0)
-                ))
-                .limit(1)
+            const owned = await repo.findOwnedById(bindingId, operatorUserId)
 
-            if (!owned[0]) {
+            if (!owned) {
                 throw new AppError('auth.oauthBindingNotFound')
             }
 
@@ -383,7 +321,7 @@ export function sysOauthAccountService(ctx: Context) {
             const newUserId = randomUuid()
             const username = await resolveUsername(login ?? '', providerUserId)
 
-            await ctx.db.insert(sysUser).values({
+            await userRepo.createUser({
                 id: newUserId,
                 username,
                 // 不写随机哈希，而是写固定占位标记：这样能区分「从未设置过密码」与

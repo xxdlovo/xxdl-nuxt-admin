@@ -1,5 +1,3 @@
-import { asc, desc } from 'drizzle-orm'
-import { sysPayChannel } from '~~/server/drizzle/schema'
 import { sysPayChannelRepo } from './SysPayChannelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -13,6 +11,7 @@ import {
     maskConfigSecrets
 } from '#server/pay/crypto'
 import { getPayProvider, listPayProviderMetas } from '#server/pay/providers'
+import type { PayChannelRow } from '#server/pay/repo/payChannelRepo'
 import { nowForMysql, truncateText } from '#server/pay/utils'
 import type { PayProvider } from '#server/pay/types'
 import type {
@@ -25,7 +24,8 @@ import type {
 } from '#shared/system/payChannel'
 import { randomUuid } from '#shared/utils/uuid'
 
-type ChannelRow = typeof sysPayChannel.$inferSelect
+/** 渠道行类型直接取自 mapper，避免 Service 再依赖 drizzle schema */
+type ChannelRow = PayChannelRow
 
 function asConfigRecord(value: unknown): Record<string, unknown> {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -227,11 +227,7 @@ export function sysPayChannelService(ctx: Context) {
 
         async page(req: SysPayChannelPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            const result = await repo.page(page, pageSize, dto, [
-                desc(sysPayChannel.isDefault),
-                asc(sysPayChannel.sortOrder),
-                desc(sysPayChannel.createdAt)
-            ])
+            const result = await repo.page(page, pageSize, dto, repo.channelListOrder())
 
             return {
                 ...result,
@@ -240,7 +236,7 @@ export function sysPayChannelService(ctx: Context) {
         },
 
         async list(dto: SysPayChannelQueryDTO): Promise<SysPayChannelDto[]> {
-            const rows = await repo.list(dto, [desc(sysPayChannel.isDefault), asc(sysPayChannel.sortOrder)]) as ChannelRow[]
+            const rows = await repo.list(dto, repo.channelListOrder()) as ChannelRow[]
 
             return rows.map(maskRow)
         },

@@ -4,10 +4,9 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysRoleAddDTO, SysRoleDataScopeUpdateDTO, SysRoleDto, SysRolePageQueryDTO, SysRoleQueryDTO, SysRoleUpdateDTO } from "#shared/system/role";
 import { randomUuid } from "#shared/utils/uuid";
-import { and, eq } from 'drizzle-orm'
-import { sysRole, sysUserRole } from '#server/drizzle/schema'
 import type { RbacRole } from '#shared/auth'
 import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
+import { sysMenuService } from '#server/sys-router/menu/SysMenuService'
 
 type SysRoleDataScope = NonNullable<SysRoleDto['dataScope']>
 
@@ -99,24 +98,14 @@ export function sysRoleService(ctx: Context) {
          * Admin privilege is handled by the auth read model, not by faking extra roles here.
          */
         async listEnabledByUserId(userId: string): Promise<RbacRole[]> {
-            const roles = await ctx.db
-                .select({
-                    id: sysRole.id,
-                    name: sysRole.name,
-                    code: sysRole.code,
-                    dataScope: sysRole.dataScope
-                })
-                .from(sysUserRole)
-                .innerJoin(sysRole, eq(sysUserRole.roleId, sysRole.id))
-                .where(and(
-                    eq(sysUserRole.userId, userId),
-                    eq(sysUserRole.status, 1),
-                    eq(sysUserRole.isDeleted, 0),
-                    eq(sysRole.status, 1),
-                    eq(sysRole.isDeleted, 0)
-                ))
+            return await repo.listEnabledByUserId(userId)
+        },
 
-            return roles
+        /** 可分配的菜单（按菜单类型过滤，供角色授权弹窗使用） */
+        async listAssignableMenus(types: Array<0 | 1 | 2>) {
+            const menus = await sysMenuService(ctx).list({})
+
+            return menus.filter(menu => menu.type != null && types.includes(menu.type as 0 | 1 | 2))
         },
     }
 }

@@ -1,6 +1,9 @@
-import { sql } from 'drizzle-orm'
 import type { MySql2Database } from 'drizzle-orm/mysql2'
 import type * as schema from '#server/drizzle/schema'
+import { sysJobRunnerRepo } from './repo/sysJobRunnerRepo'
+
+/** 日志清理任务保留天数 */
+const LOG_RETENTION_DAYS = 30
 
 export type SysJobRunContext = {
   db: MySql2Database<typeof schema>
@@ -21,15 +24,14 @@ const cleanLogHandler: SysJobHandler = {
   name: 'Clean system logs',
   description: 'Soft delete system and job logs older than 30 days.',
   async run({ db }) {
-    const [systemLogResult, jobLogResult] = await Promise.all([
-      db.execute(sql`update sys_system_log set is_deleted = 1 where is_deleted = 0 and created_at < date_sub(now(), interval 30 day)`),
-      db.execute(sql`update sys_job_log set is_deleted = 1 where is_deleted = 0 and created_at < date_sub(now(), interval 30 day)`)
+    // 原生 SQL 全部收在 mapper（repo/sysJobRunnerRepo），handler 只负责编排与汇总结果
+    const repo = sysJobRunnerRepo(db)
+    const [systemLogAffectedRows, jobLogAffectedRows] = await Promise.all([
+      repo.softDeleteSystemLogsOlderThan(LOG_RETENTION_DAYS),
+      repo.softDeleteJobLogsOlderThan(LOG_RETENTION_DAYS)
     ])
 
-    return {
-      systemLogAffectedRows: Number((systemLogResult[0] as { affectedRows?: number })?.affectedRows ?? 0),
-      jobLogAffectedRows: Number((jobLogResult[0] as { affectedRows?: number })?.affectedRows ?? 0)
-    }
+    return { systemLogAffectedRows, jobLogAffectedRows }
   }
 }
 

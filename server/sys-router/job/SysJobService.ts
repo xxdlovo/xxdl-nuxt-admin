@@ -1,10 +1,8 @@
-import { desc } from 'drizzle-orm'
 import type { Context } from '#server/trpc/context'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import { AppError } from '#server/utils/appError'
 import type { SysJobAddDTO, SysJobDto, SysJobPageQueryDTO, SysJobQueryDTO, SysJobUpdateDTO } from '#shared/system/job'
 import { randomUuid } from '#shared/utils/uuid'
-import { sysJob } from '#server/drizzle/schema'
 import { assertValidCron, formatMysqlDate, nextRunAt } from './cron'
 import { hasSysJobHandler, listSysJobHandlers } from './handlers'
 import { sysJobRepo } from './SysJobRepo'
@@ -92,7 +90,7 @@ export function sysJobService(ctx: Context) {
       return repo.page(page, pageSize, dto)
     },
     async list(dto: SysJobQueryDTO): Promise<SysJobDto[]> {
-      return repo.list(dto, [desc(sysJob.createdAt)])
+      return repo.listRecent(dto)
     },
     availableHandlers() {
       return listSysJobHandlers()

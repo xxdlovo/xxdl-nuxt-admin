@@ -4,8 +4,6 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysOssAddDTO, SysOssDto, SysOssPageQueryDTO, SysOssQueryDTO, SysOssUpdateDTO } from "#shared/system/oss";
 import { randomUuid } from "#shared/utils/uuid";
-import { desc } from 'drizzle-orm'
-import { sysOss } from '#server/drizzle/schema'
 import { createHash } from 'node:crypto'
 import { sysOssConfigRepo } from '#server/sys-router/ossConfig/SysOssConfigRepo'
 import { getOssProvider } from '#server/sys-router/ossConfig/providers'
@@ -22,7 +20,7 @@ export function sysOssService(ctx: Context) {
     const repo = sysOssRepo(ctx)
     const configRepo = sysOssConfigRepo(ctx)
 
-    return {
+    const service = {
         async create(data: SysOssAddDTO): Promise<boolean> {
             const uuid = randomUuid()
             const pojo = { ...data, id: uuid }
@@ -53,10 +51,10 @@ export function sysOssService(ctx: Context) {
         },
         async page(req: SysOssPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto, [desc(sysOss.createdAt)])
+            return await repo.pageRecent(page, pageSize, dto)
         },
         async list(dto: any): Promise<SysOssDto[]> {
-            return await repo.list(dto, [desc(sysOss.createdAt)])
+            return await repo.listRecent(dto)
         },
         async listUploadConfigs() {
             return await configRepo.listUploadable()
@@ -113,5 +111,32 @@ export function sysOssService(ctx: Context) {
             await repo.createUploadRecord(record)
             return record
         },
+
+        /**
+         * 头像上传：图片类型校验 + 默认存储配置解析都收在 Service，
+         * 路由只负责鉴权与 multipart 解析。
+         */
+        async uploadAvatar(input: Omit<SysOssUploadFileInput, 'configId'>): Promise<SysOssDto> {
+            const contentType = input.contentType || 'application/octet-stream'
+
+            if (!contentType.startsWith('image/')) {
+                throw new AppError('module.system.oss.uploadFileRequired')
+            }
+
+            const config = await service.getDefaultUploadConfig()
+
+            if (!config?.id) {
+                throw new AppError('module.system.oss.uploadConfigUnavailable')
+            }
+
+            return await service.uploadFile({
+                configId: config.id,
+                fileName: input.fileName,
+                contentType,
+                body: input.body
+            })
+        }
     }
+
+    return service
 }

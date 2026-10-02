@@ -11,27 +11,17 @@ import type {
     SysOauthEnabledPlatformDTO
 } from '#shared/system/oauthConfig'
 import { randomUuid } from '#shared/utils/uuid'
-import { and, asc, eq, sql } from 'drizzle-orm'
-import { sysOauthConfig } from '#server/drizzle/schema'
 
 export function sysOauthConfigService(ctx: Context) {
     const repo = sysOauthConfigRepo(ctx)
 
     /**
      * 取全部「已启用且未删除」的平台配置，按 sortOrder 升序。
-     * 走 ctx.db 直查而不用 CommonRepo，避免数据权限/默认过滤干扰登录流程。
+     * 查询细节在 SysOauthConfigRepo.listEnabled（不走 CommonRepo 的通用过滤，
+     * 避免数据权限/默认过滤干扰登录流程）。
      */
     async function listEnabledRows(): Promise<SysOauthConfigDto[]> {
-        const rows = await ctx.db
-            .select()
-            .from(sysOauthConfig)
-            .where(and(
-                eq(sysOauthConfig.status, 1),
-                eq(sysOauthConfig.isDeleted, 0)
-            ))
-            .orderBy(asc(sysOauthConfig.sortOrder))
-
-        return rows as SysOauthConfigDto[]
+        return await repo.listEnabled() as SysOauthConfigDto[]
     }
 
     return {
@@ -73,23 +63,12 @@ export function sysOauthConfigService(ctx: Context) {
 
         /**
          * 按 platform 取启用中的配置（含 clientSecret，仅服务端 OAuth 回调使用）。
-         * 用 LOWER() 比对，平台列被填成 GITHUB / GitHub 时同样能命中。
+         * 平台列大小写不敏感（GITHUB / GitHub 都能命中）。
          */
         async getEnabledByPlatform(platform: string): Promise<SysOauthConfigDto | null> {
-            const normalized = platform.trim().toLowerCase()
-            if (!normalized) return null
+            const row = await repo.findEnabledByPlatform(platform)
 
-            const rows = await ctx.db
-                .select()
-                .from(sysOauthConfig)
-                .where(and(
-                    sql`LOWER(${sysOauthConfig.platform}) = ${normalized}`,
-                    eq(sysOauthConfig.status, 1),
-                    eq(sysOauthConfig.isDeleted, 0)
-                ))
-                .limit(1)
-
-            return (rows[0] as SysOauthConfigDto | undefined) ?? null
+            return (row as SysOauthConfigDto | undefined) ?? null
         },
 
         /**

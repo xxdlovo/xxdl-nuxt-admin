@@ -1,10 +1,9 @@
-import { eq } from 'drizzle-orm'
 import { useDb } from '#server/drizzle/db'
-import { sysJob, sysJobLog } from '#server/drizzle/schema'
 import { AppError } from '#server/utils/appError'
 import { randomUuid } from '#shared/utils/uuid'
 import { formatMysqlDate, nextRunAt } from './cron'
 import { getSysJobHandler } from './handlers'
+import { sysJobRunnerRepo } from './repo/sysJobRunnerRepo'
 
 export type SysJobTriggerType = 'schedule' | 'manual'
 
@@ -21,15 +20,18 @@ function errorStack(error: unknown) {
   return error instanceof Error ? error.stack : undefined
 }
 
+/**
+ * 执行一次任务。
+ *
+ * 该函数同时被 tRPC（手动触发）与 nitro 任务调度（定时触发）调用，
+ * 没有 tRPC Context，因此数据访问统一走 repo/sysJobRunnerRepo（db 版 mapper）。
+ */
 export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
   const db = useDb()
-  const jobs = await db
-    .select()
-    .from(sysJob)
-    .where(eq(sysJob.id, jobId))
-    .limit(1)
+  const repo = sysJobRunnerRepo(db)
 
-  const job = jobs[0]
+  const job = await repo.findJobById(jobId)
+
   if (!job || job.isDeleted === 1) {
     throw new AppError('common.notExist')
   }
@@ -47,7 +49,7 @@ export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
   const startedAt = formatMysqlDate(started)
   const logId = randomUuid()
 
-  await db.insert(sysJobLog).values({
+  await repo.insertJobLog({
     id: logId,
     jobId: job.id,
     jobName: job.jobName,
@@ -62,13 +64,11 @@ export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
     isDeleted: 0
   })
 
-  await db.update(sysJob)
-    .set({
-      runningStatus: 1,
-      lastRunAt: startedAt,
-      updatedBy: null
-    })
-    .where(eq(sysJob.id, job.id))
+  await repo.updateJobById(job.id, {
+    runningStatus: 1,
+    lastRunAt: startedAt,
+    updatedBy: null
+  })
 
   try {
     const result = await handler.run({
@@ -82,26 +82,22 @@ export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
     const durationMs = finished.getTime() - started.getTime()
     const nextRun = job.status === 1 ? formatMysqlDate(nextRunAt(job.cronExpression, finished)) : null
 
-    await db.update(sysJobLog)
-      .set({
-        status: 1,
-        finishedAt,
-        durationMs,
-        result,
-        updatedBy: null
-      })
-      .where(eq(sysJobLog.id, logId))
+    await repo.updateJobLogById(logId, {
+      status: 1,
+      finishedAt,
+      durationMs,
+      result,
+      updatedBy: null
+    })
 
-    await db.update(sysJob)
-      .set({
-        runningStatus: 0,
-        lastSuccessAt: finishedAt,
-        lastDurationMs: durationMs,
-        lastError: null,
-        nextRunAt: nextRun,
-        updatedBy: null
-      })
-      .where(eq(sysJob.id, job.id))
+    await repo.updateJobById(job.id, {
+      runningStatus: 0,
+      lastSuccessAt: finishedAt,
+      lastDurationMs: durationMs,
+      lastError: null,
+      nextRunAt: nextRun,
+      updatedBy: null
+    })
 
     return { logId, status: 'success', result }
   } catch (error) {
@@ -111,27 +107,23 @@ export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
     const nextRun = job.status === 1 ? formatMysqlDate(nextRunAt(job.cronExpression, finished)) : null
     const message = errorMessage(error)
 
-    await db.update(sysJobLog)
-      .set({
-        status: 2,
-        finishedAt,
-        durationMs,
-        errorMessage: message,
-        errorStack: errorStack(error),
-        updatedBy: null
-      })
-      .where(eq(sysJobLog.id, logId))
+    await repo.updateJobLogById(logId, {
+      status: 2,
+      finishedAt,
+      durationMs,
+      errorMessage: message,
+      errorStack: errorStack(error),
+      updatedBy: null
+    })
 
-    await db.update(sysJob)
-      .set({
-        runningStatus: 0,
-        lastFailAt: finishedAt,
-        lastDurationMs: durationMs,
-        lastError: message,
-        nextRunAt: nextRun,
-        updatedBy: null
-      })
-      .where(eq(sysJob.id, job.id))
+    await repo.updateJobById(job.id, {
+      runningStatus: 0,
+      lastFailAt: finishedAt,
+      lastDurationMs: durationMs,
+      lastError: message,
+      nextRunAt: nextRun,
+      updatedBy: null
+    })
 
     throw error
   }

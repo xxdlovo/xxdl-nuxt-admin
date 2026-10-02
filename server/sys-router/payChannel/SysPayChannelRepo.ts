@@ -1,4 +1,4 @@
-import { and, eq, ne } from 'drizzle-orm'
+import { and, asc, desc, eq, ne } from 'drizzle-orm'
 import { CommonRepo } from '#server/drizzle/CommonRepo'
 import { sysPayChannel } from '~~/server/drizzle/schema'
 import { SysPayChannelBaseSchema } from '#shared/system/payChannel/common'
@@ -35,6 +35,11 @@ export const sysPayChannelRepo = (ctx: Context) => {
           eq(sysPayChannel.isDeleted, 0),
           ne(sysPayChannel.id, excludeId)
         ))
+    },
+
+    /** 渠道列表排序：默认渠道优先 → sortOrder 升序 → 创建时间倒序 */
+    channelListOrder() {
+      return [desc(sysPayChannel.isDefault), asc(sysPayChannel.sortOrder), desc(sysPayChannel.createdAt)]
     }
   }
 }

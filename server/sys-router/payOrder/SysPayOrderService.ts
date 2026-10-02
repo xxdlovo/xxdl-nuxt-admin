@@ -1,5 +1,3 @@
-import { and, desc, eq } from 'drizzle-orm'
-import { sysPayNotifyLog, sysPayOrder } from '~~/server/drizzle/schema'
 import { sysPayOrderRepo } from './SysPayOrderRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -67,7 +65,7 @@ export function sysPayOrderService(ctx: Context) {
             })
         },
         async list(dto: SysPayOrderQueryDTO): Promise<SysPayOrderDto[]> {
-            const rows = await repo.list(dto, [desc(sysPayOrder.createdAt)])
+            const rows = await repo.listRecent(dto)
             return rows as SysPayOrderDto[]
         },
 
@@ -87,15 +85,7 @@ export function sysPayOrderService(ctx: Context) {
 
         /** 某笔订单的回调 / 查询日志时间线 */
         async notifyLogs(orderId: string) {
-            return await ctx.db
-                .select()
-                .from(sysPayNotifyLog)
-                .where(and(
-                    eq(sysPayNotifyLog.orderId, orderId),
-                    eq(sysPayNotifyLog.isDeleted, 0)
-                ))
-                .orderBy(desc(sysPayNotifyLog.createdAt))
-                .limit(200)
+            return await repo.listNotifyLogsByOrderId(orderId)
         }
     }
 }

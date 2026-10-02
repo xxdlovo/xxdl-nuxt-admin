@@ -1,7 +1,7 @@
 import { CommonRepo } from "#server/drizzle/CommonRepo"
 import type { Context } from "#server/trpc/context"
 import { SysOauthAccountBaseSchema } from "#shared/system/oauthAccount"
-import { and, eq, inArray } from "drizzle-orm"
+import { and, desc, eq, inArray } from "drizzle-orm"
 import { sysOauthAccount } from "~~/server/drizzle/schema"
 
 const commonRepo = CommonRepo(sysOauthAccount, SysOauthAccountBaseSchema)
@@ -91,6 +91,39 @@ export const sysOauthAccountRepo = (ctx: Context) => {
       if (ids.length === 0) return 0
       await ctx.db.delete(sysOauthAccount).where(inArray(sysOauthAccount.id, ids))
       return ids.length
+    },
+
+    /** 某用户自己的绑定列表（创建时间倒序） */
+    async listByUserId(userId: string) {
+      return await ctx.db
+        .select({
+          id: sysOauthAccount.id,
+          provider: sysOauthAccount.provider,
+          providerLogin: sysOauthAccount.providerLogin,
+          avatar: sysOauthAccount.avatar,
+          createdAt: sysOauthAccount.createdAt
+        })
+        .from(sysOauthAccount)
+        .where(and(
+          eq(sysOauthAccount.userId, userId),
+          eq(sysOauthAccount.isDeleted, 0)
+        ))
+        .orderBy(desc(sysOauthAccount.createdAt))
+    },
+
+    /** 归属指定用户的绑定（解绑前的归属校验） */
+    async findOwnedById(bindingId: string, userId: string) {
+      const rows = await ctx.db
+        .select({ id: sysOauthAccount.id })
+        .from(sysOauthAccount)
+        .where(and(
+          eq(sysOauthAccount.id, bindingId),
+          eq(sysOauthAccount.userId, userId),
+          eq(sysOauthAccount.isDeleted, 0)
+        ))
+        .limit(1)
+
+      return rows[0] ?? null
     }
   }
 }

@@ -107,6 +107,34 @@ export const sysUserRoleRepo = (ctx: Context) => {
         createdBy: operatorId,
         updatedBy: operatorId
       })))
+    },
+
+    /** 用户是否已关联该角色（未软删） */
+    async existsLink(userId: string, roleId: string) {
+      const rows = await ctx.db
+        .select({ id: sysUserRole.id })
+        .from(sysUserRole)
+        .where(and(
+          eq(sysUserRole.userId, userId),
+          eq(sysUserRole.roleId, roleId),
+          eq(sysUserRole.isDeleted, 0)
+        ))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
+    /** 建立一条用户-角色关联（第三方首次登录分配默认角色用） */
+    async createLink(userId: string, roleId: string, operatorId: string | null) {
+      await ctx.db.insert(sysUserRole).values({
+        id: randomUuid(),
+        userId,
+        roleId,
+        status: 1,
+        createdBy: operatorId,
+        updatedBy: operatorId,
+        isDeleted: 0
+      })
     }
   }
 }

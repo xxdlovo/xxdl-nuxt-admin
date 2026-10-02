@@ -2,15 +2,16 @@
  * 统一支付订单领域服务（业务唯一入口）。
  *
  * 上层（tRPC / 未来充值、订单模块 / 对账任务）只调用这里的方法，
- * 不直接接触任何渠道适配器；渠道差异全部被 PayProvider 吸收。
+ * 不直接接触渠道适配器，也不直接接触数据库：
+ * 取数写数一律通过 repo/payOrderRepo、repo/payNotifyLogRepo（mapper 层）。
  */
-import { and, desc, eq, sql } from 'drizzle-orm'
-import { sysPayNotifyLog, sysPayOrder } from '#server/drizzle/schema'
 import { AppError } from '#server/utils/appError'
 import { randomUuid } from '#shared/utils/uuid'
 import { getPayChannelRuntimeById, resolvePayChannel } from './PayChannelResolver'
 import type { PayDb } from './db'
 import { getPayProvider } from './providers'
+import { payNotifyLogRepo } from './repo/payNotifyLogRepo'
+import { payOrderRepo } from './repo/payOrderRepo'
 import { canApplyStatusChange, isClosableStatus, isExpired, isPaidStatus } from './statusMap'
 import { PayApiError, type PayCreateInput, type PayOrderRow } from './types'
 import {
@@ -52,35 +53,24 @@ export type CreatePayOrderInput = {
 }
 
 export function payOrderService(db: PayDb) {
-  async function getByIdOrThrow(orderId: string): Promise<PayOrderRow> {
-    const rows = await db
-      .select()
-      .from(sysPayOrder)
-      .where(and(eq(sysPayOrder.id, orderId), eq(sysPayOrder.isDeleted, 0)))
-      .limit(1)
+  const orderRepo = payOrderRepo(db)
+  const logRepo = payNotifyLogRepo(db)
 
-    if (!rows[0]) {
+  async function getByIdOrThrow(orderId: string): Promise<PayOrderRow> {
+    const row = await orderRepo.findById(orderId)
+
+    if (!row) {
       throw new AppError('common.notExist')
     }
 
-    return rows[0]
-  }
-
-  async function outTradeNoExists(outTradeNo: string) {
-    const rows = await db
-      .select({ id: sysPayOrder.id })
-      .from(sysPayOrder)
-      .where(eq(sysPayOrder.outTradeNo, outTradeNo))
-      .limit(1)
-
-    return Boolean(rows[0])
+    return row
   }
 
   /** 生成一个库中不存在的订单号（唯一索引仍是最终保证） */
   async function pickOutTradeNo() {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const candidate = buildOutTradeNo()
-      if (!(await outTradeNoExists(candidate))) {
+      if (!(await orderRepo.existsOutTradeNo(candidate))) {
         return candidate
       }
     }
@@ -92,13 +82,7 @@ export function payOrderService(db: PayDb) {
     getById: getByIdOrThrow,
 
     async getByOutTradeNo(outTradeNo: string): Promise<PayOrderRow | null> {
-      const rows = await db
-        .select()
-        .from(sysPayOrder)
-        .where(and(eq(sysPayOrder.outTradeNo, outTradeNo), eq(sysPayOrder.isDeleted, 0)))
-        .limit(1)
-
-      return rows[0] ?? null
+      return await orderRepo.findByOutTradeNo(outTradeNo)
     },
 
     /**
@@ -172,7 +156,7 @@ export function payOrderService(db: PayDb) {
       try {
         const result = await provider.createPayment(channel, createInput)
 
-        await db.insert(sysPayOrder).values({
+        await orderRepo.insert({
           ...baseValues,
           status: 'WP',
           payMode: result.payMode,
@@ -187,7 +171,7 @@ export function payOrderService(db: PayDb) {
       } catch (error) {
         const message = toErrorMessage(error, '发起支付失败')
 
-        await db.insert(sysPayOrder).values({
+        await orderRepo.insert({
           ...baseValues,
           status: 'FL',
           payMode: 'qrcode',
@@ -211,10 +195,7 @@ export function payOrderService(db: PayDb) {
       const now = nowForMysql()
 
       if (isPaidStatus(order.status)) {
-        await db
-          .update(sysPayOrder)
-          .set({ lastQueryAt: now, updatedBy: meta.operatorId ?? null })
-          .where(eq(sysPayOrder.id, orderId))
+        await orderRepo.touchLastQuery(orderId, now, meta.operatorId ?? null)
 
         return await getByIdOrThrow(orderId)
       }
@@ -263,12 +244,12 @@ export function payOrderService(db: PayDb) {
         statusChanged = true
       }
 
-      await db.update(sysPayOrder).set(updates).where(eq(sysPayOrder.id, orderId))
+      await orderRepo.updateById(orderId, updates)
 
       // 只有状态真正变化时才写日志，避免轮询把日志表刷满
       if (statusChanged) {
         try {
-          await db.insert(sysPayNotifyLog).values({
+          await logRepo.insert({
             id: randomUuid(),
             channelId: order.channelId,
             channelCode: order.channelCode,
@@ -306,32 +287,18 @@ export function payOrderService(db: PayDb) {
         throw new AppError('module.system.payOrder.notClosable')
       }
 
-      await db
-        .update(sysPayOrder)
-        .set({
-          status: 'CL',
-          cancelledAt: nowForMysql(),
-          updatedBy: meta.operatorId ?? null
-        })
-        .where(eq(sysPayOrder.id, orderId))
+      await orderRepo.updateById(orderId, {
+        status: 'CL',
+        cancelledAt: nowForMysql(),
+        updatedBy: meta.operatorId ?? null
+      })
 
       return await getByIdOrThrow(orderId)
     },
 
     /** 过期未支付订单列表（对账任务备用） */
     async listExpiredPending(limit = 50): Promise<PayOrderRow[]> {
-      const now = nowForMysql()
-
-      return await db
-        .select()
-        .from(sysPayOrder)
-        .where(and(
-          eq(sysPayOrder.isDeleted, 0),
-          eq(sysPayOrder.status, 'WP'),
-          sql`${sysPayOrder.expireAt} is not null and ${sysPayOrder.expireAt} < ${now}`
-        ))
-        .orderBy(desc(sysPayOrder.createdAt))
-        .limit(limit)
+      return await orderRepo.listExpiredPending(nowForMysql(), limit)
     }
   }
 }

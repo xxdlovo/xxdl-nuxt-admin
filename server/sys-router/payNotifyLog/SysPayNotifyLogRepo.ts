@@ -34,6 +34,11 @@ export const sysPayNotifyLogRepo = (ctx: Context) => {
       }
 
       return await repo.page(page, pageSize, dto, [desc(sysPayNotifyLog.createdAt)], extraWhere)
+    },
+
+    /** 列表查询（时间倒序）：排序语义集中在 mapper */
+    async listRecent(dto: Record<string, unknown>) {
+      return await repo.list(dto, [desc(sysPayNotifyLog.createdAt)])
     }
   }
 }

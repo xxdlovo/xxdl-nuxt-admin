@@ -61,8 +61,7 @@ export const sysRoleRouter = router({
         types: z.array(z.union([z.literal(0), z.literal(1), z.literal(2)])).min(1)
     }))
         .query(async ({ ctx, input }) => {
-            const menus = await sysMenuService(ctx).list({})
-            return menus.filter(menu => menu.type != null && input.types.includes(menu.type as 0 | 1 | 2))
+            return sysRoleService(ctx).listAssignableMenus(input.types)
         }),
     assignedMenuIds: listProc.input(SysRoleMenuAssignedIdsQuerySchema)
         .query(async ({ ctx, input }) => {

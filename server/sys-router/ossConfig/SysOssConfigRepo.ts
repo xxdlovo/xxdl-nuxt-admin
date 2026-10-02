@@ -56,6 +56,34 @@ export const sysOssConfigRepo = (ctx: Context) => {
                 .limit(1)
 
             return rows[0] ?? null
+        },
+
+        /** 写回「测试配置」的探测结论 */
+        async updateVerifyResult(id: string, data: {
+            verifyStatus: number
+            verifyTime: string
+            verifyMessage: string
+            operatorId: string | null
+        }) {
+            await ctx.db
+                .update(sysOssConfig)
+                .set({
+                    verifyStatus: data.verifyStatus,
+                    verifyTime: data.verifyTime,
+                    verifyMessage: data.verifyMessage,
+                    updatedBy: data.operatorId
+                })
+                .where(eq(sysOssConfig.id, id))
+        },
+
+        /** 分页查询（创建时间倒序）：排序语义集中在 mapper */
+        async pageRecent(page: number, pageSize: number, dto: Record<string, unknown>) {
+            return await base.page(page, pageSize, dto, [desc(sysOssConfig.createdAt)])
+        },
+
+        /** 列表查询（创建时间倒序） */
+        async listRecent(dto: Record<string, unknown>) {
+            return await base.list(dto, [desc(sysOssConfig.createdAt)])
         }
     }
 }

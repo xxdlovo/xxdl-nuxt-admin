@@ -17,6 +17,11 @@ export const sysJobRepo = (ctx: Context) => {
       return repo.page(page, pageSize, dto, [desc(sysJob.createdAt)])
     },
 
+    /** 列表查询（创建时间倒序）：排序语义集中在 mapper */
+    async listRecent(dto: any) {
+      return repo.list(dto, [desc(sysJob.createdAt)])
+    },
+
     async listDueJobs(now = formatMysqlDate()) {
       return ctx.db
         .select()

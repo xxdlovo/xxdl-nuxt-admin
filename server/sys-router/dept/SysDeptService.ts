@@ -4,8 +4,6 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysDeptAddDTO, SysDeptDto, SysDeptPageQueryDTO, SysDeptQueryDTO, SysDeptUpdateDTO } from "#shared/system/department";
 import { randomUuid } from "#shared/utils/uuid";
-import { asc, eq, isNull, or, type SQL } from 'drizzle-orm'
-import { sysDepartment } from '#server/drizzle/schema'
 
 export function sysDeptService(ctx: Context) {
     const repo = sysDeptRepo(ctx)
@@ -45,19 +43,9 @@ export function sysDeptService(ctx: Context) {
         },
         async page(req: SysDeptPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, parentId, ...dto } = req
-            const isRootQuery = parentId === '0'
-            const extraWhere: SQL[] = []
 
-            if (isRootQuery) {
-                const rootParentWhere = or(eq(sysDepartment.parentId, '0'), eq(sysDepartment.parentId, ''), isNull(sysDepartment.parentId))
-                if (rootParentWhere) {
-                    extraWhere.push(rootParentWhere)
-                }
-            } else if (parentId) {
-                extraWhere.push(eq(sysDepartment.parentId, parentId))
-            }
-
-            return await repo.page(page, pageSize, dto, [asc(sysDepartment.sortOrder)], extraWhere)
+            // 层级过滤与排序都在 SysDeptRepo（mapper 层）
+            return await repo.pageByParent(page, pageSize, dto, parentId)
         },
         async list(dto: any): Promise<SysDeptDto[]> {
             return await repo.list(dto)

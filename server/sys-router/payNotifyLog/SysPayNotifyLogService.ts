@@ -1,5 +1,3 @@
-import { desc } from 'drizzle-orm'
-import { sysPayNotifyLog } from '~~/server/drizzle/schema'
 import { sysPayNotifyLogRepo } from './SysPayNotifyLogRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -50,7 +48,7 @@ export function sysPayNotifyLogService(ctx: Context) {
             return await repo.pageWithRange(page, pageSize, dto, { createdFrom, createdTo })
         },
         async list(dto: SysPayNotifyLogQueryDTO): Promise<SysPayNotifyLogDto[]> {
-            const rows = await repo.list(dto, [desc(sysPayNotifyLog.createdAt)])
+            const rows = await repo.listRecent(dto)
             return rows as SysPayNotifyLogDto[]
         }
     }

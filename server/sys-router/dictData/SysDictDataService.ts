@@ -5,11 +5,11 @@ import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysDictDataAddDTO, SysDictDataDto, SysDictDataPageQueryDTO, SysDictDataQueryDTO, SysDictDataUpdateDTO } from "#shared/system/dictData";
 import { randomUuid } from "#shared/utils/uuid";
 import { dictCacheService } from '#server/sys-router/storage/cache/DictCacheService'
-import { eq, inArray } from 'drizzle-orm'
-import { sysDictType } from '#server/drizzle/schema'
+import { sysDictTypeRepo } from '#server/sys-router/dictType/SysDictTypeRepo'
 
 export function sysDictDataService(ctx: Context) {
     const repo = sysDictDataRepo(ctx)
+    const typeRepo = sysDictTypeRepo(ctx)
     const cache = dictCacheService()
 
     return {
@@ -18,8 +18,8 @@ export function sysDictDataService(ctx: Context) {
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
             if (data.typeId) {
-                const type = await ctx.db.select({ code: sysDictType.code }).from(sysDictType).where(eq(sysDictType.id, data.typeId)).limit(1)
-                type[0]?.code ? await cache.invalidate(type[0].code) : await cache.invalidateAll()
+                const code = await typeRepo.getCodeById(data.typeId)
+                code ? await cache.invalidate(code) : await cache.invalidateAll()
             } else await cache.invalidateAll()
             return true
         },
@@ -27,8 +27,8 @@ export function sysDictDataService(ctx: Context) {
             const old = await repo.getById(id)
             await repo.remove(id)
             if (old?.typeId) {
-                const type = await ctx.db.select({ code: sysDictType.code }).from(sysDictType).where(eq(sysDictType.id, old.typeId)).limit(1)
-                type[0]?.code ? await cache.invalidate(type[0].code) : await cache.invalidateAll()
+                const code = await typeRepo.getCodeById(old.typeId)
+                code ? await cache.invalidate(code) : await cache.invalidateAll()
             } else await cache.invalidateAll()
             return true
         },
@@ -43,9 +43,9 @@ export function sysDictDataService(ctx: Context) {
             const typeIds = new Set([old?.typeId, data.typeId].filter((id): id is string => Boolean(id)))
             if (typeIds.size === 0) await cache.invalidateAll()
             else {
-                const types = await ctx.db.select({ code: sysDictType.code }).from(sysDictType).where(inArray(sysDictType.id, [...typeIds]))
-                if (types.length === 0) await cache.invalidateAll()
-                else await Promise.all(types.map(type => cache.invalidate(type.code)))
+                const codes = await typeRepo.listCodesByIds([...typeIds])
+                if (codes.length === 0) await cache.invalidateAll()
+                else await Promise.all(codes.map(code => cache.invalidate(code)))
             }
             return true
         },

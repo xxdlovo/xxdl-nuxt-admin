@@ -19,8 +19,7 @@ import type {
 } from '#shared/system/userRole'
 import { randomUuid } from '#shared/utils/uuid'
 import { hashUserPassword, isPlaceholderPassword } from '#server/utils/password'
-import { and, eq } from 'drizzle-orm'
-import { sysDepartment, sysUser } from '#server/drizzle/schema'
+import { sysDeptRepo } from '#server/sys-router/dept/SysDeptRepo'
 import { rbacCacheService } from '#server/sys-router/storage/cache/RbacCacheService'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
@@ -38,6 +37,7 @@ function normalizeDeptId(value: unknown) {
 
 export function sysUserService(ctx: Context) {
   const repo = sysUserRepo(ctx)
+  const deptRepo = sysDeptRepo(ctx)
   const userRoleRepo = sysUserRoleRepo(ctx)
   const roleRepo = sysRoleRepo(ctx)
   const rbacCache = rbacCacheService()
@@ -54,23 +54,11 @@ export function sysUserService(ctx: Context) {
     },
 
     async register(data: SysUserRegisterDTO): Promise<boolean> {
-      const existingUsername = await ctx.db
-        .select({ id: sysUser.id })
-        .from(sysUser)
-        .where(eq(sysUser.username, data.username))
-        .limit(1)
-
-      if (existingUsername[0]) {
+      if (await repo.existsByUsername(data.username)) {
         throw new AppError('auth.usernameExists')
       }
 
-      const existingPhone = await ctx.db
-        .select({ id: sysUser.id })
-        .from(sysUser)
-        .where(eq(sysUser.phone, data.phone))
-        .limit(1)
-
-      if (existingPhone[0]) {
+      if (await repo.existsByPhone(data.phone)) {
         throw new AppError('auth.phoneExists')
       }
 
@@ -111,13 +99,7 @@ export function sysUserService(ctx: Context) {
       }
 
       if (deptId) {
-        const deptRows = await ctx.db
-          .select({ id: sysDepartment.id })
-          .from(sysDepartment)
-          .where(and(eq(sysDepartment.id, deptId), eq(sysDepartment.isDeleted, 0)))
-          .limit(1)
-
-        if (!deptRows[0]) {
+        if (!(await deptRepo.existsActiveById(deptId))) {
           throw new AppError('common.notExist')
         }
       }
@@ -127,13 +109,9 @@ export function sysUserService(ctx: Context) {
         deptId
       })
       if (data.status !== undefined) await rbacCache.invalidateUser(id)
-      const updatedRows = await ctx.db
-        .select({ deptId: sysUser.deptId })
-        .from(sysUser)
-        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
-        .limit(1)
 
-      if (!updatedRows[0] || (updatedRows[0].deptId ?? null) !== deptId) {
+      // 回读校验：确认部门确实写入成功（数据权限外的异常写入也会在这里暴露）
+      if ((await repo.getDeptIdById(id) ?? null) !== deptId) {
         throw new AppError('common.notExist')
       }
 
@@ -169,16 +147,11 @@ export function sysUserService(ctx: Context) {
      * 既避免把密码哈希暴露给调用方，也便于个人中心与 setPassword 复用。
      */
     async getPasswordStatus(id: string): Promise<{ hasPassword: boolean } | null> {
-      const rows = await ctx.db
-        .select({ password: sysUser.password })
-        .from(sysUser)
-        .where(and(eq(sysUser.id, id), eq(sysUser.isDeleted, 0)))
-        .limit(1)
+      const password = await repo.getPasswordById(id)
 
-      const row = rows[0]
-      if (!row) return null
+      if (password === null) return null
 
-      return { hasPassword: !isPlaceholderPassword(row.password) }
+      return { hasPassword: !isPlaceholderPassword(password) }
     },
 
     async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {
@@ -235,13 +208,7 @@ export function sysUserService(ctx: Context) {
     },
 
     async getLoginUserByUsername(username: string) {
-      const users = await ctx.db
-        .select()
-        .from(sysUser)
-        .where(and(eq(sysUser.username, username), eq(sysUser.isDeleted, 0)))
-        .limit(1)
-
-      return users[0] ?? null
+      return await repo.getLoginUserByUsername(username)
     }
   }
 }

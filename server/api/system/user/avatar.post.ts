@@ -1,7 +1,9 @@
 import { createContext } from '#server/trpc/context'
 import { sysOssService } from '#server/sys-router/oss/SysOssService'
 import { apiOperationLog } from '#server/utils/apiOperationLog'
-import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
+import { createApiRouteError } from '#server/utils/apiRouteError'
+import { AppError } from '#server/utils/appError'
+import { requireLogin } from '#server/utils/routeGuard'
 import { createServerT } from '#server/utils/serverI18n'
 
 function getMultipartField(parts: Awaited<ReturnType<typeof readMultipartFormData>>, name: string) {
@@ -16,9 +18,8 @@ export default defineEventHandler(async (event) => {
     let requestParams: Record<string, unknown> = {}
 
     try {
-        if (!ctx.user) {
-            throw new AppError('auth.unauthorized')
-        }
+        // 头像只改自己的资料，登录即可；图片类型校验与存储配置解析都在 Service 内
+        requireLogin(ctx)
 
         const parts = await readMultipartFormData(event)
         const filePart = getMultipartField(parts, 'file')
@@ -27,26 +28,15 @@ export default defineEventHandler(async (event) => {
             throw new AppError('module.system.oss.uploadFileRequired')
         }
 
-        const contentType = filePart.type || 'application/octet-stream'
-        if (!contentType.startsWith('image/')) {
-            throw new AppError('module.system.oss.uploadFileRequired')
-        }
-
         requestParams = {
             fileName: filePart.filename,
             fileSize: filePart.data.byteLength,
-            contentType
+            contentType: filePart.type
         }
 
-        const config = await sysOssService(ctx).getDefaultUploadConfig()
-        if (!config?.id) {
-            throw new AppError('module.system.oss.uploadConfigUnavailable')
-        }
-
-        const data = await sysOssService(ctx).uploadFile({
-            configId: config.id,
+        const data = await sysOssService(ctx).uploadAvatar({
             fileName: filePart.filename,
-            contentType,
+            contentType: filePart.type,
             body: new Uint8Array(filePart.data)
         })
 
@@ -75,20 +65,6 @@ export default defineEventHandler(async (event) => {
             requestParams
         })
 
-        // 与 tRPC 的 errorFormatter 共用同一份 AppError 状态映射，避免两处规则漂移
-        const statusCode = error instanceof AppError
-            ? resolveAppErrorStatus(error.i18nKey).httpStatus
-            : 500
-        const message = error instanceof AppError
-            ? t(error.i18nKey)
-            : error instanceof Error
-                ? error.message
-                : t('module.system.oss.uploadFailed')
-
-        throw createError({
-            statusCode,
-            statusMessage: message,
-            message
-        })
+        throw createApiRouteError(error, t, 'module.system.oss.uploadFailed')
     }
 })

@@ -3,16 +3,15 @@
  *
  * 凭证优先级：数据库渠道配置（状态启用）> 环境变量 NUXT_PAY_APP_ID / NUXT_PAY_APP_SECRET。
  * 这是为「凭证存放位置未定」预留的唯一改动点，其他代码不感知凭证来源。
+ *
+ * 数据访问全部走 repo/payChannelRepo（mapper 层），本文件只做「选哪个渠道 + 解密 + 拼运行时对象」。
  */
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
-import { sysPayChannel } from '#server/drizzle/schema'
 import { AppError } from '#server/utils/appError'
 import { decryptConfigSecrets } from './crypto'
 import type { PayDb } from './db'
 import { getPayProvider } from './providers'
+import { payChannelRepo, type PayChannelRow } from './repo/payChannelRepo'
 import type { PayChannelRuntime } from './types'
-
-type ChannelRow = typeof sysPayChannel.$inferSelect
 
 export type ResolvePayChannelOptions = {
   channelId?: string | null
@@ -29,7 +28,7 @@ function asConfigRecord(value: unknown): Record<string, unknown> {
 }
 
 /** 渠道配置行 → 运行时配置（密钥已解密） */
-export function toChannelRuntime(row: ChannelRow): PayChannelRuntime {
+export function toChannelRuntime(row: PayChannelRow): PayChannelRuntime {
   const provider = getPayProvider(row.channelCode)
 
   if (!provider) {
@@ -98,13 +97,7 @@ export async function getPayChannelRuntimeById(
     throw new AppError('module.system.payChannel.notConfigured')
   }
 
-  const rows = await db
-    .select()
-    .from(sysPayChannel)
-    .where(and(eq(sysPayChannel.id, channelId), eq(sysPayChannel.isDeleted, 0)))
-    .limit(1)
-
-  const row = rows[0]
+  const row = await payChannelRepo(db).findById(channelId)
 
   if (!row) {
     throw new AppError('common.notExist')
@@ -125,24 +118,13 @@ export async function resolvePayChannel(
     return await getPayChannelRuntimeById(db, options.channelId)
   }
 
-  const conditions = [eq(sysPayChannel.isDeleted, 0), eq(sysPayChannel.status, 1)]
+  const row = await payChannelRepo(db).findEnabled({
+    channelCode: options.channelCode,
+    currency: options.currency
+  })
 
-  if (options.channelCode) {
-    conditions.push(eq(sysPayChannel.channelCode, options.channelCode.trim().toLowerCase()))
-  }
-  if (options.currency) {
-    conditions.push(eq(sysPayChannel.currency, options.currency))
-  }
-
-  const rows = await db
-    .select()
-    .from(sysPayChannel)
-    .where(and(...conditions))
-    .orderBy(desc(sysPayChannel.isDefault), asc(sysPayChannel.sortOrder), asc(sysPayChannel.createdAt))
-    .limit(1)
-
-  if (rows[0]) {
-    return toChannelRuntime(rows[0])
+  if (row) {
+    return toChannelRuntime(row)
   }
 
   // 库里没有可用渠道时再看环境变量兜底（仅当没有指定渠道类型或指定的就是虎皮椒）
@@ -159,15 +141,7 @@ export async function resolvePayChannel(
  * 逐个验签，第一个通过的就是来源渠道。
  */
 export async function listEnabledChannelsByCode(db: PayDb, channelCode: string): Promise<PayChannelRuntime[]> {
-  const rows = await db
-    .select()
-    .from(sysPayChannel)
-    .where(and(
-      eq(sysPayChannel.isDeleted, 0),
-      eq(sysPayChannel.status, 1),
-      eq(sysPayChannel.channelCode, channelCode.trim().toLowerCase())
-    ))
-    .orderBy(desc(sysPayChannel.isDefault), asc(sysPayChannel.sortOrder), asc(sysPayChannel.createdAt))
+  const rows = await payChannelRepo(db).listEnabledByCode(channelCode)
 
   return rows
     .map(row => {
@@ -179,19 +153,4 @@ export async function listEnabledChannelsByCode(db: PayDb, channelCode: string):
       }
     })
     .filter((channel): channel is PayChannelRuntime => channel !== null)
-}
-
-/** 渠道配置唯一性预检，给 Service 生成友好报错用 */
-export async function findChannelByConfigKey(db: PayDb, configKey: string, excludeId?: string | null) {
-  const rows = await db
-    .select({ id: sysPayChannel.id })
-    .from(sysPayChannel)
-    .where(and(
-      eq(sysPayChannel.configKey, configKey),
-      eq(sysPayChannel.isDeleted, 0),
-      excludeId ? sql`${sysPayChannel.id} <> ${excludeId}` : undefined
-    ))
-    .limit(1)
-
-  return rows[0] ?? null
 }

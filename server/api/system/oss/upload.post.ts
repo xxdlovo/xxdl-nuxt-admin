@@ -1,26 +1,11 @@
 import { createContext } from '#server/trpc/context'
-import { authService } from '#server/sys-router/auth/AuthService'
 import { sysOssService } from '#server/sys-router/oss/SysOssService'
 import { apiOperationLog } from '#server/utils/apiOperationLog'
-import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
+import { createApiRouteError } from '#server/utils/apiRouteError'
+import { AppError } from '#server/utils/appError'
+import { requirePermission } from '#server/utils/routeGuard'
 import { createServerT } from '#server/utils/serverI18n'
 import { crudPermissionCodes } from '#shared/auth'
-
-async function assertUploadPermission(ctx: Awaited<ReturnType<typeof createContext>>) {
-    const user = ctx.user
-    if (!user) {
-        throw new AppError('auth.unauthorized')
-    }
-
-    if (user.isAdmin === 1) {
-        return
-    }
-
-    const permissionCodes = await authService(ctx).listPermissionCodes(user)
-    if (!permissionCodes.includes(crudPermissionCodes('system:oss').add)) {
-        throw new AppError('auth.forbidden')
-    }
-}
 
 function getMultipartField(parts: Awaited<ReturnType<typeof readMultipartFormData>>, name: string) {
     return parts?.find(part => part.name === name)
@@ -34,7 +19,8 @@ export default defineEventHandler(async (event) => {
     let requestParams: Record<string, unknown> = {}
 
     try {
-        await assertUploadPermission(ctx)
+        // 鉴权收在 routeGuard，与 tRPC 的 permissionMiddleware 规则保持一致
+        await requirePermission(ctx, crudPermissionCodes('system:oss').add)
 
         const parts = await readMultipartFormData(event)
         const configId = getMultipartField(parts, 'configId')?.data?.toString('utf8') ?? ''
@@ -83,20 +69,6 @@ export default defineEventHandler(async (event) => {
             requestParams
         })
 
-        // 与 tRPC 的 errorFormatter 共用同一份 AppError 状态映射，避免两处规则漂移
-        const statusCode = error instanceof AppError
-            ? resolveAppErrorStatus(error.i18nKey).httpStatus
-            : 500
-        const message = error instanceof AppError
-            ? t(error.i18nKey)
-            : error instanceof Error
-                ? error.message
-                : t('module.system.oss.uploadFailed')
-
-        throw createError({
-            statusCode,
-            statusMessage: message,
-            message
-        })
+        throw createApiRouteError(error, t, 'module.system.oss.uploadFailed')
     }
 })

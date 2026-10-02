@@ -4,8 +4,6 @@ import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type { SysOssConfigAddDTO, SysOssConfigDto, SysOssConfigPageQueryDTO, SysOssConfigQueryDTO, SysOssConfigUpdateDTO } from "#shared/system/ossConfig";
 import { randomUuid } from "#shared/utils/uuid";
-import { desc, eq } from 'drizzle-orm'
-import { sysOssConfig } from '#server/drizzle/schema'
 import { verifyOssConfig } from './OssConfigVerifier'
 
 function nowForMysql() {
@@ -44,15 +42,12 @@ export function sysOssConfigService(ctx: Context) {
             if (!config) throw new AppError('common.notExist')
 
             const result = await verifyOssConfig(config)
-            await ctx.db
-                .update(sysOssConfig)
-                .set({
-                    verifyStatus: result.success ? 1 : 2,
-                    verifyTime: nowForMysql(),
-                    verifyMessage: result.message,
-                    updatedBy: ctx.user?.id ?? null
-                })
-                .where(eq(sysOssConfig.id, id))
+            await repo.updateVerifyResult(id, {
+                verifyStatus: result.success ? 1 : 2,
+                verifyTime: nowForMysql(),
+                verifyMessage: result.message,
+                operatorId: ctx.user?.id ?? null
+            })
 
             return result
         },
@@ -68,10 +63,10 @@ export function sysOssConfigService(ctx: Context) {
         },
         async page(req: SysOssConfigPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto, [desc(sysOssConfig.createdAt)])
+            return await repo.pageRecent(page, pageSize, dto)
         },
         async list(dto: any): Promise<SysOssConfigDto[]> {
-            return await repo.list(dto, [desc(sysOssConfig.createdAt)])
+            return await repo.listRecent(dto)
         },
     }
 }
