@@ -4,7 +4,7 @@
 import type { CouponScene, CouponType } from '../wallet/types'
 
 /** 会员来源：密码注册 / 第三方首登 */
-export type MemberOnboardSource = 'register' | 'oauth'
+export type MemberOnboardSource = 'register' | 'oauth' | 'backfill'
 
 /** 注册建档结果 */
 export type MemberOnboardResult = {

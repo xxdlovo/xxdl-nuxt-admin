@@ -483,6 +483,11 @@ function buildMember(executor: AppExecutor) {
     return await couponUses.listByUser(userId)
   }
 
+  /** 还没有会员档案的用户 id（`member:backfill-profile` 任务用） */
+  async function listUnprofiledUsers(limit = 200) {
+    return await members.listUserIdsWithoutProfile(limit)
+  }
+
   return {
     onboard,
     bindInviter,
@@ -495,6 +500,7 @@ function buildMember(executor: AppExecutor) {
     listInvitees,
     listLevels,
     listMyCoupons,
+    listUnprofiledUsers,
     readConfigValue,
     grantRegisterBonus
   }

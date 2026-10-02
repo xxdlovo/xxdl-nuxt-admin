@@ -1,8 +1,8 @@
 /**
  * 会员档案 mapper（数据访问层）。
  */
-import { and, desc, eq, inArray, like, sql } from 'drizzle-orm'
-import { sysConfig, sysMember } from '#server/drizzle/schema'
+import { and, asc, desc, eq, inArray, isNull, like, sql } from 'drizzle-orm'
+import { sysConfig, sysMember, sysUser } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 import { affectedRows } from '../../wallet/repo/sqlUtils'
 
@@ -15,6 +15,22 @@ export function memberRepo(executor: AppExecutor) {
   return {
     async insert(values: MemberInsert) {
       return await db.insert(sysMember).values(values)
+    },
+
+    /**
+     * 还没有会员档案的有效用户（按注册先后取一批），供补齐任务使用。
+     * 用 left join + is null 判定「缺档案」，避免逐条查询。
+     */
+    async listUserIdsWithoutProfile(limit: number): Promise<string[]> {
+      const rows = await db
+        .select({ userId: sysUser.id })
+        .from(sysUser)
+        .leftJoin(sysMember, eq(sysMember.userId, sysUser.id))
+        .where(and(eq(sysUser.isDeleted, 0), isNull(sysMember.id)))
+        .orderBy(asc(sysUser.createdAt))
+        .limit(limit)
+
+      return rows.map(row => row.userId)
     },
 
     async findByUserId(userId: string): Promise<MemberRow | null> {
