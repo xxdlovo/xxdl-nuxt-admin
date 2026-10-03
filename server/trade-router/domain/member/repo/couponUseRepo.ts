@@ -46,17 +46,27 @@ export function couponUseRepo(executor: AppExecutor) {
       return Number(rows[0]?.total ?? 0)
     },
 
-    /** 已锁定但未核销的次数（判定「有没有占用中的券」） */
-    async countLockedByUser(couponId: string, userId: string): Promise<number> {
+    /**
+     * 已锁定但未核销的次数（判定「有没有占用中的券」）。
+     *
+     * `couponId = null` 表示**不限券**，只按用户统计（首页看板「可用优惠码数」）；
+     * 传入具体券 id 时行为与此前完全一致。
+     */
+    async countLockedByUser(couponId: string | null, userId: string): Promise<number> {
+      const conditions = [
+        eq(sysMemberCouponUse.userId, userId),
+        eq(sysMemberCouponUse.status, 'locked'),
+        eq(sysMemberCouponUse.isDeleted, 0)
+      ]
+
+      if (couponId !== null) {
+        conditions.push(eq(sysMemberCouponUse.couponId, couponId))
+      }
+
       const rows = await db
         .select({ total: count() })
         .from(sysMemberCouponUse)
-        .where(and(
-          eq(sysMemberCouponUse.couponId, couponId),
-          eq(sysMemberCouponUse.userId, userId),
-          eq(sysMemberCouponUse.status, 'locked'),
-          eq(sysMemberCouponUse.isDeleted, 0)
-        ))
+        .where(and(...conditions))
 
       return Number(rows[0]?.total ?? 0)
     },
