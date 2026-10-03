@@ -17,7 +17,7 @@ import {
 } from 'h3'
 import { useDb } from '#server/drizzle/db'
 import { payNotifyDispatcher } from '#server/trade-router/domain/pay/PayNotifyDispatcher'
-import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
+import { dispatchPaidOrder } from '#server/trade-router/domain/pay/PaidHandlers'
 import { getRequestInfo } from '#server/utils/requestInfo'
 
 /** 原始报文 → 对象：JSON 走 JSON.parse，其余按表单解析 */
@@ -60,16 +60,12 @@ export default defineEventHandler(async (event) => {
     const { ip, userAgent } = getRequestInfo(event)
 
     /**
-     * 支付成功后的业务后置处理：按 `bizType` 分派。
-     * 目前只有会员充值（`recharge`）需要入账，其它类型（如测试单）保持原行为。
+     * 支付成功后的业务后置处理：统一交给 `dispatchPaidOrder` 按 `bizType` 分派
+     * （recharge → 会员充值到账；order → 交易订单完成；其它类型保持原 no-op）。
      */
     const outcome = await payNotifyDispatcher(useDb(), {
         onPaid: async (order) => {
-            if (order.bizType !== 'recharge') {
-                return
-            }
-
-            await rechargeService(useDb()).credit(order.outTradeNo, null)
+            await dispatchPaidOrder(order, useDb())
         }
     }).handleNotify(
         channelCode,
