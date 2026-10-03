@@ -212,17 +212,16 @@ const translate = (record: Record<string, string>, value?: string | null) => {
   return key ? $ts(key) : value
 }
 
-/** 汇总与待补偿数量：跟随搜索条件刷新 */
+/**
+ * 汇总与待补偿数量：跟随搜索条件刷新。
+ * `pendingRechargeCount` 由 summary 一并下发（服务端一次 COUNT(*)），
+ * 全量对账（reconcile）开销大，已收敛到「对账」按钮（见 handleReconcile），页面加载不再触发。
+ */
 const loadSummary = async () => {
-  const [summaryResult, reconcile] = await Promise.all([
-    $trpc.sysMemberBalanceLog.summary.query({
-      createdFrom: searchParams.value.createdFrom ?? null,
-      createdTo: searchParams.value.createdTo ?? null
-    }),
-    canReconcile.value
-      ? $trpc.sysMemberBalanceLog.reconcile.query({ userId: null, checkDate: null })
-      : Promise.resolve(null)
-  ])
+  const summaryResult = await $trpc.sysMemberBalanceLog.summary.query({
+    createdFrom: searchParams.value.createdFrom ?? null,
+    createdTo: searchParams.value.createdTo ?? null
+  })
 
   summary.value = {
     totalIn: summaryResult.totalIn,
@@ -230,13 +229,7 @@ const loadSummary = async () => {
     netTotal: summaryResult.netTotal
   }
 
-  if (reconcile) {
-    pendingRechargeCount.value = reconcile.pendingRechargeCount
-    reconcileResult.value = {
-      checkedCount: reconcile.checkedCount,
-      mismatches: reconcile.mismatches as typeof reconcileResult.value.mismatches
-    }
-  }
+  pendingRechargeCount.value = summaryResult.pendingRechargeCount
 }
 
 const handleDetail = (row: SysMemberBalanceLogDto) => {

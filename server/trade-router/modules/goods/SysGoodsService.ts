@@ -89,16 +89,39 @@ export function sysGoodsService(ctx: Context) {
             return pojo as SysGoodsRespDTO
         },
 
-        /** 分页：priceMin / priceMax / createdFrom / createdTo 交给 Repo 用 extraWhere 追加 */
+        /**
+         * 分页：priceMin / priceMax / createdFrom / createdTo 交给 Repo 用 extraWhere 追加。
+         *
+         * 列表行额外回填 `levelPriceCount`（该商品配了几个等级价）：分页之后**一次**
+         * `group by goods_id` 批量统计，替代前端逐行调 `levelPrices`（每行 3 条 SQL）。
+         * 该字段只用于列表展示，成交价仍按下单时的实时等级价解析。
+         */
         async page(req: SysGoodsPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, priceMin, priceMax, createdFrom, createdTo, ...dto } = req
 
-            return await repo.pageWithRange(page, pageSize, dto, {
+            const result = await repo.pageWithRange(page, pageSize, dto, {
                 priceMin,
                 priceMax,
                 createdFrom,
                 createdTo
             })
+
+            const list = (result.list ?? []) as SysGoodsRespDTO[]
+            const goodsIds = list
+                .map(row => String(row.id ?? ''))
+                .filter(id => id !== '')
+            const countByGoodsId = goodsIds.length > 0
+                ? await goods.countLevelPricesByGoodsIds(goodsIds)
+                : new Map<string, number>()
+
+            return {
+                ...result,
+                list: list.map(row => ({
+                    ...row,
+                    // 没有等级价的行统一给 0：前端只判断 count > 0，不必再区分 null
+                    levelPriceCount: countByGoodsId.get(String(row.id)) ?? 0
+                }))
+            }
         },
 
         /** 等级下拉：只取启用中的会员等级，供商品弹窗配置等级价（其余等级不需要配价） */

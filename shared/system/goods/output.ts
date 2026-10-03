@@ -19,6 +19,12 @@ export const SysGoodsRespSchema = z.object({
     remark: SysGoodsBaseSchema.shape.remark,
     createdAt: SysGoodsBaseSchema.shape.createdAt,
     updatedAt: SysGoodsBaseSchema.shape.updatedAt,
+    /**
+     * 该商品已配置的等级价条数：**列表页展示用**（如「3 个等级价」），
+     * 由 `SysGoodsService.page` 一页一次批量统计回填，无等级价时为 0。
+     * 成交价始终按下单时实时解析（`resolvePrice`），不要用这个字段参与计价。
+     */
+    levelPriceCount: z.number().nullish(),
 })
 export type SysGoodsRespDTO = z.infer<typeof SysGoodsRespSchema>
 

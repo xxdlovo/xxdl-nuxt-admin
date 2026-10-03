@@ -103,12 +103,21 @@ export function sysMemberBalanceLogService(ctx: Context) {
             return await repo.listWithRange(filters, range, 200)
         },
 
-        /** 区间汇总：按业务类型聚合，并补一个总计，供对账页看板使用 */
+        /**
+         * 区间汇总：按业务类型聚合，并补一个总计，供对账页看板使用。
+         *
+         * `pendingRechargeCount` 只是「待补偿充值条数」这一项轻量计数（一次 COUNT(*)），
+         * 让流水页每次加载/搜索都能显示待补偿数量，而不必再并发调用全量对账
+         * `reconcile`（那会对全部钱包行 + 整张流水表做全量比对）。
+         */
         async summary(input: SysMemberBalanceLogSummaryDTO) {
-            const rows = await repo.sumByBizType({
-                createdFrom: input.createdFrom ?? null,
-                createdTo: input.createdTo ?? null
-            })
+            const [rows, pendingRechargeCount] = await Promise.all([
+                repo.sumByBizType({
+                    createdFrom: input.createdFrom ?? null,
+                    createdTo: input.createdTo ?? null
+                }),
+                recharges.countPending()
+            ])
 
             let totalIn = '0.00'
             let totalOut = '0.00'
@@ -133,7 +142,8 @@ export function sysMemberBalanceLogService(ctx: Context) {
                 items,
                 totalIn,
                 totalOut,
-                netTotal: addMoney(totalIn, `-${totalOut}`)
+                netTotal: addMoney(totalIn, `-${totalOut}`),
+                pendingRechargeCount
             }
         },
 

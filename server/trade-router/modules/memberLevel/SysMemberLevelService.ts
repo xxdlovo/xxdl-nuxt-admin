@@ -1,6 +1,7 @@
 import { sysMemberLevelRepo } from './SysMemberLevelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
+import { memberLevelCacheService } from '#server/sys-router/storage/cache/MemberLevelCacheService'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type {
     SysMemberLevelAddDTO,
@@ -13,6 +14,8 @@ import { randomUuid } from '#shared/utils/uuid'
 
 export function sysMemberLevelService(ctx: Context) {
     const repo = sysMemberLevelRepo(ctx)
+    // 等级启用列表是全局缓存，所有写入口成功之后都要显式失效（TTL 只是兜底）
+    const levelCache = memberLevelCacheService()
 
     return {
         /** 新增：code 全局唯一，先判重再落库，避免把唯一索引冲突抛成数据库错误 */
@@ -28,16 +31,20 @@ export function sysMemberLevelService(ctx: Context) {
                 status: data.status ?? 1
             })
 
+            await levelCache.invalidate()
+
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            await levelCache.invalidate()
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            await levelCache.invalidate()
             return ids.length
         },
 
@@ -55,7 +62,9 @@ export function sysMemberLevelService(ctx: Context) {
                 throw new AppError('module.system.memberLevel.codeExists')
             }
 
+            // 启停、排序、改名都会影响启用列表（含缓存里的 name / sortOrder），一律失效
             await repo.updateById(id, data)
+            await levelCache.invalidate()
 
             return true
         },

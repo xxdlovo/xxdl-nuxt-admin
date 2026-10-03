@@ -5,9 +5,14 @@
  * 这是为「凭证存放位置未定」预留的唯一改动点，其他代码不感知凭证来源。
  *
  * 数据访问全部走 repo/payChannelRepo（mapper 层），本文件只做「选哪个渠道 + 解密 + 拼运行时对象」。
+ *
+ * 三个读点（findById / findEnabled / listEnabledByCode）都经 PayChannelCacheService 缓存
+ * **已解密**的运行时对象：回调是外部平台可重试、可并发的入口，逐次读库 + AES 解密不划算。
+ * 失效点全部落在 SysPayChannelService 的写入口（invalidateAll），TTL 只有 60 秒兜底。
  */
 import { AppError } from '#server/utils/appError'
 import type { AppExecutor } from '#server/drizzle/db'
+import { payChannelCacheService } from '#server/sys-router/storage/cache/PayChannelCacheService'
 import { decryptConfigSecrets } from './crypto'
 import { getPayProvider } from './providers'
 import { payChannelRepo, type PayChannelRow } from './repo/payChannelRepo'
@@ -97,13 +102,18 @@ export async function getPayChannelRuntimeById(
     throw new AppError('module.system.payChannel.notConfigured')
   }
 
-  const row = await payChannelRepo(executor).findById(channelId)
+  // 缓存里已经是解密后的运行时对象；loader 只负责回源 + 解密
+  const runtime = await payChannelCacheService().getRuntimeById(channelId, async () => {
+    const row = await payChannelRepo(executor).findById(channelId)
 
-  if (!row) {
+    return row ? toChannelRuntime(row) : null
+  })
+
+  if (!runtime) {
     throw new AppError('common.notExist')
   }
 
-  return toChannelRuntime(row)
+  return runtime
 }
 
 /**
@@ -118,13 +128,21 @@ export async function resolvePayChannel(
     return await getPayChannelRuntimeById(executor, options.channelId)
   }
 
-  const row = await payChannelRepo(executor).findEnabled({
-    channelCode: options.channelCode,
-    currency: options.currency
-  })
+  // 选择维度（channelCode + currency）缓存整个选择结果；渠道配置写入口会整前缀失效
+  const enabledRuntime = await payChannelCacheService().getEnabledRuntime(
+    { channelCode: options.channelCode, currency: options.currency },
+    async () => {
+      const found = await payChannelRepo(executor).findEnabled({
+        channelCode: options.channelCode,
+        currency: options.currency
+      })
 
-  if (row) {
-    return toChannelRuntime(row)
+      return found ? toChannelRuntime(found) : null
+    }
+  )
+
+  if (enabledRuntime) {
+    return enabledRuntime
   }
 
   // 库里没有可用渠道时再看环境变量兜底（仅当没有指定渠道类型或指定的就是虎皮椒）
@@ -139,18 +157,21 @@ export async function resolvePayChannel(
 /**
  * 回调路由用：同一个 channelCode 可能配置了多个账户，
  * 逐个验签，第一个通过的就是来源渠道。
+ * 返回的是解密后的运行时列表（已剔除未注册渠道类型），整表结果按 channelCode 缓存 60 秒。
  */
 export async function listEnabledChannelsByCode(executor: AppExecutor, channelCode: string): Promise<PayChannelRuntime[]> {
-  const rows = await payChannelRepo(executor).listEnabledByCode(channelCode)
+  return await payChannelCacheService().getEnabledRuntimesByCode(channelCode, async () => {
+    const rows = await payChannelRepo(executor).listEnabledByCode(channelCode)
 
-  return rows
-    .map(row => {
-      try {
-        return toChannelRuntime(row)
-      } catch {
-        // 未注册的渠道类型（例如历史遗留数据）跳过，不影响其他渠道验签
-        return null
-      }
-    })
-    .filter((channel): channel is PayChannelRuntime => channel !== null)
+    return rows
+      .map(row => {
+        try {
+          return toChannelRuntime(row)
+        } catch {
+          // 未注册的渠道类型（例如历史遗留数据）跳过，不影响其他渠道验签
+          return null
+        }
+      })
+      .filter((channel): channel is PayChannelRuntime => channel !== null)
+  })
 }

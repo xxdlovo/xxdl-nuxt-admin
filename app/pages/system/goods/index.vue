@@ -41,7 +41,7 @@
       :operate-type="operateType"
       :data="editingData ?? undefined"
       :close="closeVisible"
-      :refresh="handleOperateRefreshed"
+      :refresh="refresh"
     />
   </div>
 </template>
@@ -68,13 +68,6 @@ const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const goodsPermissions = useCrudPermissions('system:goods')
 const searchParams = ref<SysGoodsQueryDTO>({})
-
-/**
- * 等级价数量：契约 SysGoodsRespDTO 里没有这个字段，列表页只能按当前页的行补查后缓存。
- * 数量只是「基础价」列下方的辅助提示，取不到就整体不显示，不影响列表本身。
- */
-const levelPriceCounts = ref<Record<string, number>>({})
-let levelPriceCountToken = 0
 
 const {
   data,
@@ -113,65 +106,21 @@ const priceText = (price?: string | number | null) => {
   return `¥${Number.isFinite(value) ? value.toFixed(2) : '0.00'}`
 }
 
-/** 已缓存的数量为 -1 时代表查询失败，此时不显示提示 */
-const levelPriceCountText = (id?: string | null) => {
-  const count = id ? levelPriceCounts.value[id] : undefined
+/**
+ * 等级价数量：由列表接口 `sysGoods.page` 直接带出（`levelPriceCount`），
+ * 列表页不再逐行调用 `sysGoods.levelPrices` 补查，刷新列表即刷新数量。
+ *
+ * 数量只是「基础价」列下方的辅助提示：列表未返回该字段（或值异常）时不显示，
+ * 返回 0 时照旧显示「0 个等级价」，都不影响列表本身。
+ */
+const levelPriceCountText = (row: SysGoodsRespDTO) => {
+  const count = row.levelPriceCount
 
   if (typeof count !== 'number' || count < 0) {
     return ''
   }
 
   return $ts('module.system.goods.levelPriceCount', { count })
-}
-
-const loadLevelPriceCounts = async (rows: SysGoodsRespDTO[]) => {
-  const token = ++levelPriceCountToken
-  const ids = rows
-    .map(row => row.id)
-    .filter((id): id is string => typeof id === 'string' && id !== '' && levelPriceCounts.value[id] === undefined)
-
-  if (ids.length === 0) {
-    return
-  }
-
-  // 分批并发：一页最多 100 行，避免同一时刻打出上百个请求
-  const chunkSize = 5
-
-  for (let start = 0; start < ids.length; start += chunkSize) {
-    const chunk = ids.slice(start, start + chunkSize)
-    const results = await Promise.all(chunk.map(async (id) => {
-      try {
-        const items = await $trpc.sysGoods.levelPrices.query({ goodsId: id })
-        return [id, items.length] as const
-      } catch {
-        // 失败不写缓存：下次列表刷新会再试一次
-        return [id, -1] as const
-      }
-    }))
-
-    if (token !== levelPriceCountToken) {
-      return
-    }
-
-    for (const [id, count] of results) {
-      if (count >= 0) {
-        levelPriceCounts.value[id] = count
-      }
-    }
-  }
-}
-
-watch(data, (rows) => {
-  void loadLevelPriceCounts(rows)
-})
-
-/** 弹窗保存后会回传被改动的商品 id，用于让该行的等级价数量重新统计 */
-const handleOperateRefreshed = async (changedGoodsId?: string) => {
-  if (changedGoodsId) {
-    delete levelPriceCounts.value[changedGoodsId]
-  }
-
-  await refresh()
 }
 
 const columns = computed<TableColumn<SysGoodsRespDTO>[]>(() => {
@@ -257,7 +206,7 @@ const columns = computed<TableColumn<SysGoodsRespDTO>[]>(() => {
       id: 'price',
       header: () => $ts('module.system.goods.price'),
       cell: ({ row }) => {
-        const countText = levelPriceCountText(row.original.id)
+        const countText = levelPriceCountText(row.original)
 
         return h('div', {}, [
           h('div', { class: 'font-medium' }, priceText(row.original.price)),

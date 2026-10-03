@@ -231,28 +231,25 @@ export function orderRepo(executor: AppExecutor) {
       return { total: Number(totalRows[0]?.total ?? 0), list }
     },
 
-    /** 待支付总数（看板） */
-    async countPending() {
+    /**
+     * 看板用：待支付数（`WP`）+ 待交付服务订单数（`OD` 且 `pending`）。
+     *
+     * 两项都是 `is_deleted = 0` 上的全表聚合，条件互不重叠，所以合并成**一条**
+     * `SUM(CASE WHEN ... THEN 1 ELSE 0 END)` 查询，不再是两段独立 COUNT。
+     */
+    async countPendingOverview() {
       const rows = await db
-        .select({ total: count() })
+        .select({
+          pendingCount: sql<number>`coalesce(sum(case when ${sysOrder.status} = 'WP' then 1 else 0 end), 0)`,
+          pendingFulfillCount: sql<number>`coalesce(sum(case when ${sysOrder.status} = 'OD' and ${sysOrder.fulfillStatus} = 'pending' then 1 else 0 end), 0)`
+        })
         .from(sysOrder)
-        .where(and(eq(sysOrder.isDeleted, 0), eq(sysOrder.status, STATUS_PENDING)))
+        .where(and(eq(sysOrder.isDeleted, 0)))
 
-      return Number(rows[0]?.total ?? 0)
-    },
-
-    /** 待交付服务订单数（看板） */
-    async countPendingFulfill() {
-      const rows = await db
-        .select({ total: count() })
-        .from(sysOrder)
-        .where(and(
-          eq(sysOrder.isDeleted, 0),
-          eq(sysOrder.status, STATUS_COMPLETED),
-          eq(sysOrder.fulfillStatus, 'pending')
-        ))
-
-      return Number(rows[0]?.total ?? 0)
+      return {
+        pendingCount: Number(rows[0]?.pendingCount ?? 0),
+        pendingFulfillCount: Number(rows[0]?.pendingFulfillCount ?? 0)
+      }
     },
 
     /** 区间内订单数与成交额（成交额只统计已完成订单的应付金额） */

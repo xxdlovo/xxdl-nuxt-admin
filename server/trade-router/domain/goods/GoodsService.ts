@@ -120,6 +120,17 @@ export function buildGoods(executor: AppExecutor) {
   }
 
   /**
+   * 批量统计每个商品配了几个等级价（后台商品列表一页一次 group by）。
+   * 仅用于列表展示：成交单价仍由 `resolvePrice/resolvePrices` 在下单链路实时解析。
+   * 返回 Map<goodsId, count>，没有等级价的商品不会出现在 Map 里（调用方按 0 处理）。
+   */
+  async function countLevelPricesByGoodsIds(goodsIds: string[]): Promise<Map<string, number>> {
+    const rows = await levelPrices.countByGoodsIds(goodsIds)
+
+    return new Map(rows.map(row => [row.goodsId, Number(row.count) || 0]))
+  }
+
+  /**
    * 保存等级价：整体替换。
    * 先物理清空该商品旧行再插入新行（唯一键不含 is_deleted，软删会撞键），
    * price 为空/负数的项直接跳过（等价于「该等级用基础价」）。
@@ -194,6 +205,7 @@ export function buildGoods(executor: AppExecutor) {
     resolvePrice,
     resolvePrices,
     listLevelPrices,
+    countLevelPricesByGoodsIds,
     saveLevelPrices,
     decreaseStockOrThrow,
     rollbackStock,

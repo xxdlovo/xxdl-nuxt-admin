@@ -25,6 +25,7 @@ import type { PriceSource } from '../goods/types'
 import { memberServiceIn } from '../member/MemberService'
 import { walletServiceIn } from '../wallet/WalletService'
 import { fromCents, toCents } from '../wallet/utils'
+import { orderSummaryCacheService } from '#server/sys-router/storage/cache/OrderSummaryCacheService'
 import { orderRepo, type OrderRow } from './repo/orderRepo'
 import {
   ORDER_EXPIRE_BATCH_SIZE,
@@ -531,8 +532,7 @@ export function buildOrder(executor: AppExecutor) {
     fulfillTx,
     listExpiredPending: async (limit: number) => await repo.listExpiredPending(limit, nowForMysql()),
     pageByUser: async (params: Parameters<typeof repo.pageByUser>[0]) => await repo.pageByUser(params),
-    countPending: async () => await repo.countPending(),
-    countPendingFulfill: async () => await repo.countPendingFulfill(),
+    countPendingOverview: async () => await repo.countPendingOverview(),
     sumByRange: async (range: { createdFrom?: string | null, createdTo?: string | null }) => await repo.sumByRange(range)
   }
 }
@@ -554,6 +554,18 @@ export function isOrderAlreadySettled(error: unknown): boolean {
 export function orderService(db: AppDb) {
   const reads = buildOrder(db)
   const run = async <T>(fn: (tx: AppTx) => Promise<T>): Promise<T> => await db.transaction(async tx => await fn(tx))
+  const summaryCache = orderSummaryCacheService()
+
+  /**
+   * 看板缓存失效：订单/履约状态变化后必须调用（见 `OrderSummaryCacheService`）。
+   *
+   * 刻意在**每次成功的写操作之后**都调用一次（包括幂等重放的 `reused` 分支）：
+   * memory 缓存是进程内的，别的进程推进了状态时本进程不会收到通知，
+   * 「这次调用发现状态已经是目标值」正是本进程发现自己缓存过期的唯一机会。
+   */
+  async function invalidateSummaryCache(): Promise<void> {
+    await summaryCache.invalidate()
+  }
 
   /** 条件更新抢输时的统一兜底：重新读一次，已是目标状态就按幂等返回 */
   async function settleWithIdempotentGuard<T>(
@@ -578,18 +590,33 @@ export function orderService(db: AppDb) {
   /** 在线支付成功：回调 / 同步 / 后台共用，幂等（抽成局部函数，避免在返回对象里用 this） */
   async function markPaid(orderNo: string, operatorId: string | null = null): Promise<OrderSettleResult> {
     try {
-      return await run(tx => buildOrder(tx).markPaidTx({ orderNo, operatorId }))
+      const settled = await run(tx => buildOrder(tx).markPaidTx({ orderNo, operatorId }))
+
+      await invalidateSummaryCache()
+
+      return settled
     } catch (error) {
       if (isOrderAlreadySettled(error)) {
         const row = await reads.getByOrderNo(orderNo)
 
         if (row) {
+          await invalidateSummaryCache()
+
           return toIdempotentSettle(row)
         }
       }
 
       throw error
     }
+  }
+
+  /** 关单后尽力关闭渠道支付单：调用方已给支付单 id 时直接用，否则回查一次订单行 */
+  async function closeChannelPaymentFor(input: OrderKey & { payOrderId?: string | null }): Promise<void> {
+    const payOrderId = input.payOrderId !== undefined
+      ? input.payOrderId
+      : (await reads.findOrderByKey(input))?.payOrderId ?? null
+
+    await closeChannelPayment(db, payOrderId)
   }
 
   /**
@@ -600,6 +627,12 @@ export function orderService(db: AppDb) {
     reason?: string | null
     source: OrderCancelSource
     operatorId?: string | null
+    /**
+     * 调用方已持有的支付单 id（如 `sync` 手上的行）。
+     * 传 `null` 表示明确「没有关联支付单」，两者都能省掉一次订单回查；
+     * 不传（`undefined`）时才按 key 回查订单行 —— 行为与改造前一致。
+     */
+    payOrderId?: string | null
   }): Promise<OrderSettleResult> {
     const result = await settleWithIdempotentGuard(
       async () => await run(tx => buildOrder(tx).cancelTx(input)),
@@ -611,8 +644,10 @@ export function orderService(db: AppDb) {
     )
 
     if (!result.reused) {
-      await closeChannelPayment(db, input)
+      await closeChannelPaymentFor(input)
     }
+
+    await invalidateSummaryCache()
 
     return result
   }
@@ -628,6 +663,8 @@ export function orderService(db: AppDb) {
       const existing = await reads.findByRequestId(input.requestId)
 
       if (existing) {
+        await invalidateSummaryCache()
+
         return await fillPayInfo(db, reads.toCreateResult(existing, { reused: true }))
       }
 
@@ -639,6 +676,9 @@ export function orderService(db: AppDb) {
           return row ? reads.toCreateResult(row, { reused: true }) : null
         }
       )
+
+      // 新订单影响「今日订单数」与「待支付数」，看板缓存立即作废
+      await invalidateSummaryCache()
 
       if (input.payMode !== PAY_MODE_ONLINE) {
         return created
@@ -681,6 +721,9 @@ export function orderService(db: AppDb) {
           operatorId: input.operatorId ?? null
         }))
 
+        // WP → FL，待支付数变了
+        await invalidateSummaryCache()
+
         throw new AppError('module.system.order.payCreateFailed', { message, cause: error })
       }
     },
@@ -688,7 +731,11 @@ export function orderService(db: AppDb) {
     /** 余额单确认支付（会员自助或后台代确认） */
     async confirm(input: OrderKey & { operatorId?: string | null }): Promise<OrderSettleResult> {
       try {
-        return await run(tx => buildOrder(tx).confirmTx(input))
+        const settled = await run(tx => buildOrder(tx).confirmTx(input))
+
+        await invalidateSummaryCache()
+
+        return settled
       } catch (error) {
         if (error instanceof OrderFreezeLostError) {
           // 冻结已不可用：用独立事务把订单关掉（本次失败的事务已回滚），再给用户明确提示
@@ -699,6 +746,8 @@ export function orderService(db: AppDb) {
             operatorId: input.operatorId ?? null
           })).catch(() => undefined)
 
+          await invalidateSummaryCache()
+
           throw new AppError('module.system.order.freezeExpired')
         }
 
@@ -706,6 +755,8 @@ export function orderService(db: AppDb) {
           const row = await reads.findOrderByKey(input)
 
           if (row) {
+            await invalidateSummaryCache()
+
             return toIdempotentSettle(row)
           }
         }
@@ -719,7 +770,7 @@ export function orderService(db: AppDb) {
 
     /** 服务交付 */
     async fulfill(input: OrderKey & { remark?: string | null, operatorId?: string | null }): Promise<OrderSettleResult> {
-      return await settleWithIdempotentGuard(
+      const result = await settleWithIdempotentGuard(
         async () => await run(tx => buildOrder(tx).fulfillTx(input)),
         async () => {
           const row = await reads.findOrderByKey(input)
@@ -727,6 +778,10 @@ export function orderService(db: AppDb) {
           return row?.fulfillStatus === FULFILL_DELIVERED ? toIdempotentSettle(row) : null
         }
       )
+
+      await invalidateSummaryCache()
+
+      return result
     },
 
     /**
@@ -744,13 +799,38 @@ export function orderService(db: AppDb) {
       let closedCount = 0
       let recoveredCount = 0
 
+      /**
+       * 本批订单的支付单一次查完（原来是循环里逐单 `getById`，单轮最多 200 次额外 SELECT）。
+       * 只按 id 取回状态，循环里查 Map 判断，不再回表。
+       */
+      const payOrderIds = [...new Set(
+        rows.map(row => row.payOrderId).filter((id): id is string => Boolean(id))
+      )]
+      const payOrderStatusById = new Map<string, string>()
+
+      if (payOrderIds.length > 0) {
+        const payOrders = await payOrderService(db).listByIds(payOrderIds)
+
+        for (const payOrder of payOrders) {
+          payOrderStatusById.set(payOrder.id, payOrder.status)
+        }
+      }
+
       for (const row of rows) {
         try {
           // 支付单已支付：先补做业务后置（幂等），不能误关
           if (row.payOrderId) {
-            const payOrder = await payOrderService(db).getById(row.payOrderId)
+            const payStatus = payOrderStatusById.get(row.payOrderId)
 
-            if (payOrder.status === 'OD') {
+            /**
+             * 批量查询里没有这一行（支付单不存在或已软删）：与改造前逐单 `getById`
+             * 抛 `common.notExist` 的行为保持一致 —— 计入失败、不关单。
+             */
+            if (payStatus === undefined) {
+              throw new AppError('common.notExist')
+            }
+
+            if (payStatus === 'OD') {
               const settled = await markPaid(row.orderNo, null)
 
               if (!settled.reused) {
@@ -772,8 +852,9 @@ export function orderService(db: AppDb) {
             closedCount += 1
           }
 
+          // 手上已有支付单 id，不再回查订单行
           if (!result.reused && row.payOrderId) {
-            await closeChannelPayment(db, { orderId: row.id })
+            await closeChannelPayment(db, row.payOrderId)
           }
         } catch (error) {
           failures.push({
@@ -781,6 +862,11 @@ export function orderService(db: AppDb) {
             message: error instanceof Error ? error.message : 'unknown error'
           })
         }
+      }
+
+      // 本轮真的关掉/补做了订单才作废看板缓存（没有任何变更时缓存仍然有效）
+      if (closedCount > 0 || recoveredCount > 0) {
+        await invalidateSummaryCache()
       }
 
       return { scanned: rows.length, closedCount, recoveredCount, failures }
@@ -815,7 +901,9 @@ export function orderService(db: AppDb) {
           orderId: row.id,
           reason: `支付单已${payOrder.status === 'CL' ? '关闭' : '失败'}`,
           source: 'admin',
-          operatorId: input.operatorId ?? null
+          operatorId: input.operatorId ?? null,
+          // 手上已经有支付单 id，关单后不必再回查订单行
+          payOrderId: row.payOrderId
         })
 
         return {
@@ -845,23 +933,40 @@ export function orderService(db: AppDb) {
       }
     },
 
-    /** 看板统计 */
+    /**
+     * 看板统计。
+     *
+     * - 与筛选区间相关的两项（区间订单数 / 成交额）每次实时算；
+     * - 与区间无关的四项（今日订单数 / 今日成交额 / 待支付数 / 待交付数）走
+     *   `OrderSummaryCacheService` 的短 TTL 缓存：前端每次搜索、每次动作后都会重跑，
+     *   这几项在同一个 20 秒窗口里重复聚合没有意义；订单状态变化处会显式失效。
+     */
     async summary(range: { createdFrom?: string | null, createdTo?: string | null }): Promise<OrderSummary> {
       const todayFrom = `${nowForMysql().slice(0, 10)} 00:00:00`
-      const [rangeSum, todaySum, pendingCount, pendingFulfillCount] = await Promise.all([
+      const [rangeSum, overview] = await Promise.all([
         reads.sumByRange(range),
-        reads.sumByRange({ createdFrom: todayFrom, createdTo: null }),
-        reads.countPending(),
-        reads.countPendingFulfill()
+        summaryCache.getOverview(async () => {
+          const [todaySum, pending] = await Promise.all([
+            reads.sumByRange({ createdFrom: todayFrom, createdTo: null }),
+            reads.countPendingOverview()
+          ])
+
+          return {
+            todayCount: todaySum.totalCount,
+            todayAmount: todaySum.totalAmount,
+            pendingCount: pending.pendingCount,
+            pendingFulfillCount: pending.pendingFulfillCount
+          }
+        })
       ])
 
       return {
         totalCount: rangeSum.totalCount,
         totalAmount: rangeSum.totalAmount,
-        pendingCount,
-        pendingFulfillCount,
-        todayCount: todaySum.totalCount,
-        todayAmount: todaySum.totalAmount
+        pendingCount: overview.pendingCount,
+        pendingFulfillCount: overview.pendingFulfillCount,
+        todayCount: overview.todayCount,
+        todayAmount: overview.todayAmount
       }
     }
   }
@@ -894,19 +999,23 @@ async function fillPayInfo(db: AppDb, created: OrderCreateResult): Promise<Order
   }
 }
 
-/** 尽力关闭渠道支付单：失败不影响本地关单（渠道侧可能已支付/已关闭） */
+/**
+ * 尽力关闭渠道支付单：失败不影响本地关单（渠道侧可能已支付/已关闭）。
+ *
+ * 只接收**支付单 id**：调用方（`expireClose` / `sync`）手上本来就有订单行，
+ * 改造前这里为了拿 `payOrderId` 又按 key 回查了一次订单（每次关单多一条 SELECT）。
+ * `null` / `undefined` 一律视为「没有关联支付单」，直接返回。
+ */
 async function closeChannelPayment(
   db: AppDb,
-  key: OrderKey
+  payOrderId: string | null | undefined
 ): Promise<void> {
+  if (!payOrderId) {
+    return
+  }
+
   try {
-    const row = await buildOrder(db).findOrderByKey(key)
-
-    if (!row?.payOrderId) {
-      return
-    }
-
-    await payOrderService(db).closePayment(row.payOrderId, { operatorId: null })
+    await payOrderService(db).closePayment(payOrderId, { operatorId: null })
   } catch {
     // 渠道关闭失败只记录在渠道侧，本地订单状态已经确定，不再抛出
   }

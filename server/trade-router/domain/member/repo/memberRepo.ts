@@ -1,7 +1,7 @@
 /**
  * 会员档案 mapper（数据访问层）。
  */
-import { and, asc, desc, eq, inArray, isNotNull, isNull, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, or, sql } from 'drizzle-orm'
 import { sysConfig, sysMember, sysUser } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 import { affectedRows } from '../../wallet/repo/sqlUtils'
@@ -187,6 +187,20 @@ export function memberRepo(executor: AppExecutor) {
         .from(sysMember)
         .where(and(eq(sysMember.inviterId, inviterId), eq(sysMember.isDeleted, 0)))
         .orderBy(desc(sysMember.createdAt))
+    },
+
+    /**
+     * 下级数量：条件与 `listInvitees` 完全一致，只做一次 `COUNT(*)`。
+     * 只要数量的场景（会员档案页）不要用 `listInvitees().length`：列表没有 limit，
+     * 下级多时会白物化整表。
+     */
+    async countInvitees(inviterId: string): Promise<number> {
+      const rows = await db
+        .select({ total: count() })
+        .from(sysMember)
+        .where(and(eq(sysMember.inviterId, inviterId), eq(sysMember.isDeleted, 0)))
+
+      return Number(rows[0]?.total ?? 0)
     },
 
     /** 邀请码是否已被占用 */

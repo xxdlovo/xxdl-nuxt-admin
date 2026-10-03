@@ -8,6 +8,7 @@
  * 事务：`memberService(db)` 的写方法自带事务；已在事务中的调用方用 `memberServiceIn(tx)`。
  */
 import { AppError } from '#server/utils/appError'
+import { memberLevelCacheService } from '#server/sys-router/storage/cache/MemberLevelCacheService'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { nowForMysql } from '../pay/utils'
@@ -492,9 +493,17 @@ function buildMember(executor: AppExecutor) {
     return await members.listInvitees(userId)
   }
 
-  /** 等级下拉 */
+  /** 我邀请的下级数量（只需计数时用，避免把下级列表整表物化出来只为取 length） */
+  async function countInvitees(userId: string) {
+    return await members.countInvitees(userId)
+  }
+
+  /**
+   * 等级下拉（商城列表/详情、个人中心、商品等级价弹窗都走这里）。
+   * 整表读 + 一处缓存：写入口（SysMemberLevelService）显式失效，TTL 只作兜底。
+   */
   async function listLevels() {
-    return await levels.listEnabled()
+    return await memberLevelCacheService().getEnabledList(async () => await levels.listEnabled())
   }
 
   /** 我的券使用记录 */
@@ -533,6 +542,7 @@ function buildMember(executor: AppExecutor) {
     releaseCoupon,
     getMember,
     listInvitees,
+    countInvitees,
     listLevels,
     listMyCoupons,
     listUnprofiledUsers,

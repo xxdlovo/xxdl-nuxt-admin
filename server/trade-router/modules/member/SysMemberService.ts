@@ -231,9 +231,9 @@ export function sysMemberService(ctx: Context) {
         /** 我的会员档案（含邀请码与下级数量） */
         async myProfile() {
             const user = requireLogin(ctx)
-            const [member, invitees, levels] = await Promise.all([
+            const [member, inviteeCount, levels] = await Promise.all([
                 members.getMember(user.id),
-                members.listInvitees(user.id),
+                members.countInvitees(user.id),
                 members.listLevels()
             ])
             const level = levels.find(item => item.id === member?.levelId) ?? null
@@ -241,7 +241,7 @@ export function sysMemberService(ctx: Context) {
             return {
                 member,
                 levelName: level?.name ?? null,
-                inviteeCount: invitees.length
+                inviteeCount
             }
         },
 

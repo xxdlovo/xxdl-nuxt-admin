@@ -36,15 +36,11 @@ const uploadingAvatar = ref(false)
 const avatarProgress = ref(0)
 const avatarUploadXhr = shallowRef<XMLHttpRequest | null>(null)
 
-/** 我的会员档案（等级 / 邀请码 / 下级数量）；未登录会员体系或查询失败时为 null */
-const memberProfile = ref<{
-  levelName: string | null
-  inviteeCount: number
-  member: { inviteCode?: string | null } | null
-} | null>(null)
+/** 我的会员档案（等级 / 邀请码 / 下级数量）：走会话级 store，未登录会员体系或查询失败时为 null */
+const memberProfileStore = useMemberProfileStore()
 
 /** 会员等级名称：没有等级（或查不到档案）时不展示徽标 */
-const memberLevelName = computed(() => memberProfile.value?.levelName ?? null)
+const memberLevelName = computed(() => memberProfileStore.profile?.levelName ?? null)
 
 const profileState = reactive<Partial<SysUserProfileUpdateDTO>>({
   nickname: '',
@@ -229,8 +225,9 @@ async function loadData() {
   }
 
   // 会员档案（等级 / 邀请码 / 下级数量）：独立查询且失败不阻断个人中心，
-  // 没有会员档案时只是不展示等级，而不是整页报错
-  memberProfile.value = await $trpc.sysMember.myProfile.query().catch(() => null)
+  // 没有会员档案时只是不展示等级，而不是整页报错。
+  // 强制 refresh：等级可能已被后台改过，不能用会话开始时那份缓存。
+  await memberProfileStore.refresh()
 }
 
 function cancelEdit() {

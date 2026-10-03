@@ -7,7 +7,7 @@
  *   领域层与路由层都复用同一份 mapper，避免同一张表出现第二份 SQL；
  * - 只负责取数与写数，不做业务判断（状态能否流转、金额是否一致等在 Service / Dispatcher）。
  */
-import { and, asc, desc, eq, ne, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne, sql } from 'drizzle-orm'
 import { sysPayOrder } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 
@@ -53,6 +53,22 @@ export function payOrderRepo(executor: AppExecutor) {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /**
+     * 批量按 id 读支付单（顺序不保证，调用方自行建 Map）。
+     * 供超时关单等「一次任务手上已有一批订单」的场景使用，替代逐单 `findById`。
+     * 语义与 `findById` 一致：已软删的行不返回。
+     */
+    async listByIds(ids: string[]): Promise<PayOrderRow[]> {
+      if (ids.length === 0) {
+        return []
+      }
+
+      return await db
+        .select()
+        .from(sysPayOrder)
+        .where(and(inArray(sysPayOrder.id, ids), eq(sysPayOrder.isDeleted, 0)))
     },
 
     async existsOutTradeNo(outTradeNo: string): Promise<boolean> {

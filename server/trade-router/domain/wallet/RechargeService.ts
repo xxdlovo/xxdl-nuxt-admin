@@ -204,6 +204,19 @@ function buildRecharge(executor: AppExecutor) {
       throw new AppError('module.system.memberRecharge.notFound')
     }
 
+    return await creditLoaded(row, operatorId)
+  }
+
+  /**
+   * 到账入账的实体实现：接收**已加载**的充值单行。
+   *
+   * 补偿循环（`retryPending`）已经在扫描 SQL 里把充值单整行取回来了，
+   * 再按单号 `findByOutTradeNo` 重查一次纯属浪费（单轮最多 50 次 SELECT），
+   * 因此把入账逻辑抽到这里：`credit` 负责「按单号取行」，本函数负责「入账」。
+   */
+  async function creditLoaded(row: RechargeRow, operatorId: string | null = null): Promise<CreditRechargeResult> {
+    const outTradeNo = row.outTradeNo
+
     if (row.status === 'OD') {
       return { outTradeNo, credited: false, reused: true, amount: row.amount, giftAmount: row.giftAmount }
     }
@@ -330,7 +343,8 @@ function buildRecharge(executor: AppExecutor) {
 
     for (const row of rows) {
       try {
-        const credited = await credit(row.outTradeNo, operatorId)
+        // 扫描 SQL 已经带回充值单整行，直接入账，不再按单号回查
+        const credited = await creditLoaded(row.recharge, operatorId)
         results.push({
           outTradeNo: row.outTradeNo,
           ok: credited.credited,
@@ -348,11 +362,9 @@ function buildRecharge(executor: AppExecutor) {
     return { scanned: rows.length, results }
   }
 
-  /** 待补偿数量（对账页展示用） */
-  async function countPending(limit = 200) {
-    const rows = await repo.listPendingWithPaidOrder(limit)
-
-    return rows.length
+  /** 待补偿数量（对账页展示用）：走 `COUNT(*)`，不受列表 limit 影响 */
+  async function countPending() {
+    return await repo.countPendingWithPaidOrder()
   }
 
   return {

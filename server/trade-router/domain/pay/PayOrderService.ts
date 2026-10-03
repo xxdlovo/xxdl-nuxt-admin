@@ -85,6 +85,11 @@ export function payOrderService(executor: AppExecutor) {
       return await orderRepo.findByOutTradeNo(outTradeNo)
     },
 
+    /** 批量按 id 读支付单（超时关单/看板等已知一批订单的场景，避免逐单查询） */
+    async listByIds(ids: string[]): Promise<PayOrderRow[]> {
+      return await orderRepo.listByIds(ids)
+    },
+
     /**
      * 统一下单：解析渠道 → 调适配器 → 落库。
      * 适配器失败时也会落一条 FL 订单（便于在支付记录里排查），然后把错误抛给调用方。

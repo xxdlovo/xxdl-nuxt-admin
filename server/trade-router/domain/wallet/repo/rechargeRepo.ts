@@ -4,7 +4,7 @@
  * 与支付模块的关系：`out_trade_no` 与 `sys_pay_order.out_trade_no` 一一对应，
  * 回调到账时按 `out_trade_no` 找到充值单，再走 WalletService 入账（幂等）。
  */
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, sql } from 'drizzle-orm'
 import { sysMemberRecharge, sysPayOrder } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 import { affectedRows } from './sqlUtils'
@@ -119,12 +119,15 @@ export function rechargeRepo(executor: AppExecutor) {
     /**
      * 需要补偿的充值单：本地仍是待支付，但对应的支付单已经支付成功。
      * 用于「回调丢了 / 到账中断」的自愈（幂等键保证不会重复到账）。
-     */    async listPendingWithPaidOrder(limit: number) {
+     *
+     * 除支付单信息外，这里把 `credit` 需要的充值单列（金额、赠送金、券、支付单回填字段）
+     * 一并查出来：补偿循环可以拿 `recharge` 直接入账，不必按单号逐单回查充值单。
+     */
+    async listPendingWithPaidOrder(limit: number) {
       return await db
         .select({
-          rechargeId: sysMemberRecharge.id,
+          recharge: sysMemberRecharge,
           outTradeNo: sysMemberRecharge.outTradeNo,
-          userId: sysMemberRecharge.userId,
           payOrderId: sysPayOrder.id,
           channelCode: sysPayOrder.channelCode,
           paidAt: sysPayOrder.paidAt
@@ -139,6 +142,25 @@ export function rechargeRepo(executor: AppExecutor) {
         ))
         .orderBy(desc(sysMemberRecharge.createdAt))
         .limit(limit)
+    },
+
+    /**
+     * 待补偿条数：条件与 `listPendingWithPaidOrder` 完全一致，但只做一次 `COUNT(*)`。
+     * 不要用 `listPendingWithPaidOrder(limit).length` 代替：limit 会把条数截断（少算）。
+     */
+    async countPendingWithPaidOrder(): Promise<number> {
+      const rows = await db
+        .select({ total: count() })
+        .from(sysMemberRecharge)
+        .innerJoin(sysPayOrder, eq(sysPayOrder.outTradeNo, sysMemberRecharge.outTradeNo))
+        .where(and(
+          eq(sysMemberRecharge.status, 'WP'),
+          eq(sysMemberRecharge.isDeleted, 0),
+          eq(sysPayOrder.status, 'OD'),
+          eq(sysPayOrder.isDeleted, 0)
+        ))
+
+      return Number(rows[0]?.total ?? 0)
     },
 
     /** 某会员的充值记录（自助页用） */

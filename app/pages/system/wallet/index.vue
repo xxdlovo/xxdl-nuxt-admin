@@ -182,7 +182,7 @@
         </div>
 
         <div class="text-sm text-muted">
-          {{ $ts('module.system.wallet.inviteeCount') }}：{{ invitees.length }}
+          {{ $ts('module.system.wallet.inviteeCount') }}：{{ inviteeCount }}
         </div>
 
         <div v-if="invitees.length === 0" class="py-4 text-center text-sm text-muted">
@@ -244,6 +244,8 @@ import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
+// 会员档案（邀请码 / 下级数量）走会话级 store：与个人中心共用一次请求
+const memberProfileStore = useMemberProfileStore()
 
 const wallet = ref({
   rechargeBalance: '0.00',
@@ -259,6 +261,12 @@ const wallet = ref({
 })
 
 const profile = ref<{ inviteCode?: string | null }>({})
+/** 下级数量：取 myProfile 的 inviteeCount（服务端 COUNT），不再用明细列表长度代替 */
+const inviteeCount = ref(0)
+/**
+ * 下级明细：页面上确实渲染了明细列表，因此 `sysMember.myInvitees` 必须保留；
+ * 它只服务于列表，数量展示不再依赖它。
+ */
 const invitees = ref<Array<{ userId?: string | null, nickname?: string | null, username?: string | null, createdAt?: string | null }>>([])
 const logs = ref<Array<Record<string, unknown>>>([])
 const logsLoading = ref(false)
@@ -469,10 +477,15 @@ const loadWallet = async () => {
 }
 
 const loadProfile = async () => {
-  const result = await $trpc.sysMember.myProfile.query()
+  // 档案走 store（ensure：有缓存直接复用）；明细列表单独请求，只用于下方列表渲染
+  const [result, list] = await Promise.all([
+    memberProfileStore.ensure(),
+    $trpc.sysMember.myInvitees.query()
+  ])
 
-  profile.value = { inviteCode: result.member?.inviteCode ?? null }
-  invitees.value = await $trpc.sysMember.myInvitees.query() as typeof invitees.value
+  profile.value = { inviteCode: result?.member?.inviteCode ?? null }
+  inviteeCount.value = result?.inviteeCount ?? 0
+  invitees.value = list as typeof invitees.value
 }
 
 const loadLogs = async () => {

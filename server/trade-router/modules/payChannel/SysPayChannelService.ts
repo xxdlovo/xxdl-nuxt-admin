@@ -2,6 +2,7 @@ import { sysPayChannelRepo } from './SysPayChannelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
 import type { OrmPageResp } from '#server/utils/ApiResp'
+import { payChannelCacheService } from '#server/sys-router/storage/cache/PayChannelCacheService'
 import { toChannelRuntime } from '#server/trade-router/domain/pay/PayChannelResolver'
 import {
     describePayConfigKey,
@@ -61,6 +62,13 @@ function maskRow(row: ChannelRow): SysPayChannelDto {
 
 export function sysPayChannelService(ctx: Context) {
     const repo = sysPayChannelRepo(ctx)
+    /**
+     * 渠道运行时缓存（PayChannelResolver 的下单/查单/回调读点都走它）。
+     * 任何写入口成功之后都要整前缀失效：改 status / isDefault / channelCode / config
+     * 会影响「按 id」「按 code+currency 选择」「按 code 列表」三个维度，
+     * 定点删一个 key 覆盖不到，而且 TTL 只有 60 秒，宁可多清。
+     */
+    const channelCache = payChannelCacheService()
 
     /**
      * 组装要落库的 config：
@@ -159,16 +167,20 @@ export function sysPayChannelService(ctx: Context) {
                 verifyMessage: null
             })
 
+            await channelCache.invalidateAll()
+
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            await channelCache.invalidateAll()
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            await channelCache.invalidateAll()
             return ids.length
         },
 
@@ -201,6 +213,9 @@ export function sysPayChannelService(ctx: Context) {
             }
 
             await repo.updateById(id, values as SysPayChannelUpdateDTO)
+
+            // 配置/类型/启停/排序/默认标记都可能变了，缓存整前缀失效
+            await channelCache.invalidateAll()
 
             return true
         },
@@ -260,6 +275,9 @@ export function sysPayChannelService(ctx: Context) {
                 verifyMessage: truncateText(result.message, 500)
             })
 
+            // verifyStatus 不在 runtime 里，但写入口一律失效，避免以后往 runtime 加字段时漏失效
+            await channelCache.invalidateAll()
+
             return result
         },
 
@@ -273,6 +291,9 @@ export function sysPayChannelService(ctx: Context) {
 
             await repo.clearOtherDefaults(id)
             await repo.updateById(id, { isDefault: 1 })
+
+            // 默认渠道影响 findEnabled 的选择结果，必须失效
+            await channelCache.invalidateAll()
 
             return true
         },

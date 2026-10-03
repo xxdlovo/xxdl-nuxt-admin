@@ -2,6 +2,7 @@
 const { user, clear } = useUserSession()
 const { clearProfile } = useRbacProfile()
 const dictStore = useDictStore()
+const memberProfileStore = useMemberProfileStore()
 const { $ts } = useI18n()
 
 const displayName = computed(() => user.value?.nickname || user.value?.username || $ts('module.system.profile.userFallback'))
@@ -10,6 +11,7 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 async function handleLogout() {
   clearProfile()
   dictStore.clearDict()
+  memberProfileStore.clear()
   await clear()
   await navigateTo('/login')
 }
