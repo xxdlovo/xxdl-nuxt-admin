@@ -22,8 +22,6 @@ import { randomUuid } from '#shared/utils/uuid'
 const CREDITED_STATUS = 'OD'
 /** 缺省状态：待支付 */
 const DEFAULT_STATUS = 'WP'
-/** 只有待支付可关闭（与领域层 rechargeRepo.markClosed 的守卫一致） */
-const CLOSABLE_STATUS = 'WP'
 
 /** 批量操作先按 id 去重，避免重复 id 让「全部存在」的校验误判 */
 function uniqIds(ids: string[]) {
@@ -171,29 +169,21 @@ export function sysMemberRechargeService(ctx: Context) {
         },
 
         /**
-         * 关闭充值单：先读单确认状态（只有 WP 可关闭），再置为 CL；
-         * 该单占用的优惠码必须释放，否则用户后续充值用不了（领域层幂等，重复调用安全）。
+         * 关闭充值单：交给领域层的 `close` 一站式处理 ——
+         * 只有 WP 可关闭（CL 幂等返回、其它状态报错）、置 CL 并把原因写入 fail_reason、
+         * **同时关闭关联的渠道支付单**、释放占用的优惠码。
+         *
+         * 「必须关闭渠道支付单」这点很关键：否则渠道侧仍是待支付，
+         * 会员端轮询同步会一直拿到 WP，界面永远停在「自动同步中」。
          */
         async close(req: SysMemberRechargeCloseDTO): Promise<boolean> {
-            const row = await repo.getById(req.id)
+            const result = await recharges.close({
+                rechargeId: req.id,
+                reason: req.reason ?? null,
+                operatorId: ctx.user?.id ?? null
+            })
 
-            if (!row) {
-                throw new AppError('common.notExist')
-            }
-            if (row.status !== CLOSABLE_STATUS) {
-                throw new AppError('module.system.memberRecharge.notClosable')
-            }
-
-            await repo.markClosed(row.id, req.reason ?? null)
-
-            if (row.couponId) {
-                await member.releaseCoupon({
-                    bizNo: row.outTradeNo,
-                    operatorId: ctx.user?.id ?? null
-                })
-            }
-
-            return true
+            return result.closed || result.reused
         },
 
         /**

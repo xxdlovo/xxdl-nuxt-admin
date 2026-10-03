@@ -1401,7 +1401,8 @@
         "userSelectPlaceholder": "Select a user",
         "userSelectSearch": "Search by nickname / username / phone",
         "userSelectEmpty": "No matching user",
-        "userSelectEmptyDefault": "Type to search"
+        "userSelectEmptyDefault": "Type to search",
+        "bizNoTooLong": "Business number is too long, please retry or shorten the idempotency key ({message})"
       },
       "memberRecharge": {
         "outTradeNoExists": "This merchant order number already exists; change it or leave it empty",
@@ -1464,7 +1465,8 @@
           "amountMin": "Min amount",
           "amountMax": "Max amount",
           "userSelect": "Search and select the member"
-        }
+        },
+        "paidCannotClose": "This recharge is already paid and cannot be closed (sync it instead)"
       },
       "memberFreeze": {
         "cannotDeleteFrozen": "A frozen record cannot be deleted, please confirm or release it first",
@@ -1694,7 +1696,11 @@
         "couponChecking": "Checking…",
         "couponValid": "Valid: -¥{discount}, payable ¥{payable}{gift}",
         "couponMinAmountTip": "This coupon requires at least ¥{amount}",
-        "couponInvalid": "The coupon is not usable, please check and retry"
+        "couponInvalid": "The coupon is not usable, please check and retry",
+        "rechargeClosed": "This recharge has been closed",
+        "rechargeFailed": "This recharge failed to start",
+        "rechargeCloseReason": "Close reason",
+        "rechargeFailReason": "Failure reason"
       },
       "goods": {
         "notFound": "Goods not found",

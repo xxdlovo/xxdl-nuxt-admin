@@ -258,6 +258,30 @@ function buildRecharge(executor: AppExecutor) {
       throw new AppError('module.system.memberRecharge.notClosable')
     }
 
+    /**
+     * 已支付不能关闭：否则「钱在渠道、账在本地」对不上。
+     *
+     * 先看本地支付单；本地还是待支付时再问一次渠道（管理员点关闭是一次人工操作，
+     * 多发一次查询可以接受）。渠道不可达/quota 限制时按本地状态判断，不阻断人工关闭。
+     */
+    if (row.payOrderId) {
+      const localPayOrder = await payments.getById(row.payOrderId)
+      let payStatus = localPayOrder.status
+
+      if (payStatus === 'WP') {
+        try {
+          const queried = await payments.queryPayment(row.payOrderId, { operatorId })
+          payStatus = queried.status
+        } catch {
+          payStatus = localPayOrder.status
+        }
+      }
+
+      if (payStatus === 'OD') {
+        throw new AppError('module.system.memberRecharge.paidCannotClose')
+      }
+    }
+
     const affected = await repo.markClosed({ id: row.id, reason: input.reason ?? null, operatorId })
 
     if (affected === 0) {

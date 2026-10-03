@@ -119,17 +119,27 @@
           </div>
 
           <div class="flex items-center gap-2">
-            <UBadge :color="currentStatus === 'OD' ? 'success' : 'warning'" variant="subtle">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border" :class="currentStatusClass">
               {{ statusLabel(currentStatus) }}
-            </UBadge>
+            </span>
             <span v-if="polling" class="text-xs text-muted inline-flex items-center gap-1">
               <UIcon name="i-lucide-loader-circle" class="animate-spin" />
               {{ $ts('module.system.wallet.polling') }}
             </span>
           </div>
 
+          <!-- 被后台关闭 / 发起失败：明确展示原因，避免用户继续等二维码 -->
+          <div v-if="currentTerminalReason" class="w-full max-w-md rounded-md border border-default p-2 text-xs">
+            <span class="text-muted">
+              {{ currentStatus === 'CL'
+                ? $ts('module.system.wallet.rechargeCloseReason')
+                : $ts('module.system.wallet.rechargeFailReason') }}：
+            </span>
+            <span class="break-all">{{ currentTerminalReason }}</span>
+          </div>
+
           <UButton
-            v-if="currentStatus !== 'OD'"
+            v-if="currentStatus === 'WP'"
             size="xs"
             variant="outline"
             color="neutral"
@@ -226,7 +236,7 @@ import { h } from 'vue'
 import type { SysMemberCouponCheckRespDTO } from '#shared/system/member'
 import { memberAccountRecord, memberBizTypeRecord, memberCouponUseStatusConfig, memberDirectionRecord, memberRechargeStatusConfig } from '#shared/constants/business'
 import { badgeColorClasses } from '~/composables/badgeColorClasses'
-import { useToastError, useToastSuccess } from '~/utils/toast'
+import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -360,6 +370,15 @@ const current = ref<{
   giftAmount: string
 } | null>(null)
 const currentStatus = ref('WP')
+/** 单据终结时的原因（关闭原因 / 失败原因），用于「被后台关闭」这类场景的明确提示 */
+const currentTerminalReason = ref<string | null>(null)
+
+/** 状态徽标配色：跟随充值单状态配置（WP 待支付 / OD 已到账 / CL 已关闭 / FL 失败） */
+const currentStatusClass = computed(() => {
+  const color = memberRechargeStatusConfig[currentStatus.value]?.color ?? 'neutral'
+
+  return badgeColorClasses[color] || badgeColorClasses.neutral
+})
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let pollStartedAt = 0
@@ -502,7 +521,7 @@ const startPolling = () => {
   scheduleNextPoll()
 }
 
-/** 主动同步充值状态：已支付则到账并刷新余额 */
+/** 主动同步充值状态：已支付则到账；被后台关闭 / 失败则停止轮询并展示原因 */
 const syncRecharge = async () => {
   if (!current.value) return
 
@@ -512,11 +531,26 @@ const syncRecharge = async () => {
     const result = await $trpc.sysMember.myRechargeSync.mutate({ outTradeNo: current.value.outTradeNo })
 
     currentStatus.value = result.status
+    currentTerminalReason.value = result.failReason ?? null
 
     if (result.status === 'OD') {
       stopPolling()
       useToastSuccess($ts('module.system.wallet.rechargeSuccess'), undefined, current.value.payAmount)
       await Promise.all([loadWallet(), loadRecharges(), loadLogs()])
+
+      return
+    }
+
+    if (result.status !== 'WP') {
+      // 本地单据已终结（后台关闭 / 发起失败）：停止轮询并明确告知原因
+      stopPolling()
+      useToastWarning(
+        result.status === 'CL'
+          ? $ts('module.system.wallet.rechargeClosed')
+          : $ts('module.system.wallet.rechargeFailed'),
+        undefined,
+        result.failReason ?? undefined
+      )
     }
   } finally {
     syncing.value = false
@@ -555,6 +589,7 @@ const handleRecharge = async () => {
       giftAmount: result.giftAmount
     }
     currentStatus.value = result.status
+    currentTerminalReason.value = null
     rechargeForm.amount = ''
     rechargeForm.couponCode = ''
     resetCouponCheck()

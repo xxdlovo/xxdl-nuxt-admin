@@ -78,7 +78,8 @@ export const SysMemberAdjustSchema = z.object({
     direction: z.enum(['in', 'out']),
     amount: z.union([z.string(), z.number()]),
     reason: z.string().min(1, 'form.required').max(255, 'form.required'),
-    requestId: z.string().min(1, 'form.required').max(64, 'form.required'),
+    /** 幂等键：服务端会拼成 `adjust:{requestId}` 写入 biz_no(varchar(64))，因此上限 36 */
+    requestId: z.string().min(1, 'form.required').max(36, 'form.required'),
     remark: z.string().max(255).nullish(),
 })
 export type SysMemberAdjustDTO = z.infer<typeof SysMemberAdjustSchema>
@@ -92,7 +93,8 @@ export const SysMemberGrantSchema = z.object({
     amount: z.union([z.string(), z.number()]),
     source: z.enum(['system', 'campaign']),
     expireAt: z.string().max(30).nullish(),
-    requestId: z.string().min(1, 'form.required').max(64, 'form.required'),
+    /** 幂等键：服务端会拼成 `gift:{requestId}` 写入 biz_no(varchar(64))，因此上限 36 */
+    requestId: z.string().min(1, 'form.required').max(36, 'form.required'),
     remark: z.string().max(255).nullish(),
 })
 export type SysMemberGrantDTO = z.infer<typeof SysMemberGrantSchema>

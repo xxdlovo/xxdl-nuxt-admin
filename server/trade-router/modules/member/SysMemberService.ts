@@ -15,7 +15,7 @@ import { rechargeRepo } from '#server/trade-router/domain/wallet/repo/rechargeRe
 import { payOrderService } from '#server/trade-router/domain/pay/PayOrderService'
 import { memberService } from '#server/trade-router/domain/member/MemberService'
 import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
-import { walletService } from '#server/trade-router/domain/wallet/WalletService'
+import { buildGiftGrantBizNo, walletService } from '#server/trade-router/domain/wallet/WalletService'
 import { sysUserRepo } from '#server/sys-router/user/SysUserRepo'
 import type { Context } from '#server/trpc/context'
 import type { OrmPageResp } from '#server/utils/ApiResp'
@@ -180,7 +180,7 @@ export function sysMemberService(ctx: Context) {
                 account: 'gift',
                 amount: input.amount,
                 bizType: input.source === 'campaign' ? 'gift_campaign' : 'gift_system',
-                bizNo: `gift:${input.userId}:${input.requestId}`,
+                bizNo: buildGiftGrantBizNo(input.requestId),
                 giftSource: input.source,
                 giftExpireAt: input.expireAt ?? null,
                 reason: '后台发放赠送金',
@@ -307,6 +307,10 @@ export function sysMemberService(ctx: Context) {
         /**
          * 主动同步充值状态：向渠道查询支付单，若已支付则触发到账（幂等）。
          * 回调不可达（内网/本地开发）时，页面靠它把余额补上。
+         *
+         * 返回的 `status` 一律是**本地充值单**的状态（而不是渠道支付单的），
+         * 这样后台关闭充值单后页面立刻能拿到 CL 并停止轮询；
+         * `failReason` 是关闭原因 / 失败原因，供页面直接展示。
          */
         async myRechargeSync(input: SysMemberRechargeOutTradeNoDTO) {
             const user = requireLogin(ctx)
@@ -316,18 +320,38 @@ export function sysMemberService(ctx: Context) {
                 throw new AppError('module.system.memberRecharge.notFound')
             }
 
-            if (row.status === 'OD') {
-                return { outTradeNo: row.outTradeNo, status: 'OD', credited: false, reused: true }
+            // 已到账 / 已被后台关闭 / 发起失败：本地状态已终结，不再看渠道
+            if (row.status !== 'WP') {
+                return {
+                    outTradeNo: row.outTradeNo,
+                    status: row.status,
+                    credited: false,
+                    reused: row.status === 'OD',
+                    failReason: row.failReason ?? null
+                }
             }
 
             if (!row.payOrderId) {
-                return { outTradeNo: row.outTradeNo, status: row.status, credited: false, reused: false }
+                return {
+                    outTradeNo: row.outTradeNo,
+                    status: row.status,
+                    credited: false,
+                    reused: false,
+                    failReason: row.failReason ?? null
+                }
             }
 
             const order = await payOrders.queryPayment(row.payOrderId, { operatorId: user.id })
 
             if (order.status !== 'OD') {
-                return { outTradeNo: row.outTradeNo, status: order.status, credited: false, reused: false }
+                // 渠道还没支付：状态仍按本地单据（WP）返回，页面继续轮询
+                return {
+                    outTradeNo: row.outTradeNo,
+                    status: row.status,
+                    credited: false,
+                    reused: false,
+                    failReason: null
+                }
             }
 
             const credited = await rechargeOrders.credit(row.outTradeNo, user.id)
@@ -336,7 +360,8 @@ export function sysMemberService(ctx: Context) {
                 outTradeNo: row.outTradeNo,
                 status: 'OD',
                 credited: credited.credited,
-                reused: credited.reused
+                reused: credited.reused,
+                failReason: null
             }
         },
 

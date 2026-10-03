@@ -1401,7 +1401,8 @@
         "userSelectPlaceholder": "请选择用户",
         "userSelectSearch": "输入昵称 / 用户名 / 手机号搜索",
         "userSelectEmpty": "没有匹配的用户",
-        "userSelectEmptyDefault": "输入关键字开始搜索"
+        "userSelectEmptyDefault": "输入关键字开始搜索",
+        "bizNoTooLong": "业务单号超长，请重试或缩短幂等键（{message}）"
       },
       "memberRecharge": {
         "outTradeNoExists": "商户充值单号已存在，请更换或留空由系统生成",
@@ -1464,7 +1465,8 @@
           "amountMin": "最小金额",
           "amountMax": "最大金额",
           "userSelect": "请搜索并选择会员"
-        }
+        },
+        "paidCannotClose": "该充值单已支付，不能关闭（请先同步到账）"
       },
       "memberFreeze": {
         "cannotDeleteFrozen": "冻结中的单据不能删除，请先确认或释放",
@@ -1694,7 +1696,11 @@
         "couponChecking": "校验中…",
         "couponValid": "可用：抵扣 ¥{discount}，应付 ¥{payable}{gift}",
         "couponMinAmountTip": "该优惠码满 ¥{amount} 可用",
-        "couponInvalid": "优惠码不可用，请检查后重试"
+        "couponInvalid": "优惠码不可用，请检查后重试",
+        "rechargeClosed": "本次充值单已被关闭",
+        "rechargeFailed": "本次充值单发起失败",
+        "rechargeCloseReason": "关闭原因",
+        "rechargeFailReason": "失败原因"
       },
       "goods": {
         "notFound": "商品不存在",

@@ -43,6 +43,31 @@ import { nowForMysql } from '../pay/utils'
 /** 默认冻结有效期（分钟）：避免业务忘记释放导致余额被长期占住 */
 const DEFAULT_FREEZE_TTL_MINUTES = 30
 
+/**
+ * 业务单号长度上限：`sys_member_balance_log` / `sys_member_gift_grant` /
+ * `sys_member_freeze` / `sys_member_coupon_use` 的 `biz_no` 都是 varchar(64)。
+ * 超长时给业务错误而不是让 MySQL 抛 `Data too long`（后者对使用者毫无提示价值）。
+ */
+const BIZ_NO_MAX_LENGTH = 64
+
+/** 手工调账的业务单号：只由 requestId 组成（操作人已单独落在 operator_id 列，无需进业务键） */
+export function buildAdjustBizNo(requestId: string): string {
+  return `adjust:${requestId}`
+}
+
+/** 手工发放赠送金的业务单号：同样只由 requestId 组成 */
+export function buildGiftGrantBizNo(requestId: string): string {
+  return `gift:${requestId}`
+}
+
+function assertBizNoLength(bizNo: string, label: string) {
+  if (bizNo.length > BIZ_NO_MAX_LENGTH) {
+    throw new AppError('module.system.member.bizNoTooLong', {
+      message: `${label} ${bizNo.length}/${BIZ_NO_MAX_LENGTH}`
+    })
+  }
+}
+
 /** 幂等命中：唯一键冲突说明该业务事件已经被处理过，外层据此回滚并返回「已处理」 */
 class AlreadyAppliedError extends Error {
   constructor() {
@@ -306,6 +331,7 @@ function buildWallet(executor: AppExecutor) {
     }): Promise<CreditResult> {
       const amount = normalizeMoney(input.amount)
       const operatorId = input.operatorId ?? null
+      assertBizNoLength(input.bizNo, 'bizNo')
       const dedupKey = buildDedupKey(input.bizType, input.bizNo, input.account)
 
       // 快速路径：命中幂等键直接返回，不再进入写链路
@@ -394,7 +420,8 @@ function buildWallet(executor: AppExecutor) {
 
       const amount = normalizeMoney(input.amount)
       const operatorId = input.operatorId ?? null
-      const bizNo = `adjust:${operatorId ?? 'system'}:${input.requestId}`
+      const bizNo = buildAdjustBizNo(input.requestId)
+      assertBizNoLength(bizNo, 'bizNo')
       const dedupKey = buildDedupKey('adjust', bizNo, input.account)
 
       if (await logs.existsByDedupKey(dedupKey)) {
@@ -471,6 +498,7 @@ function buildWallet(executor: AppExecutor) {
     }): Promise<FreezeResult> {
       const amount = normalizeMoney(input.amount)
       const operatorId = input.operatorId ?? null
+      assertBizNoLength(input.bizNo, 'bizNo')
 
       const existing = await freezes.findByBizNo(input.bizNo)
       if (existing) {
@@ -958,7 +986,7 @@ export function walletService(db: AppDb) {
             account: input.account,
             amount: input.amount,
             bizType: 'adjust',
-            bizNo: `adjust:${input.operatorId ?? 'system'}:${input.requestId}`
+            bizNo: buildAdjustBizNo(input.requestId)
           })
         }
         throw error
