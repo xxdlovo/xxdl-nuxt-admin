@@ -94,6 +94,7 @@ import { memberCouponSceneRecord, memberCouponTypeRecord } from '#shared/constan
 import type { BadgeConfig } from '#shared/types/nuxtui'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '~/composables/useTable'
 import TableWithPagination from '~/components/table/TableWithPagination.vue'
+import CopyValueBadge from '~/components/base/CopyValueBadge.vue'
 import SysMemberCouponSearch from './components/sys-member-coupon-search.vue'
 import SysMemberCouponOperate from './components/sys-member-coupon-operate.vue'
 import { useToastError, useToastSuccess } from '~/utils/toast'
@@ -287,8 +288,17 @@ const columns = computed<TableColumn<SysMemberCouponRespDTO>[]>(() => {
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
-      accessorKey: 'code',
-      header: () => $ts('module.system.memberCoupon.code')
+      id: 'code',
+      header: () => $ts('module.system.memberCoupon.code'),
+      // 优惠码是要发给用户的：直接点一下就能复制，省得手动选中
+      cell: ({ row }) => row.original.code
+        ? h(CopyValueBadge, {
+            label: '',
+            value: String(row.original.code),
+            color: 'primary',
+            icon: 'i-lucide-ticket-percent'
+          })
+        : h('span', { class: 'text-muted' }, '-')
     },
     {
       accessorKey: 'name',

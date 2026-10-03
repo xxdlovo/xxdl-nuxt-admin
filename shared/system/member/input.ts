@@ -150,3 +150,16 @@ export const SysMemberUserOptionQuerySchema = z.object({
 })
 export type SysMemberUserOptionQueryDTO = z.infer<typeof SysMemberUserOptionQuerySchema>
 
+/**
+ * 自助校验优惠码（下单 / 充值前主动校验，避免提交后才报错）。
+ * `amount` 可空：为空时只校验「券本身是否可用」（存在、启用、在有效期内、场景匹配、次数未超），
+ * 门槛与抵扣金额等填了金额再算。
+ * `scene` 默认充值；商城下单传 `consume`。
+ */
+export const SysMemberCouponCheckSchema = z.object({
+    code: z.string().min(1, 'form.required').max(32, 'form.required'),
+    amount: z.union([z.string(), z.number()]).nullish(),
+    scene: z.enum(['recharge', 'consume']).default('recharge'),
+})
+export type SysMemberCouponCheckDTO = z.infer<typeof SysMemberCouponCheckSchema>
+

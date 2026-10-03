@@ -23,6 +23,7 @@ import type {
     SysMemberAddDTO,
     SysMemberAdjustDTO,
     SysMemberChangeLevelDTO,
+    SysMemberCouponCheckDTO,
     SysMemberGrantDTO,
     SysMemberMyLogQueryDTO,
     SysMemberPageQueryDTO,
@@ -30,6 +31,7 @@ import type {
     SysMemberUpdateDTO,
     SysMemberUserOptionQueryDTO
 } from '#shared/system/member'
+import type { SysMemberCouponCheckRespDTO } from '#shared/system/member'
 import type {
     SysMemberRechargeCreateDTO,
     SysMemberRechargeOutTradeNoDTO
@@ -355,6 +357,75 @@ export function sysMemberService(ctx: Context) {
         /** 等级下拉（会员编辑器用，避免前端再申请额外权限） */
         async levelOptions() {
             return await members.listLevels()
+        },
+
+        /**
+         * 自助校验优惠码：充值页在「生成二维码」前主动校验，避免提交后才报错。
+         *
+         * 返回结构化结果而不是抛错：无效时给 i18n key，前端就地高亮提示；
+         * 服务端在真正下单/充值时会用同一套 `resolveCoupon` 再校验一次（这里是前置提示，不是唯一防线）。
+         */
+        async myCouponCheck(input: SysMemberCouponCheckDTO): Promise<SysMemberCouponCheckRespDTO> {
+            const user = requireLogin(ctx)
+            const amountText = String(input.amount ?? '').trim()
+
+            try {
+                const result = await members.resolveCoupon({
+                    code: input.code,
+                    userId: user.id,
+                    scene: input.scene,
+                    amount: amountText || '0.00',
+                    // 没填金额时只校验券本身可用，金额相关判定等填了金额再算
+                    skipAmountCheck: !amountText
+                })
+
+                if (!result) {
+                    return {
+                        valid: false,
+                        reason: 'module.system.member.couponNotFound',
+                        code: null,
+                        type: null,
+                        value: null,
+                        minAmount: null,
+                        giftAmount: null,
+                        discountAmount: null,
+                        payableAmount: null
+                    }
+                }
+
+                return {
+                    valid: true,
+                    reason: null,
+                    code: result.code,
+                    type: result.type,
+                    value: result.value,
+                    minAmount: result.minAmount,
+                    giftAmount: result.giftAmount,
+                    discountAmount: amountText ? result.discountAmount : null,
+                    payableAmount: amountText ? result.payableAmount : null
+                }
+            } catch (error) {
+                if (error instanceof AppError) {
+                    // `couponMinAmount` 的文案需要门槛金额作参数，领域层把 minAmount 放在 message 里带出来
+                    const minAmount = error.i18nKey === 'module.system.member.couponMinAmount'
+                        ? error.message
+                        : null
+
+                    return {
+                        valid: false,
+                        reason: error.i18nKey,
+                        code: null,
+                        type: null,
+                        value: null,
+                        minAmount,
+                        giftAmount: null,
+                        discountAmount: null,
+                        payableAmount: null
+                    }
+                }
+
+                throw error
+            }
         },
 
         /**

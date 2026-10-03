@@ -68,7 +68,7 @@ onUnmounted(() => {
       :icon="icon"
       class="min-w-0 rounded-r-none rounded-l-full"
     >
-      <span class="truncate">{{ label }} {{ textValue }}</span>
+      <span class="truncate">{{ label ? `${label} ${textValue}` : textValue }}</span>
     </UBadge>
     <UButton
       type="button"

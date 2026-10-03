@@ -1690,7 +1690,11 @@
         "form": {
           "amount": "Enter the recharge amount (CNY)",
           "couponCode": "Enter a coupon code, optional"
-        }
+        },
+        "couponChecking": "Checking…",
+        "couponValid": "Valid: -¥{discount}, payable ¥{payable}{gift}",
+        "couponMinAmountTip": "This coupon requires at least ¥{amount}",
+        "couponInvalid": "The coupon is not usable, please check and retry"
       },
       "goods": {
         "notFound": "Goods not found",

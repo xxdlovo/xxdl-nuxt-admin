@@ -2,6 +2,32 @@ import { z } from 'zod'
 import { SysMemberBaseSchema } from './common'
 
 /**
+ * 优惠码校验结果（充值 / 下单前主动校验）。
+ *
+ * - `valid = false` 时 `reason` 是 i18n key（如 `module.system.member.couponExpired`），前端直接 `$ts(reason)`；
+ * - 未填金额时只返回券面信息（`minAmount/value/giftAmount`），`discountAmount/payableAmount` 为 null，
+ *   前端提示「满 X 元可用」即可，不要显示抵扣额。
+ */
+export const SysMemberCouponCheckRespSchema = z.object({
+    valid: z.boolean(),
+    reason: z.string().nullish(),
+    code: z.string().nullish(),
+    /** amount 固定金额抵扣 / rate 折扣率 */
+    type: z.string().nullish(),
+    /** amount 类型=抵扣金额；rate 类型=应付比例（0.90 表示九折） */
+    value: z.string().nullish(),
+    /** 使用门槛（元），0 表示无门槛 */
+    minAmount: z.string().nullish(),
+    /** 附带赠送金（元） */
+    giftAmount: z.string().nullish(),
+    /** 抵扣金额（元）；未填金额时为 null */
+    discountAmount: z.string().nullish(),
+    /** 抵扣后应付（元）；未填金额时为 null */
+    payableAmount: z.string().nullish(),
+})
+export type SysMemberCouponCheckRespDTO = z.infer<typeof SysMemberCouponCheckRespSchema>
+
+/**
  * 会员钱包快照（展示用，字段与 sys_member_wallet 对齐）。
  * 金额列在 MySQL 中是 decimal(12,2)，drizzle 读写均为字符串，故统一用 string。
  */

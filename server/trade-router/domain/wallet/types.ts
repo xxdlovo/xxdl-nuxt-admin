@@ -144,6 +144,10 @@ export type CouponResolveResult = {
   couponId: string
   code: string
   type: CouponType
+  /** 券面配置值：amount 类型是抵扣金额，rate 类型是应付比例（0.90 = 九折） */
+  value: string
+  /** 使用门槛（元，两位小数），0 表示无门槛 */
+  minAmount: string
   /** 抵扣金额（元，两位小数） */
   discountAmount: string
   /** 附带赠送金（元，两位小数） */

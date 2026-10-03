@@ -33,6 +33,10 @@ const requestId = ref('')
 const state = reactive<{
   account: 'recharge' | 'gift'
   direction: 'in' | 'out'
+  /**
+   * 声明为 string 以满足 `UInput` 的绑定类型；但 `type="number"` 在运行时可能给出
+   * number，因此判空与提交一律经 `toText()`，不要直接调 `.trim()`。
+   */
   amount: string
   reason: string
   remark: string
@@ -47,7 +51,13 @@ const state = reactive<{
 const accountItems = useTransformRecordToOption(memberAccountRecord)
 const directionItems = useTransformRecordToOption(memberDirectionRecord)
 
-const canSubmit = computed(() => Boolean(state.amount.trim()) && Boolean(state.reason.trim()))
+/**
+ * 统一转成字符串再判空：数字型输入没有 `.trim()`，
+ * 直接在 computed 里调用会抛 TypeError，导致按钮永远禁用（历史 bug）。
+ */
+const toText = (value: string | number | null | undefined) => String(value ?? '').trim()
+
+const canSubmit = computed(() => Boolean(toText(state.amount)) && Boolean(toText(state.reason)))
 
 const save = async () => {
   if (!props.data?.userId || !canSubmit.value) {
@@ -61,10 +71,10 @@ const save = async () => {
       userId: props.data.userId,
       account: state.account,
       direction: state.direction,
-      amount: state.amount.trim(),
-      reason: state.reason.trim(),
+      amount: toText(state.amount),
+      reason: toText(state.reason),
       requestId: requestId.value,
-      remark: state.remark.trim() || null
+      remark: toText(state.remark) || null
     })
 
     useToastSuccess($ts('module.system.member.adjustSuccess'))

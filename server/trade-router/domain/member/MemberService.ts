@@ -323,6 +323,12 @@ function buildMember(executor: AppExecutor) {
     userId: string
     scene: Exclude<CouponScene, 'all'>
     amount: string | number
+    /**
+     * 仅校验券本身是否可用、跳过「金额相关」判定（门槛与应付必须 > 0）。
+     * 用于「还没填金额就先校验优惠码」的场景：此时金额按 0 处理，
+     * 只能确认券存在、在有效期内、场景匹配、未超额，抵扣额等填了金额再算。
+     */
+    skipAmountCheck?: boolean
   }): Promise<CouponResolveResult | null> {
     const code = String(input.code ?? '').trim()
 
@@ -367,7 +373,7 @@ function buildMember(executor: AppExecutor) {
 
     const amountCents = toCents(String(input.amount))
 
-    if (compareMoney(fromCents(amountCents), coupon.minAmount) < 0) {
+    if (!input.skipAmountCheck && compareMoney(fromCents(amountCents), coupon.minAmount) < 0) {
       throw new AppError('module.system.member.couponMinAmount', { message: coupon.minAmount })
     }
 
@@ -382,9 +388,11 @@ function buildMember(executor: AppExecutor) {
       }
     }
 
-    const { discountCents, payableCents } = computeDiscount(coupon, amountCents)
+    const { discountCents, payableCents } = input.skipAmountCheck && amountCents <= 0
+      ? { discountCents: 0, payableCents: 0 }
+      : computeDiscount(coupon, amountCents)
 
-    if (payableCents <= 0) {
+    if (!input.skipAmountCheck && payableCents <= 0) {
       throw new AppError('module.system.member.couponNotApplicable')
     }
 
@@ -392,6 +400,8 @@ function buildMember(executor: AppExecutor) {
       couponId: coupon.id,
       code: coupon.code,
       type: coupon.type as CouponResolveResult['type'],
+      value: fromCents(toCents(coupon.value)),
+      minAmount: fromCents(toCents(coupon.minAmount)),
       discountAmount: fromCents(discountCents),
       giftAmount: coupon.giftAmount,
       payableAmount: fromCents(payableCents)

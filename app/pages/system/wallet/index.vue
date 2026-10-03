@@ -37,13 +37,38 @@
 
         <UForm :state="rechargeForm" class="space-y-4" @submit="handleRecharge">
           <UFormField name="amount" required :label="$ts('module.system.wallet.amount')">
-            <UInput v-model="rechargeForm.amount" type="number" step="0.01" min="0.01" :placeholder="$ts('module.system.wallet.form.amount')" class="w-full" />
+            <UInput
+              v-model="rechargeForm.amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              :placeholder="$ts('module.system.wallet.form.amount')"
+              class="w-full"
+              @blur="() => void recheckCouponOnAmountChange()"
+            />
           </UFormField>
-          <UFormField name="couponCode" :label="$ts('module.system.wallet.couponCode')" :help="$ts('module.system.wallet.couponCodeHelp')">
-            <UBaseInput v-model="rechargeForm.couponCode" :placeholder="$ts('module.system.wallet.form.couponCode')" trailing="clear" class="w-full" />
+          <UFormField name="couponCode" :label="$ts('module.system.wallet.couponCode')">
+            <UBaseInput
+              v-model="rechargeForm.couponCode"
+              :placeholder="$ts('module.system.wallet.form.couponCode')"
+              trailing="clear"
+              class="w-full"
+              @blur="() => void checkCoupon()"
+            />
+            <template #help>
+              <span v-if="couponChecking" class="inline-flex items-center gap-1 text-muted">
+                <UIcon name="i-lucide-loader-circle" class="animate-spin" />
+                {{ $ts('module.system.wallet.couponChecking') }}
+              </span>
+              <span v-else-if="couponCheck?.valid" class="text-success">{{ couponHintText }}</span>
+              <span v-else-if="couponCheck && !couponCheck.valid" class="text-error">
+                {{ couponInvalidText }}
+              </span>
+              <span v-else class="text-muted">{{ $ts('module.system.wallet.couponCodeHelp') }}</span>
+            </template>
           </UFormField>
           <div class="flex justify-end">
-            <UButton type="submit" color="primary" icon="i-lucide-qr-code" :loading="creating">
+            <UButton type="submit" color="primary" icon="i-lucide-qr-code" :loading="creating" :disabled="!canSubmitRecharge">
               {{ $ts('module.system.wallet.submitRecharge') }}
             </UButton>
           </div>
@@ -198,6 +223,7 @@ definePageMeta({
 
 import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
+import type { SysMemberCouponCheckRespDTO } from '#shared/system/member'
 import { memberAccountRecord, memberBizTypeRecord, memberCouponUseStatusConfig, memberDirectionRecord, memberRechargeStatusConfig } from '#shared/constants/business'
 import { badgeColorClasses } from '~/composables/badgeColorClasses'
 import { useToastError, useToastSuccess } from '~/utils/toast'
@@ -230,7 +256,98 @@ const rechargesLoading = ref(false)
 const couponUses = ref<Array<Record<string, unknown>>>([])
 const couponsLoading = ref(false)
 
-const rechargeForm = reactive({ amount: '', couponCode: '' })
+const rechargeForm = reactive<{
+  /**
+   * 声明为 string 以满足 `UInput` 的绑定类型；但 `type="number"` 在运行时可能给出
+   * number，因此判空与提交一律经 `toText()`（历史上这里直接 `.trim()` 抛过 TypeError）。
+   */
+  amount: string
+  couponCode: string
+}>({ amount: '', couponCode: '' })
+
+/** 统一转成字符串：数字型输入没有 `.trim()`（历史上这里抛过 TypeError） */
+const toText = (value: string | number | null | undefined) => String(value ?? '').trim()
+
+/** 优惠码校验结果（null = 未填或尚未校验） */
+const couponCheck = ref<SysMemberCouponCheckRespDTO | null>(null)
+const couponChecking = ref(false)
+
+const resetCouponCheck = () => {
+  couponCheck.value = null
+}
+
+/**
+ * 主动校验优惠码：填了码就查一次，返回是否可用。
+ * 未填金额时只校验券本身（门槛/抵扣等填了金额再算），
+ * 真正下单时服务端还会用同一套规则再校验一次。
+ */
+const checkCoupon = async (): Promise<boolean> => {
+  const code = toText(rechargeForm.couponCode)
+
+  if (!code) {
+    resetCouponCheck()
+
+    return true
+  }
+
+  couponChecking.value = true
+
+  try {
+    couponCheck.value = await $trpc.sysMember.myCouponCheck.query({
+      code,
+      amount: toText(rechargeForm.amount) || null
+    })
+
+    return couponCheck.value.valid
+  } finally {
+    couponChecking.value = false
+  }
+}
+
+/** 金额变化会让「门槛 / 抵扣额」失效，需要重新校验 */
+const recheckCouponOnAmountChange = async () => {
+  if (!toText(rechargeForm.couponCode)) {
+    return
+  }
+
+  await checkCoupon()
+}
+
+const canSubmitRecharge = computed(() => Boolean(toText(rechargeForm.amount)) && !couponChecking.value && !creating.value)
+
+/** 优惠码校验通过后的提示文案：填了金额显示抵扣/应付，否则提示门槛 */
+const couponHintText = computed(() => {
+  const result = couponCheck.value
+
+  if (!result?.valid) {
+    return ''
+  }
+
+  if (result.discountAmount) {
+    const gift = result.giftAmount && result.giftAmount !== '0.00'
+      ? `（${$ts('module.system.wallet.giftAmount')} ¥${result.giftAmount}）`
+      : ''
+
+    return $ts('module.system.wallet.couponValid', {
+      discount: result.discountAmount,
+      payable: result.payableAmount ?? '-',
+      gift
+    })
+  }
+
+  return $ts('module.system.wallet.couponMinAmountTip', { amount: result.minAmount ?? '0.00' })
+})
+
+/** 校验失败文案：门槛类错误需要把金额作为参数传给 i18n */
+const couponInvalidText = computed(() => {
+  const reason = couponCheck.value?.reason || 'module.system.member.couponNotFound'
+
+  if (reason === 'module.system.member.couponMinAmount') {
+    return $ts(reason, { message: couponCheck.value?.minAmount ?? '-' })
+  }
+
+  return $ts(reason)
+})
 const creating = ref(false)
 const syncing = ref(false)
 const polling = ref(false)
@@ -407,7 +524,15 @@ const syncRecharge = async () => {
 }
 
 const handleRecharge = async () => {
-  if (!rechargeForm.amount.trim()) {
+  const amountText = toText(rechargeForm.amount)
+
+  if (!amountText) {
+    return
+  }
+
+  // 生成前主动校验优惠码：无效就直接拦下，不浪费一次「下单 + 渠道请求」
+  if (!(await checkCoupon())) {
+    useToastError($ts('module.system.wallet.couponInvalid'))
     return
   }
 
@@ -416,8 +541,8 @@ const handleRecharge = async () => {
 
   try {
     const result = await $trpc.sysMember.myRecharge.mutate({
-      amount: rechargeForm.amount.trim(),
-      couponCode: rechargeForm.couponCode.trim() || null,
+      amount: amountText,
+      couponCode: toText(rechargeForm.couponCode) || null,
       notifyUrl: null
     })
 
@@ -432,6 +557,7 @@ const handleRecharge = async () => {
     currentStatus.value = result.status
     rechargeForm.amount = ''
     rechargeForm.couponCode = ''
+    resetCouponCheck()
     startPolling()
   } finally {
     creating.value = false

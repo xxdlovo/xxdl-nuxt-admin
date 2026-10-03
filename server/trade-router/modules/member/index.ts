@@ -10,7 +10,8 @@ import {
     SysMemberPageQuerySchema,
     SysMemberQuerySchema,
     SysMemberUpdateSchema,
-    SysMemberUserOptionQuerySchema
+    SysMemberUserOptionQuerySchema,
+    SysMemberCouponCheckSchema
 } from '#shared/system/member'
 import {
     SysMemberRechargeCreateSchema,
@@ -74,6 +75,12 @@ export const sysMemberRouter = router({
     userOptions: listProc.input(SysMemberUserOptionQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMemberService(ctx).userOptions(input)
+        }),
+
+    /** 自助校验优惠码（充值 / 下单前主动校验，无效时返回 i18n key 而不是抛错） */
+    myCouponCheck: protectedProcedure.input(SysMemberCouponCheckSchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myCouponCheck(input)
         }),
 
     /** 手工调账：加/减余额，必须带原因与 requestId（幂等） */
