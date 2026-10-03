@@ -1703,7 +1703,59 @@
         "status": {
           "online": "Online",
           "offline": "Offline"
-        }
+        },
+        "title": "Goods",
+        "name": "Name",
+        "subtitle": "Subtitle",
+        "cover": "Cover",
+        "price": "Base Price",
+        "priceMin": "Min Price",
+        "priceMax": "Max Price",
+        "createdFrom": "Created From",
+        "createdTo": "Created To",
+        "stock": "Stock",
+        "unlimitedStock": "Unlimited",
+        "stockDisabled": "Unlimited stock, no need to fill in",
+        "salesCount": "Sales",
+        "sortOrder": "Sort",
+        "typeLabel": "Type",
+        "statusLabel": "Status",
+        "levelPriceCount": "{count} level prices",
+        "addSysGoods": "Add Goods",
+        "editSysGoods": "Edit Goods",
+        "coverUploadUnavailable": "Your account has no object storage upload permission; paste the cover URL instead",
+        "serviceNotice": "Service Notice",
+        "remark": "Remark",
+        "form": {
+          "name": "Enter a goods name",
+          "subtitle": "Enter a subtitle",
+          "cover": "Paste a cover image URL, or upload above",
+          "price": "Enter the base price",
+          "priceRequired": "Enter a valid base price",
+          "priceMin": "Enter the min price",
+          "priceMax": "Enter the max price",
+          "type": "Select a goods type",
+          "status": "Select a goods status",
+          "serviceNotice": "Enter the service notice (checkout hint / delivery note)",
+          "detail": "Enter the goods detail",
+          "remark": "Enter a remark"
+        },
+        "levelPrice": {
+          "title": "Member Level Prices",
+          "hint": "Leave a price blank to use the base price; the level price applies according to the member level when the order is placed.",
+          "levelName": "Member Level",
+          "price": "Level Price",
+          "remark": "Remark",
+          "pricePlaceholder": "Blank = base price",
+          "levelDisabled": "Disabled",
+          "empty": "No enabled member levels",
+          "addHint": "Save the goods first, then edit it again to configure member level prices.",
+          "saveSuccess": "Level prices saved ({count} rows)",
+          "form": {
+            "remark": "Enter a remark for this level price"
+          }
+        },
+        "detail": "Detail"
       },
       "order": {
         "notFound": "Order not found",
@@ -1827,7 +1879,8 @@
           "fulfillStatus": "Select a fulfilment status",
           "amountMin": "Min amount due",
           "amountMax": "Max amount due"
-        }
+        },
+        "deleteNotAllowed": "Only closed or failed orders can be deleted (close a pending order first)"
       },
       "mall": {
         "title": "Store",

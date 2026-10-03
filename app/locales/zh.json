@@ -1703,7 +1703,59 @@
         "status": {
           "online": "上架中",
           "offline": "已下架"
-        }
+        },
+        "title": "商品管理",
+        "name": "名称",
+        "subtitle": "副标题",
+        "cover": "封面",
+        "price": "基础价",
+        "priceMin": "最低价",
+        "priceMax": "最高价",
+        "createdFrom": "创建时间起",
+        "createdTo": "创建时间止",
+        "stock": "库存",
+        "unlimitedStock": "不限量",
+        "stockDisabled": "不限库存，无需填写",
+        "salesCount": "销量",
+        "sortOrder": "排序",
+        "typeLabel": "类型",
+        "statusLabel": "状态",
+        "levelPriceCount": "{count} 个等级价",
+        "addSysGoods": "新增商品",
+        "editSysGoods": "编辑商品",
+        "coverUploadUnavailable": "当前账号没有对象存储上传权限，请直接填写封面地址",
+        "serviceNotice": "服务说明",
+        "remark": "备注",
+        "form": {
+          "name": "请输入商品名称",
+          "subtitle": "请输入副标题",
+          "cover": "粘贴封面图片地址，或使用上方上传",
+          "price": "请输入基础价",
+          "priceRequired": "请输入有效的基础价",
+          "priceMin": "请输入最低价",
+          "priceMax": "请输入最高价",
+          "type": "请选择商品类型",
+          "status": "请选择商品状态",
+          "serviceNotice": "请输入服务说明（下单提示/交付说明）",
+          "detail": "请输入商品详情",
+          "remark": "请输入备注"
+        },
+        "levelPrice": {
+          "title": "会员等级价",
+          "hint": "留空表示该等级使用基础价；等级价按下单时的会员等级生效。",
+          "levelName": "会员等级",
+          "price": "等级价（元）",
+          "remark": "备注",
+          "pricePlaceholder": "留空用基础价",
+          "levelDisabled": "已停用",
+          "empty": "暂无启用中的会员等级",
+          "addHint": "新增商品保存后，请再次编辑该商品以配置会员等级价。",
+          "saveSuccess": "等级价已保存，共 {count} 条",
+          "form": {
+            "remark": "请输入该等级价的备注"
+          }
+        },
+        "detail": "商品详情"
       },
       "order": {
         "notFound": "订单不存在",
@@ -1827,7 +1879,8 @@
           "fulfillStatus": "请选择履约状态",
           "amountMin": "最低应付金额",
           "amountMax": "最高应付金额"
-        }
+        },
+        "deleteNotAllowed": "只有已关闭或发起失败的订单可以删除（待支付订单请先关闭）"
       },
       "mall": {
         "title": "商城",

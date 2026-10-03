@@ -95,6 +95,25 @@ export function sysOrderService(ctx: Context) {
         return { user, order }
     }
 
+    /**
+     * 删除保护：只有已关闭（CL）/ 发起失败（FL）的订单可以删除。
+     * - 待支付（WP）要先关闭：否则会留下悬挂的冻结单与优惠码占用；
+     * - 已完成（OD）是收入凭证，不允许删除。
+     */
+    async function assertRemovable(ids: string[]) {
+        for (const id of ids) {
+            const row = await repo.getById(id)
+
+            if (!row) {
+                throw new AppError('common.notExist')
+            }
+
+            if (row.status !== 'CL' && row.status !== 'FL') {
+                throw new AppError('module.system.order.deleteNotAllowed')
+            }
+        }
+    }
+
     return {
         // ── 后台管理 ────────────────────────────────────────────────────────
 
@@ -134,15 +153,19 @@ export function sysOrderService(ctx: Context) {
         },
 
         async remove(id: string): Promise<boolean> {
+            await assertRemovable([id])
             await repo.remove(id)
 
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
-            await repo.batchRemove(ids)
+            const uniqueIds = Array.from(new Set(ids))
 
-            return ids.length
+            await assertRemovable(uniqueIds)
+            await repo.batchRemove(uniqueIds)
+
+            return uniqueIds.length
         },
 
         /** 确认支付（余额单实扣）：冻结确认 + 置已完成 + 核销券 + 加销量由领域层完成 */
