@@ -36,6 +36,16 @@ const uploadingAvatar = ref(false)
 const avatarProgress = ref(0)
 const avatarUploadXhr = shallowRef<XMLHttpRequest | null>(null)
 
+/** 我的会员档案（等级 / 邀请码 / 下级数量）；未登录会员体系或查询失败时为 null */
+const memberProfile = ref<{
+  levelName: string | null
+  inviteeCount: number
+  member: { inviteCode?: string | null } | null
+} | null>(null)
+
+/** 会员等级名称：没有等级（或查不到档案）时不展示徽标 */
+const memberLevelName = computed(() => memberProfile.value?.levelName ?? null)
+
 const profileState = reactive<Partial<SysUserProfileUpdateDTO>>({
   nickname: '',
   email: '',
@@ -217,6 +227,10 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+
+  // 会员档案（等级 / 邀请码 / 下级数量）：独立查询且失败不阻断个人中心，
+  // 没有会员档案时只是不展示等级，而不是整页报错
+  memberProfile.value = await $trpc.sysMember.myProfile.query().catch(() => null)
 }
 
 function cancelEdit() {
@@ -402,6 +416,15 @@ onBeforeUnmount(() => {
             <div class="flex flex-wrap items-center gap-2">
               <h1 class="truncate text-xl font-semibold text-default">{{ displayName }}</h1>
               <UBadge :label="isAdminText" color="primary" variant="soft" />
+              <!-- 会员等级：挂在昵称旁，一眼可见 -->
+              <UBadge
+                v-if="memberLevelName"
+                :label="memberLevelName"
+                :title="$ts('module.system.profile.memberLevel')"
+                color="warning"
+                variant="soft"
+                icon="i-lucide-crown"
+              />
             </div>
             <p class="truncate text-sm text-muted">
               {{ user?.username }} · {{ profileState.email || $ts('module.system.profile.unsetEmail') }}
@@ -458,6 +481,20 @@ onBeforeUnmount(() => {
                 <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)]">
                   <span class="text-sm text-muted">{{ $ts('module.system.user.nickName') }}</span>
                   <span class="min-w-0 truncate text-sm font-medium text-default">{{ profileState.nickname || '-' }}</span>
+                </div>
+                <!-- 会员等级：来自会员档案（sysMember.myProfile 的 levelName），只读展示 -->
+                <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)]">
+                  <span class="text-sm text-muted">{{ $ts('module.system.profile.memberLevel') }}</span>
+                  <span class="min-w-0 text-sm font-medium text-default">
+                    <UBadge
+                      v-if="memberLevelName"
+                      :label="memberLevelName"
+                      color="warning"
+                      variant="soft"
+                      icon="i-lucide-crown"
+                    />
+                    <template v-else>-</template>
+                  </span>
                 </div>
                 <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-[120px_minmax(0,1fr)]">
                   <span class="text-sm text-muted">{{ $ts('module.system.user.userEmail') }}</span>

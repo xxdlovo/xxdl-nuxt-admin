@@ -541,7 +541,8 @@
           "nicknameMax": "Nick name cannot exceed 50 characters",
           "avatarMax": "Avatar URL cannot exceed 255 characters",
           "remarkMax": "Remark cannot exceed 500 characters"
-        }
+        },
+        "memberLevel": "Member level"
       },
       "department": {
         "title": "Department List",

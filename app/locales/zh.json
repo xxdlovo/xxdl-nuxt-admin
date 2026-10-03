@@ -541,7 +541,8 @@
           "nicknameMax": "昵称不能超过 50 个字符",
           "avatarMax": "头像地址不能超过 255 个字符",
           "remarkMax": "备注不能超过 500 个字符"
-        }
+        },
+        "memberLevel": "会员等级"
       },
       "department": {
         "title": "部门列表",
