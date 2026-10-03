@@ -73,18 +73,26 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
      * i18n key 不存在时 `$t` 会原样返回 key，直接用会让用户看到 "module.xxx.yyy"，
      * 因此翻译结果与 key 相同时回退到分类文案。
      */
-    const translateOr = (key: string, fallback: string) => {
-        const translated = $t(key)
+    const translateOr = (key: string, fallback: string, params?: Record<string, unknown>) => {
+        const translated = $t(key, params)
         return translated === key ? fallback : translated
     }
 
     if (error.cause instanceof AppError) {
         i18nKey = error.cause.i18nKey
 
+        /**
+         * AppError 允许把参数放在 message 里（例如优惠码门槛金额：
+         * 「最低 {message} 元」）；message 与 key 相同说明没带参数，此时不传。
+         */
+        const params = error.cause.message && error.cause.message !== i18nKey
+            ? { message: error.cause.message }
+            : undefined
+
         // type 是前端 toast 的标题、message 是描述（见 app/plugins/01.client.ts），
         // 两者都填翻译文案会导致提示内容重复，因此 type 固定用错误分类。
         errorType = $t('system.businessError')
-        customMessage = translateOr(i18nKey, $t('system.businessError'))
+        customMessage = translateOr(i18nKey, $t('system.businessError'), params)
 
         // 业务错误按语义映射到 4xx：前端可据此按 code 分支，
         // 监控与网关也能把「请求有问题」和「服务端异常」分开统计。

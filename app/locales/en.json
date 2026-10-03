@@ -1302,7 +1302,7 @@
         "couponUsedUp": "Coupon usage limit reached",
         "couponMinAmount": "Minimum order amount for this coupon is {message} CNY",
         "couponUserLimit": "You have reached the per-user usage limit for this coupon",
-        "couponNotApplicable": "Coupon discount leaves no payable amount, cannot be used",
+        "couponNotApplicable": "This coupon is worth ¥{message}; the order amount must be greater than that",
         "keyword": "Keyword",
         "nickname": "Member",
         "username": "Username",
@@ -1718,7 +1718,8 @@
         "rechargeFailReason": "Failure reason",
         "rechargeSuccessDesc": "The balance has been credited",
         "rechargeClosedDesc": "This recharge has been closed and was not paid",
-        "rechargeFailedDesc": "The payment failed to start, please generate a new QR code"
+        "rechargeFailedDesc": "The payment failed to start, please generate a new QR code",
+        "couponGiftSuffix": " (gift ¥{gift})"
       },
       "goods": {
         "notFound": "Goods not found",
@@ -1948,7 +1949,19 @@
           "couponCode": "Enter a coupon code, optional",
           "contact": "Enter phone or email",
           "remark": "Describe your requirement (optional)"
-        }
+        },
+        "couponChecking": "Checking…",
+        "couponValid": "Coupon applied",
+        "couponMinAmountTip": "This coupon requires at least ¥{amount}",
+        "couponRequiredTip": "The coupon is worth ¥{amount}; the order amount must be greater than that",
+        "couponInvalid": "The coupon is not usable, please check and retry",
+        "giftAmount": "Gift",
+        "couponGiftSuffix": " (gift ¥{gift})",
+        "couponValidGift": "Coupon applied: gift ¥{gift}",
+        "totalAmount": "Item total",
+        "couponDiscount": "Coupon discount",
+        "payableAmount": "Payable",
+        "unitPriceTimesQuantity": "¥{price} × {quantity}"
       },
       "myOrder": {
         "title": "My orders",

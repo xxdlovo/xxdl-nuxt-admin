@@ -18,6 +18,11 @@ export const SysMemberCouponCheckRespSchema = z.object({
     value: z.string().nullish(),
     /** 使用门槛（元），0 表示无门槛 */
     minAmount: z.string().nullish(),
+    /**
+     * 「优惠码面值大于订单金额」时需要达到的金额（元）。
+     * 与 `minAmount` 互斥：`reason = couponNotApplicable` 时用它提示「需满足 ¥X 才可使用」。
+     */
+    requiredAmount: z.string().nullish(),
     /** 附带赠送金（元） */
     giftAmount: z.string().nullish(),
     /** 抵扣金额（元）；未填金额时为 null */

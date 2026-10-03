@@ -1302,7 +1302,7 @@
         "couponUsedUp": "优惠码使用次数已达上限",
         "couponMinAmount": "未达到优惠码使用门槛（最低 {message} 元）",
         "couponUserLimit": "你已使用过该优惠码，超过每人可用次数",
-        "couponNotApplicable": "该优惠码抵扣后金额不足，无法使用",
+        "couponNotApplicable": "该优惠码面值 ¥{message}，订单金额需大于该金额才可使用",
         "keyword": "关键字",
         "nickname": "会员",
         "username": "用户名",
@@ -1718,7 +1718,8 @@
         "rechargeFailReason": "失败原因",
         "rechargeSuccessDesc": "余额已到账",
         "rechargeClosedDesc": "该充值单已关闭，未完成支付",
-        "rechargeFailedDesc": "发起支付失败，请重新生成二维码"
+        "rechargeFailedDesc": "发起支付失败，请重新生成二维码",
+        "couponGiftSuffix": "（赠送金 ¥{gift}）"
       },
       "goods": {
         "notFound": "商品不存在",
@@ -1948,7 +1949,19 @@
           "couponCode": "请输入优惠码，可留空",
           "contact": "请输入联系电话或邮箱",
           "remark": "请描述你的需求（可选）"
-        }
+        },
+        "couponChecking": "校验中…",
+        "couponValid": "优惠码可用",
+        "couponMinAmountTip": "该优惠码满 ¥{amount} 可用",
+        "couponRequiredTip": "该券面值 ¥{amount}，订单金额需大于该金额才可使用",
+        "couponInvalid": "优惠码不可用，请检查后重试",
+        "giftAmount": "赠送金",
+        "couponGiftSuffix": "（赠送金 ¥{gift}）",
+        "couponValidGift": "优惠码可用：赠送 ¥{gift}",
+        "totalAmount": "商品金额",
+        "couponDiscount": "优惠码抵扣",
+        "payableAmount": "应付金额",
+        "unitPriceTimesQuantity": "¥{price} × {quantity}"
       },
       "myOrder": {
         "title": "我的订单",

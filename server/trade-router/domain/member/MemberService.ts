@@ -393,7 +393,16 @@ function buildMember(executor: AppExecutor) {
       : computeDiscount(coupon, amountCents)
 
     if (!input.skipAmountCheck && payableCents <= 0) {
-      throw new AppError('module.system.member.couponNotApplicable')
+      /**
+       * 面值型优惠码的抵扣会吃掉整单金额（应付 ≤ 0）：把「需要达到的金额」作为 message 带出去，
+       * 前端据此提示「该券面值 ¥X，订单金额需大于该金额才可使用」，而不是干巴巴一句「无法使用」。
+       * 折扣率型券正常不会走到这里（应付比例 > 0），兜底用门槛金额。
+       */
+      const requireAmount = coupon.type === 'amount'
+        ? fromCents(toCents(coupon.value))
+        : fromCents(toCents(coupon.minAmount))
+
+      throw new AppError('module.system.member.couponNotApplicable', { message: requireAmount })
     }
 
     return {

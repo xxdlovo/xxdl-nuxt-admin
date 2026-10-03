@@ -436,6 +436,7 @@ export function sysMemberService(ctx: Context) {
                         type: null,
                         value: null,
                         minAmount: null,
+                        requiredAmount: null,
                         giftAmount: null,
                         discountAmount: null,
                         payableAmount: null
@@ -449,14 +450,23 @@ export function sysMemberService(ctx: Context) {
                     type: result.type,
                     value: result.value,
                     minAmount: result.minAmount,
+                    requiredAmount: null,
                     giftAmount: result.giftAmount,
                     discountAmount: amountText ? result.discountAmount : null,
                     payableAmount: amountText ? result.payableAmount : null
                 }
             } catch (error) {
                 if (error instanceof AppError) {
-                    // `couponMinAmount` 的文案需要门槛金额作参数，领域层把 minAmount 放在 message 里带出来
+                    /**
+                     * 两个「金额相关」的失败要把金额带回给前端：
+                     * - `couponMinAmount`  → 门槛金额（最低消费）
+                     * - `couponNotApplicable` → 面值大于订单金额时，需要达到的金额
+                     * 领域层把金额放在 `message` 里传出来。
+                     */
                     const minAmount = error.i18nKey === 'module.system.member.couponMinAmount'
+                        ? error.message
+                        : null
+                    const requiredAmount = error.i18nKey === 'module.system.member.couponNotApplicable'
                         ? error.message
                         : null
 
@@ -467,6 +477,7 @@ export function sysMemberService(ctx: Context) {
                         type: null,
                         value: null,
                         minAmount,
+                        requiredAmount,
                         giftAmount: null,
                         discountAmount: null,
                         payableAmount: null

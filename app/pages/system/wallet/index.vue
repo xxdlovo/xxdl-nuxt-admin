@@ -338,8 +338,9 @@ const couponHintText = computed(() => {
   }
 
   if (result.discountAmount) {
+    // 后缀整段走 i18n：括号与语序在不同语言里不一样，不要硬编码中文括号
     const gift = result.giftAmount && result.giftAmount !== '0.00'
-      ? `（${$ts('module.system.wallet.giftAmount')} ¥${result.giftAmount}）`
+      ? $ts('module.system.wallet.couponGiftSuffix', { gift: result.giftAmount })
       : ''
 
     return $ts('module.system.wallet.couponValid', {
@@ -352,12 +353,17 @@ const couponHintText = computed(() => {
   return $ts('module.system.wallet.couponMinAmountTip', { amount: result.minAmount ?? '0.00' })
 })
 
-/** 校验失败文案：门槛类错误需要把金额作为参数传给 i18n */
+/** 校验失败文案：金额相关的两类错误要把金额作为参数传给 i18n */
 const couponInvalidText = computed(() => {
   const reason = couponCheck.value?.reason || 'module.system.member.couponNotFound'
 
   if (reason === 'module.system.member.couponMinAmount') {
     return $ts(reason, { message: couponCheck.value?.minAmount ?? '-' })
+  }
+
+  // 面值大于本次金额：提示「需满足 ¥X 才可使用」
+  if (reason === 'module.system.member.couponNotApplicable') {
+    return $ts(reason, { message: couponCheck.value?.requiredAmount ?? '-' })
   }
 
   return $ts(reason)

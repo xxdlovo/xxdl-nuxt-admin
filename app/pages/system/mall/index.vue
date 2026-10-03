@@ -139,8 +139,23 @@
             <UFormField name="payMode" required :label="$ts('module.system.mall.payMode')">
               <URadioGroup v-model="orderForm.payMode" :items="payModeItems" orientation="horizontal" />
             </UFormField>
-            <UFormField name="couponCode" :label="$ts('module.system.mall.couponCode')" :help="$ts('module.system.mall.couponCodeHelp')">
-              <UBaseInput v-model="orderForm.couponCode" :placeholder="$ts('module.system.mall.form.couponCode')" trailing="clear" class="w-full" />
+            <UFormField name="couponCode" :label="$ts('module.system.mall.couponCode')">
+              <UBaseInput
+                v-model="orderForm.couponCode"
+                :placeholder="$ts('module.system.mall.form.couponCode')"
+                trailing="clear"
+                class="w-full"
+                @blur="() => void checkCoupon()"
+              />
+              <template #help>
+                <span v-if="couponChecking" class="inline-flex items-center gap-1 text-muted">
+                  <UIcon name="i-lucide-loader-circle" class="animate-spin" />
+                  {{ $ts('module.system.mall.couponChecking') }}
+                </span>
+                <span v-else-if="couponCheck?.valid" class="text-success">{{ couponHintText }}</span>
+                <span v-else-if="couponCheck && !couponCheck.valid" class="text-error">{{ couponInvalidText }}</span>
+                <span v-else class="text-muted">{{ $ts('module.system.mall.couponCodeHelp') }}</span>
+              </template>
             </UFormField>
             <UFormField v-if="detail.type === 'service'" name="contact" required :label="$ts('module.system.mall.contact')" :help="$ts('module.system.mall.contactHelp')">
               <UBaseInput v-model="orderForm.contact" :placeholder="$ts('module.system.mall.form.contact')" trailing="clear" class="w-full" />
@@ -148,6 +163,28 @@
             <UFormField v-if="detail.type === 'service'" name="remark" :label="$ts('module.system.mall.remark')">
               <UTextarea v-model="orderForm.remark" :rows="3" :placeholder="$ts('module.system.mall.form.remark')" class="w-full" />
             </UFormField>
+
+            <!-- 总价随数量 / 优惠码自动更新：单价 × 数量 → 抵扣 → 应付 -->
+            <div class="rounded-md border border-default bg-elevated p-3 text-sm space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-muted">{{ $ts('module.system.mall.totalAmount') }}</span>
+                <span class="font-medium">¥{{ orderAmount }}</span>
+              </div>
+              <div class="text-xs text-muted text-right">
+                {{ $ts('module.system.mall.unitPriceTimesQuantity', { price: detail.myPrice, quantity: String(orderQuantity) }) }}
+              </div>
+              <template v-if="couponCheck?.valid">
+                <div class="flex items-center justify-between">
+                  <span class="text-muted">{{ $ts('module.system.mall.couponDiscount') }}</span>
+                  <span class="text-success">-¥{{ couponCheck.discountAmount ?? '0.00' }}</span>
+                </div>
+                <USeparator />
+                <div class="flex items-center justify-between">
+                  <span class="text-muted">{{ $ts('module.system.mall.payableAmount') }}</span>
+                  <span class="font-semibold text-primary">¥{{ couponCheck.payableAmount ?? orderAmount }}</span>
+                </div>
+              </template>
+            </div>
           </UForm>
 
           <!-- 在线支付：二维码 + 轮询 -->
@@ -204,7 +241,7 @@
             color="primary"
             icon="i-lucide-shopping-cart"
             :loading="creating"
-            :disabled="detail?.type === 'service' && !orderForm.contact.trim()"
+            :disabled="couponChecking || (detail?.type === 'service' && !orderForm.contact.trim())"
             @click="submitOrder"
           >
             {{ detail?.type === 'service'
@@ -228,6 +265,7 @@ definePageMeta({
 })
 
 import type { SysMallGoodsRespDTO } from '#shared/system/goods'
+import type { SysMemberCouponCheckRespDTO } from '#shared/system/member'
 import type { SysOrderCreateRespDTO } from '#shared/system/order'
 import { goodsTypeRecord, orderStatusConfig } from '#shared/constants/business'
 import { randomUuid } from '#shared/utils/uuid'
@@ -256,6 +294,93 @@ const orderForm = reactive({
   couponCode: '',
   contact: '',
   remark: ''
+})
+
+/** 本次下单数量：服务类固定 1 份，其余按表单（与提交时的口径一致） */
+const orderQuantity = computed(() => detail.value?.type === 'service' ? 1 : Math.max(1, orderForm.quantity))
+
+/** 本次下单金额 = 我的价格 × 数量（只用于展示与优惠码预校验，服务端会重新计算并以此为准） */
+const orderAmount = computed(() => {
+  const price = Number(detail.value?.myPrice ?? 0)
+
+  return (price * orderQuantity.value).toFixed(2)
+})
+
+/** 优惠码校验结果（null = 未填或尚未校验） */
+const couponCheck = ref<SysMemberCouponCheckRespDTO | null>(null)
+const couponChecking = ref(false)
+
+const resetCouponCheck = () => {
+  couponCheck.value = null
+}
+
+/**
+ * 下单前主动校验优惠码（场景 consume）：
+ * 无效就地提示并拦下，不浪费一次「扣库存 + 落单 + 冻结/下单」的完整链路。
+ * 服务端在真正下单时会用同一套规则再校验一次（这里是前置提示，不是唯一防线）。
+ */
+const checkCoupon = async (): Promise<boolean> => {
+  const code = orderForm.couponCode.trim()
+
+  if (!code) {
+    resetCouponCheck()
+
+    return true
+  }
+
+  couponChecking.value = true
+
+  try {
+    couponCheck.value = await $trpc.sysMember.myCouponCheck.query({
+      code,
+      amount: orderAmount.value,
+      scene: 'consume'
+    })
+
+    return couponCheck.value.valid
+  } finally {
+    couponChecking.value = false
+  }
+}
+
+// 数量变化（或换了商品）会让门槛与抵扣额失效，需要重新校验
+watch([() => orderForm.quantity, () => detail.value?.id], () => {
+  if (orderForm.couponCode.trim()) {
+    void checkCoupon()
+  }
+})
+
+/** 校验通过后的提示：金额明细统一在下方「总价」区展示，这里只说明券可用 */
+const couponHintText = computed(() => {
+  const result = couponCheck.value
+
+  if (!result?.valid) {
+    return ''
+  }
+
+  // 纯赠送金券（没有抵扣额）额外点出赠送金额，否则只说一句「可用」
+  const giftOnly = (!result.discountAmount || result.discountAmount === '0.00')
+    && !!result.giftAmount && result.giftAmount !== '0.00'
+
+  return giftOnly
+    ? $ts('module.system.mall.couponValidGift', { gift: result.giftAmount ?? '-' })
+    : $ts('module.system.mall.couponValid')
+})
+
+/** 校验失败文案：金额相关的两类错误要把金额作为参数传给 i18n */
+const couponInvalidText = computed(() => {
+  const reason = couponCheck.value?.reason || 'module.system.member.couponNotFound'
+
+  if (reason === 'module.system.member.couponMinAmount') {
+    return $ts(reason, { message: couponCheck.value?.minAmount ?? '-' })
+  }
+
+  // 面值大于订单金额：提示「订单金额需大于 ¥X 才可使用」
+  if (reason === 'module.system.member.couponNotApplicable') {
+    return $ts('module.system.mall.couponRequiredTip', { amount: couponCheck.value?.requiredAmount ?? '-' })
+  }
+
+  return $ts(reason)
 })
 
 /** 在线支付结果（含二维码）；余额支付不填这个，直接提示已冻结 */
@@ -325,6 +450,7 @@ const resetOrderForm = () => {
   orderForm.contact = ''
   orderForm.remark = ''
   payInfo.value = null
+  resetCouponCheck()
 }
 
 const openDetail = async (item: SysMallGoodsRespDTO) => {
@@ -407,6 +533,13 @@ const syncOrder = async () => {
 
 const submitOrder = async () => {
   if (!detail.value) return
+
+  // 下单前先校验优惠码：无效就地拦下，不进入「扣库存 + 落单 + 冻结/下单」链路
+  if (!(await checkCoupon())) {
+    useToastError($ts('module.system.mall.couponInvalid'))
+
+    return
+  }
 
   creating.value = true
   stopPolling()

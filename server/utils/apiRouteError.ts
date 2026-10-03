@@ -6,7 +6,7 @@
  */
 import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
 
-export type ApiRouteTranslator = (i18nKey: string) => string
+export type ApiRouteTranslator = (i18nKey: string, params?: Record<string, unknown>) => string
 
 /**
  * 计算要返回给客户端的状态码与文案。
@@ -24,8 +24,13 @@ export function resolveApiRouteError(
     ? resolveAppErrorStatus(error.i18nKey).httpStatus
     : 500
 
+  // AppError 允许把参数放在 message 里（如「最低 {message} 元」），与 key 相同则视为没带参数
+  const params = error instanceof AppError && error.message && error.message !== error.i18nKey
+    ? { message: error.message }
+    : undefined
+
   const message = error instanceof AppError
-    ? t(error.i18nKey)
+    ? t(error.i18nKey, params)
     : error instanceof Error
       ? error.message
       : t(fallbackKey)
