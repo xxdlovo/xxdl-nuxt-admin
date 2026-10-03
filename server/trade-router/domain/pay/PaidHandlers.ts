@@ -9,8 +9,13 @@
  * - `order`    → 交易订单完成（`OrderService.markPaid`，幂等，不动余额）
  * - 其它（含 `test`）→ 保持原有 no-op：只把支付单置为已支付，不做业务后置
  *
- * 调用方：支付回调（`server/api/pay/notify/[channel].post.ts`）与主动同步（`OrderService.sync`）。
- * 抛错表示后置处理失败：回调会返回 5xx 让平台重试，业务侧靠唯一键与状态机保证不重复生效。
+ * 调用方：**只有**支付回调路由（`server/api/pay/notify/[channel].post.ts`）通过
+ * `PayNotifyDispatcher` 的 `onPaid` 扩展点调用它。
+ * 主动同步（`OrderService.sync` / `SysMemberService.myRechargeSync`）不经过这里：
+ * 它们各自直接调业务侧幂等方法，因为此时已知业务类型、不必再按 `biz_type` 分派。
+ *
+ * 抛错表示后置处理失败：回调会返回 5xx，平台重试时会再次调用本函数（至少一次语义），
+ * 业务侧靠唯一键与状态机保证同一事件只生效一次。
  */
 import type { AppDb } from '#server/drizzle/db'
 import { orderService } from '../order/OrderService'

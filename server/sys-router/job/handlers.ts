@@ -153,8 +153,12 @@ const memberReconcileHandler: SysJobHandler = {
 
 /**
  * 超时未支付订单自动关闭：释放冻结余额、释放优惠码、回滚库存，订单置为 CL。
- * 余额单的冻结不设过期（`ttlMinutes = 0`），因此这是它们唯一的自动释放触发点；
- * 已支付但回调丢失的在线单会先被「同步状态」或本任务的前置判断跳过（不会误关）。
+ * 余额单的冻结不设过期（`ttlMinutes = 0`），因此这是它们唯一的自动释放触发点。
+ *
+ * 关单前会先看本地支付单：已是 `OD` 的（回调到了但业务后置没做完、或订单被主动查询推进过）
+ * 会被补做业务后置而不是关闭，返回结果里的 `recoveredCount` 就是这类单的数量。
+ * 回调完全没到达、本地支付单也仍是 `WP` 的情况无法在这里发现（逐单外呼渠道不可接受），
+ * 需要人工或对账介入，见 doc/main/8.payment/7.integration.md。
  */
 const orderExpireCloseHandler: SysJobHandler = {
   code: 'order:expire-close',

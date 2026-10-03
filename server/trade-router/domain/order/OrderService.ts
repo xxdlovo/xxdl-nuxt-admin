@@ -729,14 +729,38 @@ export function orderService(db: AppDb) {
       )
     },
 
-    /** 超时关闭：逐单独立事务，单笔失败不影响其余订单 */
+    /**
+     * 超时关闭：逐单独立事务，单笔失败不影响其余订单。
+     *
+     * 关单前先看**本地支付单**：如果它已经是 `OD`（回调到了但业务后置没做完，
+     * 或订单是被主动查询推进的），这笔钱其实收到了，必须按支付成功推进而不是关掉；
+     * 否则会出现「钱在渠道、订单被关」且此后 `sync` 也不会再自愈（订单已非 WP）。
+     * 只读本地状态，不发渠道请求（一次任务最多扫 200 单，逐单外呼不可接受）；
+     * 回调完全没到达的情况仍由人工/对账介入，见 doc/main/8.payment/7.integration.md。
+     */
     async expireClose(limit = ORDER_EXPIRE_BATCH_SIZE): Promise<OrderExpireCloseResult> {
       const rows = await reads.listExpiredPending(limit)
       const failures: Array<{ orderNo: string, message: string }> = []
       let closedCount = 0
+      let recoveredCount = 0
 
       for (const row of rows) {
         try {
+          // 支付单已支付：先补做业务后置（幂等），不能误关
+          if (row.payOrderId) {
+            const payOrder = await payOrderService(db).getById(row.payOrderId)
+
+            if (payOrder.status === 'OD') {
+              const settled = await markPaid(row.orderNo, null)
+
+              if (!settled.reused) {
+                recoveredCount += 1
+              }
+
+              continue
+            }
+          }
+
           const result = await run(tx => buildOrder(tx).cancelTx({
             orderId: row.id,
             reason: CLOSE_REASON.timeout,
@@ -759,7 +783,7 @@ export function orderService(db: AppDb) {
         }
       }
 
-      return { scanned: rows.length, closedCount, failures }
+      return { scanned: rows.length, closedCount, recoveredCount, failures }
     },
 
     /** 主动同步在线支付状态：先在事务外查渠道，再走与回调相同的幂等路径 */

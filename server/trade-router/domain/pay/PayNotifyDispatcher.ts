@@ -42,12 +42,19 @@ export type PayNotifyOutcome = {
 /**
  * 回调处理的扩展点。
  *
- * `onPaid` 在该笔订单**首次**被置为已支付（`markPaidIfPending` 影响行数 > 0）后调用，
- * 用于把「已支付」这个事实告知业务域（例如 `bizType = 'recharge'` 时给会员充值到账）。
+ * `onPaid` 在两种情况下调用（**至少一次**语义，业务侧必须幂等）：
+ * 1. 本单**首次**被置为已支付（`markPaidIfPending` 影响行数 > 0）之后；
+ * 2. 回调进来时订单**已经是** `OD`（影响行数为 0），且本次事件还没写过成功日志 ——
+ *    说明上一次置为已支付之后业务后置可能没做完（抛错、进程中断，或订单是由主动查询
+ *    `queryPayment` 推进的、那条路径根本不做业务分派）。此时补做一次，业务侧靠
+ *    唯一键 / 条件更新保证不会重复生效。
  *
  * 约定：
- * - 抛错会中断回调处理并让调用方返回 5xx，平台会重试；业务侧必须幂等（唯一键兜底）；
- * - 业务侧漏处理时，由对账/补偿任务按「支付单已支付但业务单未完成」补齐。
+ * - 抛错会中断回调处理并让调用方返回 5xx，平台重试时会在上面第 2 种情况重新触发本回调，
+ *   因此「平台重试」确实是业务后置的补偿路径之一；
+ * - 业务侧仍必须幂等：同一业务事件重复告知只允许生效一次；
+ * - 平台不再重试、或回调根本没到达时，由对账/补偿任务按
+ *   「支付单已支付但业务单未完成」补齐（见 `doc/main/8.payment/7.integration.md`）。
  */
 export type PayNotifyOptions = {
   onPaid?: (order: PayOrderRow) => Promise<void>
@@ -297,6 +304,21 @@ export function payNotifyDispatcher(executor: AppExecutor, options: PayNotifyOpt
       })
 
       if (affected === 0) {
+        /**
+         * 订单已经是已支付：可能是渠道重复投递（业务后置早已完成），
+         * 也可能是「上次置为已支付后业务后置失败 / 订单由主动查询推进」而本次事件没有日志。
+         * 无法区分，因此这里**再告知业务域一次**（至少一次语义，业务侧幂等）：
+         * 已完成时各业务侧会命中自己的唯一键 / 状态守卫，开销只是一次读。
+         *
+         * 注意：上面的 `existsByDedupKey` 命中分支不重复调用 —— 成功日志是在 `onPaid`
+         * 之后写的，日志存在即可推断业务后置已完成。
+         */
+        if (options.onPaid) {
+          const latestOrder = await orderRepo.findById(order.id) ?? order
+
+          await options.onPaid(latestOrder)
+        }
+
         await writeLog({
           ...resultLog,
           status: previousStatus,

@@ -94,6 +94,8 @@ export type OrderSummary = {
 export type OrderExpireCloseResult = {
   scanned: number
   closedCount: number
+  /** 支付单其实已支付、被补做业务后置（未关单）的数量 */
+  recoveredCount: number
   failures: Array<{ orderNo: string, message: string }>
 }
 
