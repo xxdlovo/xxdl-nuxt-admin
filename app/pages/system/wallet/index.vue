@@ -77,36 +77,50 @@
         <USeparator v-if="current" :label="$ts('module.system.wallet.currentRecharge')" />
 
         <div v-if="current" class="flex flex-col items-center gap-2">
-          <img
-            v-if="current.qrImageUrl"
-            :src="current.qrImageUrl"
-            alt="recharge qrcode"
-            class="max-w-[220px] rounded-md border border-default bg-white p-1"
-          >
-          <template v-else-if="current.qrContent">
-            <UTextarea
-              :model-value="current.qrContent"
-              readonly
-              autoresize
-              :rows="2"
-              color="neutral"
-              variant="subtle"
-              class="w-full font-mono text-xs"
-            />
-            <div class="text-xs text-muted">{{ $ts('module.system.wallet.qrContentTip') }}</div>
-          </template>
-          <div v-else class="text-xs text-muted">{{ $ts('module.system.wallet.noQrcode') }}</div>
+          <!-- 待支付：展示二维码 / 支付链接 -->
+          <template v-if="currentStatus === 'WP'">
+            <img
+              v-if="current.qrImageUrl"
+              :src="current.qrImageUrl"
+              alt="recharge qrcode"
+              class="max-w-[220px] rounded-md border border-default bg-white p-1"
+            >
+            <template v-else-if="current.qrContent">
+              <UTextarea
+                :model-value="current.qrContent"
+                readonly
+                autoresize
+                :rows="2"
+                color="neutral"
+                variant="subtle"
+                class="w-full font-mono text-xs"
+              />
+              <div class="text-xs text-muted">{{ $ts('module.system.wallet.qrContentTip') }}</div>
+            </template>
+            <div v-else class="text-xs text-muted">{{ $ts('module.system.wallet.noQrcode') }}</div>
 
-          <UButton
-            v-if="current.payUrl"
-            :to="current.payUrl"
-            target="_blank"
-            size="sm"
-            variant="link"
-            icon="i-lucide-external-link"
-          >
-            {{ $ts('module.system.wallet.openPayUrl') }}
-          </UButton>
+            <UButton
+              v-if="current.payUrl"
+              :to="current.payUrl"
+              target="_blank"
+              size="sm"
+              variant="link"
+              icon="i-lucide-external-link"
+            >
+              {{ $ts('module.system.wallet.openPayUrl') }}
+            </UButton>
+          </template>
+
+          <!-- 已终结（到账 / 被关闭 / 失败）：不再展示二维码，只给结果与原因 -->
+          <UAlert
+            v-else
+            class="w-full max-w-md"
+            :color="currentTerminalAlert.color"
+            variant="subtle"
+            :icon="currentTerminalAlert.icon"
+            :title="currentTerminalAlert.title"
+            :description="currentTerminalReason || currentTerminalAlert.description"
+          />
 
           <div class="text-xs text-muted">
             {{ $ts('module.system.wallet.rechargeOrderNo') }}：<span class="break-all">{{ current.outTradeNo }}</span>
@@ -126,16 +140,6 @@
               <UIcon name="i-lucide-loader-circle" class="animate-spin" />
               {{ $ts('module.system.wallet.polling') }}
             </span>
-          </div>
-
-          <!-- 被后台关闭 / 发起失败：明确展示原因，避免用户继续等二维码 -->
-          <div v-if="currentTerminalReason" class="w-full max-w-md rounded-md border border-default p-2 text-xs">
-            <span class="text-muted">
-              {{ currentStatus === 'CL'
-                ? $ts('module.system.wallet.rechargeCloseReason')
-                : $ts('module.system.wallet.rechargeFailReason') }}：
-            </span>
-            <span class="break-all">{{ currentTerminalReason }}</span>
           </div>
 
           <UButton
@@ -380,6 +384,34 @@ const currentStatusClass = computed(() => {
   return badgeColorClasses[color] || badgeColorClasses.neutral
 })
 
+/** 单据终结后的结果提示（待支付时不展示，二维码区域取而代之） */
+const currentTerminalAlert = computed(() => {
+  if (currentStatus.value === 'OD') {
+    return {
+      color: 'success' as const,
+      icon: 'i-lucide-circle-check',
+      title: $ts('module.system.wallet.rechargeSuccess'),
+      description: $ts('module.system.wallet.rechargeSuccessDesc')
+    }
+  }
+
+  if (currentStatus.value === 'CL') {
+    return {
+      color: 'warning' as const,
+      icon: 'i-lucide-circle-slash',
+      title: $ts('module.system.wallet.rechargeClosed'),
+      description: $ts('module.system.wallet.rechargeClosedDesc')
+    }
+  }
+
+  return {
+    color: 'error' as const,
+    icon: 'i-lucide-triangle-alert',
+    title: $ts('module.system.wallet.rechargeFailed'),
+    description: $ts('module.system.wallet.rechargeFailedDesc')
+  }
+})
+
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 let pollStartedAt = 0
 let pollFailures = 0
@@ -542,8 +574,9 @@ const syncRecharge = async () => {
     }
 
     if (result.status !== 'WP') {
-      // 本地单据已终结（后台关闭 / 发起失败）：停止轮询并明确告知原因
+      // 本地单据已终结（后台关闭 / 发起失败）：停止轮询、刷新列表并明确告知原因
       stopPolling()
+      await loadRecharges()
       useToastWarning(
         result.status === 'CL'
           ? $ts('module.system.wallet.rechargeClosed')
@@ -593,7 +626,13 @@ const handleRecharge = async () => {
     rechargeForm.amount = ''
     rechargeForm.couponCode = ''
     resetCouponCheck()
-    startPolling()
+
+    // 只有待支付才需要轮询；已经是终结状态（到账/关闭/失败）就直接停掉
+    if (result.status === 'WP') {
+      startPolling()
+    } else {
+      stopPolling()
+    }
   } finally {
     creating.value = false
   }

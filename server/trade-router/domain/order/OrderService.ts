@@ -592,6 +592,31 @@ export function orderService(db: AppDb) {
     }
   }
 
+  /**
+   * 关闭订单（抽成局部函数：`sync` 自愈关闭时也要用，对象字面量里没法互相引用）。
+   * 本地关单在事务内完成，渠道关单失败不影响本地结果。
+   */
+  async function cancelOrder(input: OrderKey & {
+    reason?: string | null
+    source: OrderCancelSource
+    operatorId?: string | null
+  }): Promise<OrderSettleResult> {
+    const result = await settleWithIdempotentGuard(
+      async () => await run(tx => buildOrder(tx).cancelTx(input)),
+      async () => {
+        const row = await reads.findOrderByKey(input)
+
+        return row ? toIdempotentSettle(row) : null
+      }
+    )
+
+    if (!result.reused) {
+      await closeChannelPayment(db, input)
+    }
+
+    return result
+  }
+
   return {
     getById: reads.getById,
     getByOrderNo: reads.getByOrderNo,
@@ -690,26 +715,7 @@ export function orderService(db: AppDb) {
     },
 
     /** 关闭订单（取消 / 后台关闭 / 超时） */
-    async cancel(input: OrderKey & {
-      reason?: string | null
-      source: OrderCancelSource
-      operatorId?: string | null
-    }): Promise<OrderSettleResult> {
-      const result = await settleWithIdempotentGuard(
-        async () => await run(tx => buildOrder(tx).cancelTx(input)),
-        async () => {
-          const row = await reads.findOrderByKey(input)
-
-          return row ? toIdempotentSettle(row) : null
-        }
-      )
-
-      if (!result.reused) {
-        await closeChannelPayment(db, input)
-      }
-
-      return result
-    },
+    cancel: cancelOrder,
 
     /** 服务交付 */
     async fulfill(input: OrderKey & { remark?: string | null, operatorId?: string | null }): Promise<OrderSettleResult> {
@@ -774,6 +780,27 @@ export function orderService(db: AppDb) {
       }
 
       const payOrder = await payOrderService(db).queryPayment(row.payOrderId, { operatorId: input.operatorId ?? null })
+
+      /**
+       * 支付单已被关闭 / 发起失败（渠道过期、后台关过支付单等）：
+       * 订单不可能再支付，就地自愈关闭（释放冻结/优惠码/回滚库存），
+       * 不必等 `order:expire-close` 任务到点才处理。
+       */
+      if (payOrder.status === 'CL' || payOrder.status === 'FL') {
+        const closed = await cancelOrder({
+          orderId: row.id,
+          reason: `支付单已${payOrder.status === 'CL' ? '关闭' : '失败'}`,
+          source: 'admin',
+          operatorId: input.operatorId ?? null
+        })
+
+        return {
+          orderNo: row.orderNo,
+          status: closed.status,
+          payOrderStatus: payOrder.status,
+          changed: !closed.reused
+        }
+      }
 
       if (payOrder.status !== 'OD') {
         return {

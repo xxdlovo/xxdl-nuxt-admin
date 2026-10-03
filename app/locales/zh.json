@@ -1700,7 +1700,10 @@
         "rechargeClosed": "本次充值单已被关闭",
         "rechargeFailed": "本次充值单发起失败",
         "rechargeCloseReason": "关闭原因",
-        "rechargeFailReason": "失败原因"
+        "rechargeFailReason": "失败原因",
+        "rechargeSuccessDesc": "余额已到账",
+        "rechargeClosedDesc": "该充值单已关闭，未完成支付",
+        "rechargeFailedDesc": "发起支付失败，请重新生成二维码"
       },
       "goods": {
         "notFound": "商品不存在",

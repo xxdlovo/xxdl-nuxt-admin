@@ -343,24 +343,48 @@ export function sysMemberService(ctx: Context) {
 
             const order = await payOrders.queryPayment(row.payOrderId, { operatorId: user.id })
 
-            if (order.status !== 'OD') {
-                // 渠道还没支付：状态仍按本地单据（WP）返回，页面继续轮询
+            // 渠道已支付：入账
+            if (order.status === 'OD') {
+                const credited = await rechargeOrders.credit(row.outTradeNo, user.id)
+
                 return {
                     outTradeNo: row.outTradeNo,
-                    status: row.status,
-                    credited: false,
-                    reused: false,
+                    status: 'OD',
+                    credited: credited.credited,
+                    reused: credited.reused,
                     failReason: null
                 }
             }
 
-            const credited = await rechargeOrders.credit(row.outTradeNo, user.id)
+            /**
+             * 支付单已经被关闭 / 发起失败（渠道过期、后台关过支付单等）：
+             * 反向把充值单也关掉，避免本地永远停在「待支付」让页面无限轮询。
+             * 关闭原因回填 fail_reason，页面据此展示并停止展示二维码。
+             */
+            if (order.status === 'CL' || order.status === 'FL') {
+                await rechargeOrders.close({
+                    outTradeNo: row.outTradeNo,
+                    reason: `支付单已${order.status === 'CL' ? '关闭' : '失败'}`,
+                    operatorId: user.id
+                })
 
+                const latest = await rechargeOrders.findRecharge(row.outTradeNo)
+
+                return {
+                    outTradeNo: row.outTradeNo,
+                    status: latest?.status ?? 'CL',
+                    credited: false,
+                    reused: true,
+                    failReason: latest?.failReason ?? null
+                }
+            }
+
+            // 渠道仍未支付：状态仍按本地单据（WP）返回，页面继续轮询
             return {
                 outTradeNo: row.outTradeNo,
-                status: 'OD',
-                credited: credited.credited,
-                reused: credited.reused,
+                status: row.status,
+                credited: false,
+                reused: false,
                 failReason: null
             }
         },

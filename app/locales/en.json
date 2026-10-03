@@ -1700,7 +1700,10 @@
         "rechargeClosed": "This recharge has been closed",
         "rechargeFailed": "This recharge failed to start",
         "rechargeCloseReason": "Close reason",
-        "rechargeFailReason": "Failure reason"
+        "rechargeFailReason": "Failure reason",
+        "rechargeSuccessDesc": "The balance has been credited",
+        "rechargeClosedDesc": "This recharge has been closed and was not paid",
+        "rechargeFailedDesc": "The payment failed to start, please generate a new QR code"
       },
       "goods": {
         "notFound": "Goods not found",
