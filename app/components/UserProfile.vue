@@ -25,6 +25,17 @@ const items = computed(() => [[
     label: $ts('module.system.wallet.title'),
     icon: 'i-lucide-wallet',
     to: '/system/wallet'
+  },
+  {
+    // 交易自助：商城下单与我的订单
+    label: $ts('module.system.mall.title'),
+    icon: 'i-lucide-store',
+    to: '/system/mall'
+  },
+  {
+    label: $ts('module.system.myOrder.title'),
+    icon: 'i-lucide-receipt',
+    to: '/system/my-orders'
   }
 ], [
   {
