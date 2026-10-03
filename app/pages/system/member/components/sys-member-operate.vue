@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SysMemberDto } from '#shared/system/member'
 import { useToastSuccess } from '~/utils/toast'
+import MemberUserSelect from '~/components/MemberUserSelect.vue'
 
 /**
  * 会员建档 / 编辑弹窗。
@@ -47,6 +48,14 @@ const state = reactive<{
 })
 
 const levelItems = ref<Array<{ label: string, value: string }>>([])
+
+/** 会员下拉需要 string | null，表单态用空串表示「未选择」 */
+const userIdModel = computed({
+  get: () => state.userId || null,
+  set: (value: string | null | undefined) => {
+    state.userId = value ?? ''
+  }
+})
 
 const loadLevels = async () => {
   if (levelItems.value.length > 0) return
@@ -121,7 +130,14 @@ watch(visible, (opened) => {
     <template #body>
       <UForm :state="state" class="space-y-4">
         <UFormField name="userId" required :label="$ts('module.system.member.userId')" :help="isEdit ? '' : $ts('module.system.member.userIdHelp')">
-          <UBaseInput v-model="state.userId" :disabled="isEdit" :placeholder="$ts('module.system.member.form.userId')" trailing="clear" class="w-full" />
+          <!-- 建档：从「还没有会员档案」的用户里搜索选择，避免选到已建档的人 -->
+          <UBaseInput v-if="isEdit" v-model="state.userId" disabled class="w-full" />
+          <MemberUserSelect
+            v-else
+            v-model="userIdModel"
+            scope="unprofiled"
+            :placeholder="$ts('module.system.member.form.userSelect')"
+          />
         </UFormField>
         <UFormField v-if="!isEdit" name="inviteCode" :label="$ts('module.system.member.inviteCodeInput')" :help="$ts('module.system.member.inviteCodeInputHelp')">
           <UBaseInput v-model="state.inviteCode" :placeholder="$ts('module.system.member.form.inviteCodeInput')" trailing="clear" class="w-full" />

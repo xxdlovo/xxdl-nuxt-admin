@@ -9,7 +9,8 @@ import {
     SysMemberMyLogQuerySchema,
     SysMemberPageQuerySchema,
     SysMemberQuerySchema,
-    SysMemberUpdateSchema
+    SysMemberUpdateSchema,
+    SysMemberUserOptionQuerySchema
 } from '#shared/system/member'
 import {
     SysMemberRechargeCreateSchema,
@@ -64,6 +65,15 @@ export const sysMemberRouter = router({
     levelOptions: listProc
         .query(async ({ ctx }) => {
             return sysMemberService(ctx).levelOptions()
+        }),
+
+    /**
+     * 用户下拉搜索（建档选人 / 按会员筛选）。
+     * scope=unprofiled 只返回还没有会员档案的用户，scope=member 只返回已有档案的会员。
+     */
+    userOptions: listProc.input(SysMemberUserOptionQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberService(ctx).userOptions(input)
         }),
 
     /** 手工调账：加/减余额，必须带原因与 requestId（幂等） */

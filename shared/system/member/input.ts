@@ -137,3 +137,16 @@ export type SysMemberMyLogQueryDTO = z.infer<typeof SysMemberMyLogQuerySchema>
  * 这个 Schema 的**唯一定义在 `shared/system/memberRecharge`**（充值域的归属模块），
  * 会员自助接口直接复用 `SysMemberRechargeCreateSchema`，避免两处同名同义定义漂移。
  */
+
+/**
+ * 会员用户下拉搜索（后台选人，供建档 / 补录充值 / 流水筛选复用）。
+ * - `scope = 'member'`：只列已有会员档案的用户；
+ * - `scope = 'unprofiled'`：只列还没有档案的用户（建档弹窗用，避免选到已有档案的人）。
+ */
+export const SysMemberUserOptionQuerySchema = z.object({
+    keyword: z.string().max(50).nullish(),
+    limit: z.number().int().min(1).max(50).default(20),
+    scope: z.enum(['member', 'unprofiled']).default('member'),
+})
+export type SysMemberUserOptionQueryDTO = z.infer<typeof SysMemberUserOptionQuerySchema>
+

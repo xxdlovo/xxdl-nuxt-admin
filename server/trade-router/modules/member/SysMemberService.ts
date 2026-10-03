@@ -27,7 +27,8 @@ import type {
     SysMemberMyLogQueryDTO,
     SysMemberPageQueryDTO,
     SysMemberQueryDTO,
-    SysMemberUpdateDTO
+    SysMemberUpdateDTO,
+    SysMemberUserOptionQueryDTO
 } from '#shared/system/member'
 import type {
     SysMemberRechargeCreateDTO,
@@ -354,6 +355,14 @@ export function sysMemberService(ctx: Context) {
         /** 等级下拉（会员编辑器用，避免前端再申请额外权限） */
         async levelOptions() {
             return await members.listLevels()
+        },
+
+        /**
+         * 用户下拉搜索：建档弹窗用 scope=unprofiled（只列待建档用户），
+         * 其它场景用 scope=member（只列已有会员档案的用户）。
+         */
+        async userOptions(input: SysMemberUserOptionQueryDTO) {
+            return await members.searchUserOptions(input)
         }
     }
 }

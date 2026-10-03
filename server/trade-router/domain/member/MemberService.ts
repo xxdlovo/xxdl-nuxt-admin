@@ -488,6 +488,22 @@ function buildMember(executor: AppExecutor) {
     return await members.listUserIdsWithoutProfile(limit)
   }
 
+  /**
+   * 用户下拉搜索（后台选择会员/待建档用户用）。
+   * 只返回下拉需要的展示字段，避免把整行用户信息暴露给前端。
+   */
+  async function searchUserOptions(input: {
+    keyword?: string | null
+    limit?: number
+    scope?: 'member' | 'unprofiled'
+  }) {
+    return await members.searchUserOptions({
+      keyword: input.keyword ?? null,
+      limit: Math.min(Math.max(input.limit ?? 20, 1), 50),
+      scope: input.scope === 'unprofiled' ? 'unprofiled' : 'member'
+    })
+  }
+
   return {
     onboard,
     bindInviter,
@@ -501,6 +517,7 @@ function buildMember(executor: AppExecutor) {
     listLevels,
     listMyCoupons,
     listUnprofiledUsers,
+    searchUserOptions,
     readConfigValue,
     grantRegisterBonus
   }

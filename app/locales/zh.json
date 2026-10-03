@@ -1394,9 +1394,14 @@
           "status": "请选择状态",
           "remark": "请输入备注",
           "amount": "请输入金额（元）",
-          "reason": "请输入调账原因"
+          "reason": "请输入调账原因",
+          "userSelect": "请搜索并选择要建档的用户"
         },
-        "giftSourceLabel": "来源"
+        "giftSourceLabel": "来源",
+        "userSelectPlaceholder": "请选择用户",
+        "userSelectSearch": "输入昵称 / 用户名 / 手机号搜索",
+        "userSelectEmpty": "没有匹配的用户",
+        "userSelectEmptyDefault": "输入关键字开始搜索"
       },
       "memberRecharge": {
         "outTradeNoExists": "商户充值单号已存在，请更换或留空由系统生成",
@@ -1457,7 +1462,8 @@
           "status": "请选择充值状态",
           "remark": "请输入备注",
           "amountMin": "最小金额",
-          "amountMax": "最大金额"
+          "amountMax": "最大金额",
+          "userSelect": "请搜索并选择会员"
         }
       },
       "memberFreeze": {
@@ -1564,7 +1570,7 @@
           "disabled": "停用"
         },
         "form": {
-          "code": "请输入等级编码，例如 vip1",
+          "code": "例如 vip,svip",
           "name": "请输入等级名称",
           "benefit": "请输入该等级的权益说明",
           "status": "请选择状态",

@@ -9,6 +9,7 @@ import {
     SysMemberBalanceLogReconcileSchema,
     SysMemberBalanceLogSummarySchema
 } from '#shared/system/memberBalanceLog'
+import { SysMemberUserOptionQuerySchema } from '#shared/system/member'
 import { sysMemberBalanceLogService } from './SysMemberBalanceLogService'
 
 const listProc = proc({ permission: 'system:memberBalanceLog:list' })
@@ -32,6 +33,12 @@ export const sysMemberBalanceLogRouter = router({
     list: listProc.input(SysMemberBalanceLogQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMemberBalanceLogService(ctx).list(input)
+        }),
+
+    /** 会员下拉搜索（流水按会员筛选），只列已有会员档案的用户 */
+    userOptions: listProc.input(SysMemberUserOptionQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberBalanceLogService(ctx).userOptions(input)
         }),
 
     /** 区间汇总（对账看板） */

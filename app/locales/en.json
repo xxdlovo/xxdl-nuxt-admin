@@ -1393,10 +1393,15 @@
           "status": "Select status",
           "remark": "Enter remark",
           "amount": "Enter amount (CNY)",
-          "reason": "Enter the adjustment reason"
+          "reason": "Enter the adjustment reason",
+          "userSelect": "Search and select the user to create a profile for"
         },
         "giftSourceLabel": "Source",
-        "grantSuccess": "Granted"
+        "grantSuccess": "Granted",
+        "userSelectPlaceholder": "Select a user",
+        "userSelectSearch": "Search by nickname / username / phone",
+        "userSelectEmpty": "No matching user",
+        "userSelectEmptyDefault": "Type to search"
       },
       "memberRecharge": {
         "outTradeNoExists": "This merchant order number already exists; change it or leave it empty",
@@ -1457,7 +1462,8 @@
           "status": "Select the recharge status",
           "remark": "Enter a remark",
           "amountMin": "Min amount",
-          "amountMax": "Max amount"
+          "amountMax": "Max amount",
+          "userSelect": "Search and select the member"
         }
       },
       "memberFreeze": {
@@ -1564,7 +1570,7 @@
           "disabled": "Disabled"
         },
         "form": {
-          "code": "Enter a level code, e.g. vip1",
+          "code": "e.g. vip,svip",
           "name": "Enter the level name",
           "benefit": "Describe the benefits of this level",
           "status": "Select status",

@@ -15,6 +15,7 @@ import type {
     SysMemberRechargeQueryDTO,
     SysMemberRechargeUpdateDTO
 } from '#shared/system/memberRecharge'
+import type { SysMemberUserOptionQueryDTO } from '#shared/system/member'
 import { randomUuid } from '#shared/utils/uuid'
 
 /** 已到账（OD）的充值单是入账凭证：既不能改，也不能删 */
@@ -88,8 +89,7 @@ export function sysMemberRechargeService(ctx: Context) {
             return true
         },
 
-        /** 已到账单据禁止修改，其余只允许改备注 */
-        async updateById(id: string, data: SysMemberRechargeUpdateDTO): Promise<boolean> {
+        /** 已到账单据禁止修改，其余只允许改备注 */        async updateById(id: string, data: SysMemberRechargeUpdateDTO): Promise<boolean> {
             const row = await repo.getById(id)
 
             if (!row) {
@@ -194,6 +194,18 @@ export function sysMemberRechargeService(ctx: Context) {
             }
 
             return true
+        },
+
+        /**
+         * 会员下拉搜索（补录充值选人）。
+         * 充值只能落到已有会员档案的用户，这里固定 scope=member，忽略前端传的 scope。
+         */
+        async userOptions(input: SysMemberUserOptionQueryDTO) {
+            return await member.searchUserOptions({
+                keyword: input.keyword ?? null,
+                limit: input.limit,
+                scope: 'member'
+            })
         }
     }
 }

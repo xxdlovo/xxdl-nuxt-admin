@@ -9,6 +9,7 @@ import {
     SysMemberRechargeQuerySchema,
     SysMemberRechargePageQuerySchema
 } from '#shared/system/memberRecharge'
+import { SysMemberUserOptionQuerySchema } from '#shared/system/member'
 
 const listProc = proc({ permission: 'system:memberRecharge:list' })
 const addProc = proc({ permission: 'system:memberRecharge:add' })
@@ -52,5 +53,10 @@ export const sysMemberRechargeRouter = router({
     close: closeProc.input(SysMemberRechargeCloseSchema)
         .mutation(async ({ ctx, input }) => {
             return sysMemberRechargeService(ctx).close(input)
+        }),
+    /** 会员下拉搜索（补录充值选人），只列已有会员档案的用户 */
+    userOptions: listProc.input(SysMemberUserOptionQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberRechargeService(ctx).userOptions(input)
         })
 })

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { type SysMemberBalanceLogQueryDTO, SysMemberBalanceLogQuerySchema } from '#shared/system/memberBalanceLog'
 import { memberAccountRecord, memberBizTypeRecord, memberDirectionRecord } from '#shared/constants/business'
+import MemberUserSelect from '~/components/MemberUserSelect.vue'
 
 const { $ts } = useI18n()
 
@@ -66,7 +67,7 @@ const reset = () => {
         <UForm ref="form" :validate-on="['input']" :schema="schema" :state="state" class="p-2">
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
             <UFormField name="userId" :label="$ts('module.system.memberBalanceLog.userId')" orientation="horizontal" :ui="formItemUi">
-              <UBaseInput v-model="state.userId" :placeholder="$ts('module.system.memberBalanceLog.form.userId')" trailing="clear" class="w-full" />
+              <MemberUserSelect v-model="state.userId" source="sysMemberBalanceLog" :placeholder="$ts('module.system.memberBalanceLog.form.userId')" />
             </UFormField>
             <UFormField name="account" :label="$ts('module.system.memberBalanceLog.account')" orientation="horizontal" :ui="formItemUi">
               <USelect v-model.nullable="state.account" :placeholder="$ts('module.system.memberBalanceLog.form.account')" class="w-full" :items="accountItems" clearable />

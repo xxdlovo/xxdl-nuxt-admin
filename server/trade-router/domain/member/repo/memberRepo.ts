@@ -1,7 +1,7 @@
 /**
  * 会员档案 mapper（数据访问层）。
  */
-import { and, asc, desc, eq, inArray, isNull, like, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, isNotNull, isNull, like, or, sql } from 'drizzle-orm'
 import { sysConfig, sysMember, sysUser } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 import { affectedRows } from '../../wallet/repo/sqlUtils'
@@ -31,6 +31,64 @@ export function memberRepo(executor: AppExecutor) {
         .limit(limit)
 
       return rows.map(row => row.userId)
+    },
+
+    /**
+     * 用户下拉搜索（后台选择会员用）。
+     *
+     * - `scope = 'member'`：只列已有会员档案的用户（补录充值、流水筛选等场景）
+     * - `scope = 'unprofiled'`：只列还没有档案的用户（会员建档场景，避免选到已有档案的人）
+     * - 关键字同时匹配用户名 / 昵称 / 手机号，若整串是完整用户ID则精确命中
+     */
+    async searchUserOptions(params: {
+      keyword?: string | null
+      limit: number
+      scope: 'member' | 'unprofiled'
+    }): Promise<Array<{ value: string, label: string, phone: string | null, nickname: string | null, username: string | null }>> {
+      const conditions = [eq(sysUser.isDeleted, 0)]
+      const keyword = String(params.keyword ?? '').trim()
+
+      if (keyword) {
+        const pattern = `%${keyword}%`
+        const matched = or(
+          eq(sysUser.id, keyword),
+          like(sysUser.username, pattern),
+          like(sysUser.nickname, pattern),
+          like(sysUser.phone, pattern)
+        )
+
+        if (matched) {
+          conditions.push(matched)
+        }
+      }
+
+      conditions.push(params.scope === 'member' ? isNotNull(sysMember.id) : isNull(sysMember.id))
+
+      const rows = await db
+        .select({
+          userId: sysUser.id,
+          username: sysUser.username,
+          nickname: sysUser.nickname,
+          phone: sysUser.phone
+        })
+        .from(sysUser)
+        .leftJoin(sysMember, eq(sysMember.userId, sysUser.id))
+        .where(and(...conditions))
+        .orderBy(desc(sysUser.createdAt))
+        .limit(params.limit)
+
+      return rows.map((row) => {
+        const name = row.nickname || row.username || row.userId
+        const suffix = row.phone ? ` · ${row.phone}` : ''
+
+        return {
+          value: row.userId,
+          label: `${name}${suffix}`,
+          phone: row.phone ?? null,
+          nickname: row.nickname ?? null,
+          username: row.username ?? null
+        }
+      })
     },
 
     async findByUserId(userId: string): Promise<MemberRow | null> {

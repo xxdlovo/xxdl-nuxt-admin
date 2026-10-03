@@ -3,6 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import { type SysMemberRechargeAddDTO, SysMemberRechargeAddSchema } from '#shared/system/memberRecharge'
 import { memberRechargeStatusConfig } from '#shared/constants/business'
 import { useToastError, useToastSuccess } from '~/utils/toast'
+import MemberUserSelect from '~/components/MemberUserSelect.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -49,6 +50,14 @@ const state = ref({
   status: 'WP',
   paidAt: '',
   remark: ''
+})
+
+/** 会员下拉需要 string | null，表单态用空串表示「未选择」 */
+const userIdModel = computed({
+  get: () => state.value.userId || null,
+  set: (value: string | null | undefined) => {
+    state.value.userId = value ?? ''
+  }
 })
 
 /** 补录成「已到账」时服务端会走领域到账流程自动入账余额，需要给操作者提示 */
@@ -145,7 +154,11 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMemberRechargeAddDTO>) =>
       <UForm ref="form" :validate="validate" :state="state" class="p-2" @submit="handleSubmit">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-6">
           <UFormField name="userId" required :label="$ts('module.system.memberRecharge.userId')" orientation="horizontal" :ui="formItemUi">
-            <UBaseInput v-model="state.userId" :placeholder="$ts('module.system.memberRecharge.form.userId')" trailing="clear" class="w-full" />
+            <MemberUserSelect
+              v-model="userIdModel"
+              source="sysMemberRecharge"
+              :placeholder="$ts('module.system.memberRecharge.form.userSelect')"
+            />
           </UFormField>
           <UFormField name="amount" required :label="$ts('module.system.memberRecharge.amount')" orientation="horizontal" :ui="formItemUi">
             <UInput v-model="state.amount" type="number" :placeholder="$ts('module.system.memberRecharge.form.amount')" class="w-full" />

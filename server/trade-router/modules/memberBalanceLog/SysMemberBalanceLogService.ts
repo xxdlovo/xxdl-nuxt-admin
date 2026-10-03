@@ -17,6 +17,7 @@ import type { Context } from '#server/trpc/context'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import { buildCsv, buildCsvFilename } from '#shared/utils/csv'
 import { walletService } from '#server/trade-router/domain/wallet/WalletService'
+import { memberService } from '#server/trade-router/domain/member/MemberService'
 import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
 import { addMoney } from '#server/trade-router/domain/wallet/utils'
 import type {
@@ -27,6 +28,7 @@ import type {
     SysMemberBalanceLogRechargeRetryDTO,
     SysMemberBalanceLogSummaryDTO
 } from '#shared/system/memberBalanceLog'
+import type { SysMemberUserOptionQueryDTO } from '#shared/system/member'
 import { sysMemberBalanceLogRepo } from './SysMemberBalanceLogRepo'
 
 /** 导出上限：超过则提示收窄条件（避免 tRPC 响应体过大） */
@@ -56,6 +58,7 @@ const BIZ_TYPE_LABEL: Record<string, string> = {
 export function sysMemberBalanceLogService(ctx: Context) {
     const repo = sysMemberBalanceLogRepo(ctx)
     const wallet = walletService(ctx.db)
+    const members = memberService(ctx.db)
     const recharges = rechargeService(ctx.db)
 
     const operatorId = () => ctx.user?.id ?? null
@@ -156,6 +159,18 @@ export function sysMemberBalanceLogService(ctx: Context) {
         async rechargeRetry(input: SysMemberBalanceLogRechargeRetryDTO) {
             // 单次补偿上限固定，避免一次请求扫过多数据（需要更多时可重复点击）
             return await recharges.retryPending(50, operatorId())
+        },
+
+        /**
+         * 会员下拉搜索（流水按会员筛选）。
+         * 流水只可能属于有档案的会员，这里固定 scope=member。
+         */
+        async userOptions(input: SysMemberUserOptionQueryDTO) {
+            return await members.searchUserOptions({
+                keyword: input.keyword ?? null,
+                limit: input.limit,
+                scope: 'member'
+            })
         },
 
         /** CSV 导出：超过上限直接报错，避免前端拿到截断的数据还以为是全量 */
