@@ -1,7 +1,9 @@
 import { and, desc, eq, gte, inArray, lte, type SQL } from 'drizzle-orm'
+import { getTableColumns } from 'drizzle-orm'
 import { CommonRepo } from '#server/drizzle/CommonRepo'
-import { sysMemberRecharge } from '~~/server/drizzle/schema'
+import { sysMemberCoupon, sysMemberRecharge, sysPayOrder } from '~~/server/drizzle/schema'
 import { SysMemberRechargeBaseSchema } from '#shared/system/memberRecharge/common'
+import { buildScopedWhere } from '#server/drizzle/queries/buildScope'
 import type { Context } from '#server/trpc/context'
 
 const commonRepo = CommonRepo(sysMemberRecharge, SysMemberRechargeBaseSchema)
@@ -11,6 +13,53 @@ export type SysMemberRechargeRangeQuery = {
   amountMax?: string | null
   createdFrom?: string | null
   createdTo?: string | null
+}
+
+/**
+ * 详情列：充值单本体 + 关联的优惠码 + 关联的支付单。
+ *
+ * 为什么要联表而不是让前端再点一次接口：详情页要显示「优惠码名称」「支付单号」这类
+ * 可读信息，而查看充值记录的角色未必有优惠码 / 支付单模块的查询权限；
+ * 一次左连接既省一次请求，也避免权限耦合。
+ *
+ * 别名统一加 `coupon*` / `linkedPay*` 前缀：充值单自己已有 `couponId`/`couponCode`/
+ * `payOrderId`/`payChannelCode`/`payAmount` 等列，直接同名会被覆盖。
+ */
+const profileColumns = {
+  ...getTableColumns(sysMemberRecharge),
+
+  // 优惠码（couponId 为空时全为 null）
+  couponName: sysMemberCoupon.name,
+  couponType: sysMemberCoupon.type,
+  couponValue: sysMemberCoupon.value,
+  couponMinAmount: sysMemberCoupon.minAmount,
+  couponGiftAmount: sysMemberCoupon.giftAmount,
+  couponScene: sysMemberCoupon.scene,
+  couponValidFrom: sysMemberCoupon.validFrom,
+  couponValidTo: sysMemberCoupon.validTo,
+  couponMaxUse: sysMemberCoupon.maxUse,
+  couponUsedCount: sysMemberCoupon.usedCount,
+  couponPerUserLimit: sysMemberCoupon.perUserLimit,
+  couponBatchNo: sysMemberCoupon.batchNo,
+  couponStatus: sysMemberCoupon.status,
+  couponRemark: sysMemberCoupon.remark,
+
+  // 关联支付单（payOrderId 为空时全为 null）
+  linkedPayOutTradeNo: sysPayOrder.outTradeNo,
+  linkedPayStatus: sysPayOrder.status,
+  linkedPayChannelCode: sysPayOrder.channelCode,
+  linkedPayMode: sysPayOrder.payMode,
+  linkedPayAmount: sysPayOrder.amount,
+  linkedPayCurrency: sysPayOrder.currency,
+  linkedPaySubject: sysPayOrder.subject,
+  linkedPayProviderStatus: sysPayOrder.providerStatus,
+  linkedPayProviderOrderId: sysPayOrder.providerOrderId,
+  linkedPayTransactionId: sysPayOrder.transactionId,
+  linkedPayNotifyCount: sysPayOrder.notifyCount,
+  linkedPayPaidAt: sysPayOrder.paidAt,
+  linkedPayExpireAt: sysPayOrder.expireAt,
+  linkedPayFailReason: sysPayOrder.failReason,
+  linkedPayCreatedAt: sysPayOrder.createdAt
 }
 
 export const sysMemberRechargeRepo = (ctx: Context) => {
@@ -58,6 +107,25 @@ export const sysMemberRechargeRepo = (ctx: Context) => {
       }
 
       return await repo.list({}, [], [inArray(sysMemberRecharge.id, ids)])
+    },
+
+    /**
+     * 详情：充值单 + 优惠码 + 支付单联表，叠加数据权限（口径与 CommonRepo.getById 一致）。
+     */
+    async getProfileById(id: string) {
+      const where = await buildScopedWhere(sysMemberRecharge, ctx,
+        eq(sysMemberRecharge.id, id),
+        eq(sysMemberRecharge.isDeleted, 0))
+
+      const rows = await ctx.db
+        .select(profileColumns)
+        .from(sysMemberRecharge)
+        .leftJoin(sysMemberCoupon, eq(sysMemberCoupon.id, sysMemberRecharge.couponId))
+        .leftJoin(sysPayOrder, eq(sysPayOrder.id, sysMemberRecharge.payOrderId))
+        .where(where)
+        .limit(1)
+
+      return rows[0] ?? null
     },
 
     /**

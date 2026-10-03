@@ -1466,7 +1466,11 @@
           "amountMax": "最大金额",
           "userSelect": "请搜索并选择会员"
         },
-        "paidCannotClose": "该充值单已支付，不能关闭（请先同步到账）"
+        "paidCannotClose": "该充值单已支付，不能关闭（请先同步到账）",
+        "couponDetailTitle": "优惠码详情",
+        "payOrderDetailTitle": "支付单详情",
+        "viewCoupon": "查看优惠码",
+        "viewPayOrder": "查看支付单"
       },
       "memberFreeze": {
         "cannotDeleteFrozen": "冻结中的单据不能删除，请先确认或释放",
@@ -1647,7 +1651,18 @@
         "validTo": "失效时间",
         "maxUse": "使用次数上限",
         "perUserLimit": "每人可用次数",
-        "batchNo": "活动批次号"
+        "batchNo": "活动批次号",
+        "uses": "使用记录",
+        "usesTitle": "使用记录",
+        "usesEmpty": "暂无使用记录",
+        "useUser": "使用人",
+        "usePhone": "手机号",
+        "useDiscount": "抵扣金额",
+        "useGift": "赠送金",
+        "useBizNo": "业务单号",
+        "useTime": "使用时间",
+        "useCreatedAt": "记录时间",
+        "useStatusLabel": "使用状态"
       },
       "wallet": {
         "title": "我的余额",

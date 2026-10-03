@@ -44,6 +44,13 @@
       :refresh="refresh"
     />
 
+    <!-- 使用记录反查：这张券被谁用了，接口权限沿用 system:memberCoupon:list -->
+    <SysMemberCouponUses
+      v-model:visible="usesVisible"
+      :coupon-id="usesTarget?.id"
+      :coupon-code="usesTarget?.code"
+    />
+
     <!-- 作废不可逆：独立二次确认弹窗，可填写作废原因（写入 remark） -->
     <UModal
       v-model:open="voidVisible"
@@ -97,6 +104,7 @@ import TableWithPagination from '~/components/table/TableWithPagination.vue'
 import CopyValueBadge from '~/components/base/CopyValueBadge.vue'
 import SysMemberCouponSearch from './components/sys-member-coupon-search.vue'
 import SysMemberCouponOperate from './components/sys-member-coupon-operate.vue'
+import SysMemberCouponUses from './components/sys-member-coupon-uses.vue'
 import { useToastError, useToastSuccess } from '~/utils/toast'
 
 /**
@@ -119,6 +127,15 @@ const searchParams = ref<SysMemberCouponQueryDTO>({})
 
 // 作废是独立于 CRUD 的高敏感权限码，useCrudPermissions 不覆盖，这里单独判断
 const canVoid = computed(() => isAdmin.value || hasPermission('system:memberCoupon:void'))
+
+// 使用记录反查沿用列表权限（system:memberCoupon:list），不再做二次授权判断
+const usesVisible = ref(false)
+const usesTarget = ref<SysMemberCouponRespDTO | null>(null)
+
+const handleUses = (coupon: SysMemberCouponRespDTO) => {
+  usesTarget.value = coupon
+  usesVisible.value = true
+}
 
 const {
   data,
@@ -245,6 +262,14 @@ const columns = computed<TableColumn<SysMemberCouponRespDTO>[]>(() => {
       const Popconfirm = resolveComponent('Popconfirm')
       const actions = []
 
+      // 使用记录只读反查，列表权限角色即可查看，始终展示
+      actions.push(h(UButton, {
+        variant: 'outline',
+        color: 'neutral',
+        size: 'xs',
+        onClick: () => handleUses(row.original)
+      }, { default: () => $ts('module.system.memberCoupon.uses') }))
+
       if (couponPermissions.canEdit.value) {
         actions.push(h(UButton, {
           variant: 'outline',
@@ -340,7 +365,8 @@ const columns = computed<TableColumn<SysMemberCouponRespDTO>[]>(() => {
       cell: ({ row }) => usageText(row.original)
     },
     useBadgeColumn<SysMemberCouponRespDTO>('status', 'module.system.memberCoupon.statusLabel', memberCouponStatusConfig, 1),
-    ...(couponPermissions.canOperate.value || canVoid.value ? [actionColumn] : [])
+    // 「使用记录」对所有列表权限角色可见，所以操作列不再随编辑/作废权限整体隐藏
+    actionColumn
   ]
 })
 

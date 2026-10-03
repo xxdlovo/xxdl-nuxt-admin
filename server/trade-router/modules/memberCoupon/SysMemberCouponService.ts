@@ -9,6 +9,7 @@ import type {
     SysMemberCouponQueryDTO,
     SysMemberCouponRespDTO,
     SysMemberCouponUpdateDTO,
+    SysMemberCouponUsesQueryDTO,
     SysMemberCouponVoidDTO
 } from '#shared/system/memberCoupon'
 import { randomUuid } from '#shared/utils/uuid'
@@ -171,6 +172,22 @@ export function sysMemberCouponService(ctx: Context) {
                 : { status: COUPON_STATUS_VOID })
 
             return true
+        },
+
+        /**
+         * 使用记录反查：这张券被谁用了、用在哪个业务单上。
+         *
+         * 先确认券存在（否则前端传错 id 只会得到空列表，看不出是参数问题）；
+         * 返回核销记录 + 使用人昵称/账号/手机号，按创建时间倒序分页。
+         */
+        async uses(req: SysMemberCouponUsesQueryDTO) {
+            const row = await repo.getById(req.couponId)
+
+            if (!row) {
+                throw new AppError('common.notExist')
+            }
+
+            return await repo.pageUses(req.couponId, req.page, req.pageSize)
         }
     }
 }

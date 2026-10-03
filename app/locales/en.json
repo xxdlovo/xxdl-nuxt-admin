@@ -1466,7 +1466,11 @@
           "amountMax": "Max amount",
           "userSelect": "Search and select the member"
         },
-        "paidCannotClose": "This recharge is already paid and cannot be closed (sync it instead)"
+        "paidCannotClose": "This recharge is already paid and cannot be closed (sync it instead)",
+        "couponDetailTitle": "Coupon detail",
+        "payOrderDetailTitle": "Payment order detail",
+        "viewCoupon": "View coupon",
+        "viewPayOrder": "View payment order"
       },
       "memberFreeze": {
         "cannotDeleteFrozen": "A frozen record cannot be deleted, please confirm or release it first",
@@ -1647,7 +1651,18 @@
         "validTo": "Valid to",
         "maxUse": "Total usage limit",
         "perUserLimit": "Per-user limit",
-        "batchNo": "Campaign batch no."
+        "batchNo": "Campaign batch no.",
+        "uses": "Usage records",
+        "usesTitle": "Usage records",
+        "usesEmpty": "No usage records yet",
+        "useUser": "Used by",
+        "usePhone": "Phone",
+        "useDiscount": "Discount",
+        "useGift": "Gift amount",
+        "useBizNo": "Business no.",
+        "useTime": "Used at",
+        "useCreatedAt": "Recorded at",
+        "useStatusLabel": "Usage status"
       },
       "wallet": {
         "title": "My balance",

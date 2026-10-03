@@ -79,3 +79,14 @@ export type SysMemberCouponQueryDTO = z.infer<typeof SysMemberCouponQuerySchema>
 export const SysMemberCouponPageQuerySchema =
     SysMemberCouponQuerySchema.extend(ApiRequestSchema.shape)
 export type SysMemberCouponPageQueryDTO = z.infer<typeof SysMemberCouponPageQuerySchema>
+
+/**
+ * 使用记录反查（谁用了这张券）：按 couponId 分页列出核销记录。
+ * 权限沿用 `system:memberCoupon:list`。
+ */
+export const SysMemberCouponUsesQuerySchema = z
+    .object({
+        couponId: z.string().min(1, 'form.required').max(36, 'form.required'),
+    })
+    .extend(ApiRequestSchema.shape)
+export type SysMemberCouponUsesQueryDTO = z.infer<typeof SysMemberCouponUsesQuerySchema>

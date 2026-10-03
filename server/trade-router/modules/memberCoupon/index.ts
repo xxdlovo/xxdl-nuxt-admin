@@ -7,6 +7,7 @@ import {
     SysMemberCouponUpdateSchema,
     SysMemberCouponQuerySchema,
     SysMemberCouponPageQuerySchema,
+    SysMemberCouponUsesQuerySchema,
     SysMemberCouponVoidSchema
 } from '#shared/system/memberCoupon'
 
@@ -45,6 +46,11 @@ export const sysMemberCouponRouter = router({
     page: listProc.input(SysMemberCouponPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysMemberCouponService(ctx).page(input)
+        }),
+    /** 使用记录反查：这张券被谁用了（核销记录 + 使用人信息，分页） */
+    uses: listProc.input(SysMemberCouponUsesQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberCouponService(ctx).uses(input)
         }),
     // 作废：status 置 2，只能用一次；重复调用幂等返回 true
     void: voidProc.input(SysMemberCouponVoidSchema)

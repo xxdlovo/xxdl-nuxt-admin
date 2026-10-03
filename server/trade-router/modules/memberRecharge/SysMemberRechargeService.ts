@@ -147,14 +147,18 @@ export function sysMemberRechargeService(ctx: Context) {
             return pojo as SysMemberRechargeDto
         },
 
-        async getById(id: string): Promise<SysMemberRechargeDto> {
-            const pojo = await repo.getById(id)
+        /**
+         * 详情：联表带出优惠码名称与关联支付单信息，供前端展示与二级弹窗使用。
+         * 返回的行除充值单字段外还含 `coupon*` 与 `linkedPay*` 两组前缀字段。
+         */
+        async getById(id: string) {
+            const profile = await repo.getProfileById(id)
 
-            if (!pojo) {
+            if (!profile) {
                 throw new AppError('common.notExist')
             }
 
-            return pojo as SysMemberRechargeDto
+            return profile
         },
 
         async page(req: SysMemberRechargePageQueryDTO): Promise<OrmPageResp> {
