@@ -186,3 +186,46 @@ export const memberCouponUseStatusConfig: Readonly<Record<string, BadgeConfig>> 
     used: { i18nKey: 'module.system.memberCoupon.useStatus.used', color: 'success' },
     released: { i18nKey: 'module.system.memberCoupon.useStatus.released', color: 'neutral' }
 }
+
+// ── 商品 / 订单 ──────────────────────────────────────────────────────────
+
+/** 商品类型：虚拟物品 / 人工服务 / 实物（预留） */
+export const goodsTypeRecord: Record<string, string> = {
+    virtual: 'module.system.goods.type.virtual',
+    service: 'module.system.goods.type.service',
+    physical: 'module.system.goods.type.physical'
+}
+
+/** 商品状态徽标 */
+export const goodsStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    '0': { i18nKey: 'module.system.goods.status.offline', color: 'neutral' },
+    '1': { i18nKey: 'module.system.goods.status.online', color: 'success' }
+}
+
+/** 订单资金状态徽标：待支付 / 已完成 / 已关闭 / 发起失败 */
+export const orderStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    WP: { i18nKey: 'module.system.order.status.pending', color: 'warning' },
+    OD: { i18nKey: 'module.system.order.status.completed', color: 'success' },
+    CL: { i18nKey: 'module.system.order.status.closed', color: 'neutral' },
+    FL: { i18nKey: 'module.system.order.status.failed', color: 'error' }
+}
+
+/** 支付方式：余额支付 / 在线支付 */
+export const orderPayModeRecord: Record<string, string> = {
+    balance: 'module.system.order.payMode.balance',
+    online: 'module.system.order.payMode.online'
+}
+
+/** 履约状态徽标：无需交付 / 待交付 / 已交付 */
+export const orderFulfillStatusConfig: Readonly<Record<string, BadgeConfig>> = {
+    none: { i18nKey: 'module.system.order.fulfillStatus.none', color: 'neutral' },
+    pending: { i18nKey: 'module.system.order.fulfillStatus.pending', color: 'warning' },
+    delivered: { i18nKey: 'module.system.order.fulfillStatus.delivered', color: 'success' }
+}
+
+/** 价格来源：基础价 / 等级价 / 会员协议价（预留） */
+export const orderPriceSourceRecord: Record<string, string> = {
+    base: 'module.system.order.priceSource.base',
+    level: 'module.system.order.priceSource.level',
+    member: 'module.system.order.priceSource.member'
+}

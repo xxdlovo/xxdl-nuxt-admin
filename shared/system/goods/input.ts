@@ -52,9 +52,9 @@ export const SysGoodsQuerySchema = SysGoodsBaseSchema.pick({
 }).extend({
     /** 不限库存筛选：1 只看不限库存商品 */
     unlimitedStock: z.number().nullish(),
-    /** 价格区间（非表字段，由 Repo 用区间条件消费） */
-    priceMin: z.union([z.string(), z.number()]).nullish(),
-    priceMax: z.union([z.string(), z.number()]).nullish(),
+    /** 价格区间（非表字段，搜索框传字符串，由 Repo 用区间条件消费） */
+    priceMin: z.string().max(20).nullish(),
+    priceMax: z.string().max(20).nullish(),
     /** 创建时间区间 YYYY-MM-DD HH:mm:ss（非表字段） */
     createdFrom: z.string().max(30).nullish(),
     createdTo: z.string().max(30).nullish(),

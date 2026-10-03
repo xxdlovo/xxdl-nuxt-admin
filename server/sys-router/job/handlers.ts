@@ -2,6 +2,7 @@ import type { MySql2Database } from 'drizzle-orm/mysql2'
 import type * as schema from '#server/drizzle/schema'
 import { sysJobRunnerRepo } from './repo/sysJobRunnerRepo'
 import { memberService } from '#server/trade-router/domain/member/MemberService'
+import { orderService } from '#server/trade-router/domain/order/OrderService'
 import { walletService } from '#server/trade-router/domain/wallet/WalletService'
 import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
 
@@ -150,6 +151,20 @@ const memberReconcileHandler: SysJobHandler = {
   }
 }
 
+/**
+ * 超时未支付订单自动关闭：释放冻结余额、释放优惠码、回滚库存，订单置为 CL。
+ * 余额单的冻结不设过期（`ttlMinutes = 0`），因此这是它们唯一的自动释放触发点；
+ * 已支付但回调丢失的在线单会先被「同步状态」或本任务的前置判断跳过（不会误关）。
+ */
+const orderExpireCloseHandler: SysJobHandler = {
+  code: 'order:expire-close',
+  name: 'Close expired orders',
+  description: 'Close unpaid trade orders whose payment window has expired.',
+  async run({ db }) {
+    return await orderService(db).expireClose()
+  }
+}
+
 const handlers = [
   cleanLogHandler,
   resetDemoDataHandler,
@@ -157,6 +172,7 @@ const handlers = [
   memberExpireGiftHandler,
   memberBackfillProfileHandler,
   memberReconcileHandler,
+  orderExpireCloseHandler,
 ] as const
 
 const handlerMap = new Map(handlers.map(handler => [handler.code, handler]))

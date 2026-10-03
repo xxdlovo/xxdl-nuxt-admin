@@ -21,9 +21,9 @@ export const SysOrderQuerySchema = SysOrderBaseSchema.pick({
     priceSource: true,
     couponCode: true,
 }).extend({
-    /** 应付金额区间（非表字段） */
-    amountMin: z.union([z.string(), z.number()]).nullish(),
-    amountMax: z.union([z.string(), z.number()]).nullish(),
+    /** 应付金额区间（非表字段，搜索框传字符串） */
+    amountMin: z.string().max(20).nullish(),
+    amountMax: z.string().max(20).nullish(),
     /** 下单时间区间 YYYY-MM-DD HH:mm:ss（非表字段） */
     createdFrom: z.string().max(30).nullish(),
     createdTo: z.string().max(30).nullish(),

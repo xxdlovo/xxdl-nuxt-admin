@@ -18,6 +18,8 @@ import { sysPayChannelRouter } from '#server/trade-router/modules/payChannel'
 import { sysPayNotifyLogRouter } from '#server/trade-router/modules/payNotifyLog'
 import { sysPayOrderRouter } from '#server/trade-router/modules/payOrder'
 import { sysPayTestRouter } from '#server/trade-router/modules/payTest'
+import { sysGoodsRouter } from '#server/trade-router/modules/goods'
+import { sysOrderRouter } from '#server/trade-router/modules/order'
 import { sysMemberRouter } from '#server/trade-router/modules/member'
 import { sysMemberBalanceLogRouter } from '#server/trade-router/modules/memberBalanceLog'
 import { sysMemberCouponRouter } from '#server/trade-router/modules/memberCoupon'
@@ -57,6 +59,8 @@ export const appRouter = router({
     sysPayNotifyLog: sysPayNotifyLogRouter,
     sysPayOrder: sysPayOrderRouter,
     sysPayTest: sysPayTestRouter,
+    sysGoods: sysGoodsRouter,
+    sysOrder: sysOrderRouter,
     sysMember: sysMemberRouter,
     sysMemberBalanceLog: sysMemberBalanceLogRouter,
     sysMemberCoupon: sysMemberCouponRouter,

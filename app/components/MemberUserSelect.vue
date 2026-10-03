@@ -15,8 +15,8 @@ type MemberUserOption = {
 }
 
 const props = withDefaults(defineProps<{
-  /** 调用哪个模块的 userOptions 接口：sysMember / sysMemberRecharge / sysMemberBalanceLog */
-  source?: 'sysMember' | 'sysMemberRecharge' | 'sysMemberBalanceLog'
+  /** 调用哪个模块的 userOptions 接口：sysMember / sysMemberRecharge / sysMemberBalanceLog / sysMemberOrder */
+  source?: 'sysMember' | 'sysMemberRecharge' | 'sysMemberBalanceLog' | 'sysMemberOrder'
   /** member 只列已有档案的会员；unprofiled 只列待建档用户 */
   scope?: 'member' | 'unprofiled'
   placeholder?: string
@@ -79,7 +79,14 @@ const load = async (keywordOverride?: string) => {
   loading.value = true
 
   try {
-    const client = $trpc[props.source] as unknown as UserOptionsClient
+    // 用 Record 索引：$trpc 的路由类型是字面量对象，无法用「多选一」的联合去索引
+    const routers = $trpc as unknown as Record<string, UserOptionsClient | undefined>
+    const client = routers[props.source]
+
+    if (!client) {
+      return
+    }
+
     const keyword = (keywordOverride ?? searchTerm.value).trim() || null
     const result = await client.userOptions.query({
       keyword,
