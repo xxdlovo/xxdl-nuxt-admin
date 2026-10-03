@@ -4,6 +4,8 @@ import { sysDepartment } from "./system/department"
 import { sysConfig } from "./system/config"
 import { sysDictData } from "./system/dictData"
 import { sysDictType } from "./system/dictType"
+import { sysGoods } from "./system/goods"
+import { sysGoodsLevelPrice } from "./system/goodsLevelPrice"
 import { sysJob } from "./system/job"
 import { sysJobLog } from "./system/jobLog"
 import { sysLoginLog } from "./system/loginLog"
@@ -21,6 +23,7 @@ import { sysMenu } from "./system/menu"
 import { sysNotice } from "./system/notice"
 import { sysOauthAccount } from "./system/oauthAccount"
 import { sysOauthConfig } from "./system/oauthConfig"
+import { sysOrder } from "./system/order"
 import { sysOss } from "./system/oss"
 import { sysOssConfig } from "./system/ossConfig"
 import { sysPayChannel } from "./system/payChannel"
@@ -40,6 +43,8 @@ export {
   sysDepartment,
   sysDictData,
   sysDictType,
+  sysGoods,
+  sysGoodsLevelPrice,
   sysJob,
   sysJobLog,
   sysLoginLog,
@@ -57,6 +62,7 @@ export {
   sysNotice,
   sysOauthAccount,
   sysOauthConfig,
+  sysOrder,
   sysOss,
   sysOssConfig,
   sysPayChannel,
