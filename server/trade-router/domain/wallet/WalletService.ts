@@ -779,9 +779,16 @@ function buildWallet(executor: AppExecutor) {
           }
         }
 
-        await grants.markUsedIfEmpty(batch.id, null)
-
+        /**
+         * 批次剩余为 0 说明整批（或剩余部分）已经过期掉：置 `expired`。
+         *
+         * **顺序很关键**：`markExpired` 的守卫是 `status = 'active'`，而 `markUsedIfEmpty`
+         * 会在剩余为 0 时把状态改成 `used`；先调后者的话前者就永远影响 0 行，
+         * 批次会停在 `used`，`expired` 这个语义状态实际写不出来。
+         * 剩余仍大于 0 时保持 `active`，交给下一轮任务继续处理（部分过期是允许的）。
+         */
         const latestBatch = await grants.findByBizNo(batch.bizNo)
+
         if (latestBatch && !isPositiveMoney(latestBatch.remainAmount)) {
           await grants.markExpired(batch.id, null)
         }
@@ -841,23 +848,33 @@ function buildWallet(executor: AppExecutor) {
     async assertConsistency(input: { userId?: string | null } = {}): Promise<ConsistencyResult> {
       const mismatches: ReconcileMismatch[] = []
 
+      /**
+       * **逐账户**核对：两个账户各自必须与流水净额相等。
+       *
+       * 早期实现比的是「两账户合计」，会掩盖对冲错误 —— 例如充值金多 100、赠送金少 100，
+       * 合计仍然相等，对账看起来是干净的，但单个账户已经错了。
+       */
+      function pushAccountMismatch(userId: string, account: WalletAccount, walletAmount: string, ledgerAmount: string) {
+        if (compareMoney(walletAmount, ledgerAmount) === 0) {
+          return
+        }
+
+        mismatches.push({
+          userId,
+          account,
+          walletTotal: walletAmount,
+          ledgerTotal: ledgerAmount,
+          diff: subMoney(walletAmount, ledgerAmount)
+        })
+      }
+
       if (input.userId) {
         const walletRow = await findWallet(input.userId)
         const nets = await logs.sumNetByUser(input.userId)
         const netMap = new Map(nets.map(item => [item.account, String(item.net)]))
-        const rechargeLedger = netMap.get('recharge') ?? '0.00'
-        const giftLedger = netMap.get('gift') ?? '0.00'
-        const walletTotal = addMoney(walletRow?.rechargeBalance ?? '0.00', walletRow?.giftBalance ?? '0.00')
-        const ledgerTotal = addMoney(rechargeLedger, giftLedger)
 
-        if (compareMoney(walletTotal, ledgerTotal) !== 0) {
-          mismatches.push({
-            userId: input.userId,
-            walletTotal,
-            ledgerTotal,
-            diff: subMoney(walletTotal, ledgerTotal)
-          })
-        }
+        pushAccountMismatch(input.userId, 'recharge', walletRow?.rechargeBalance ?? '0.00', netMap.get('recharge') ?? '0.00')
+        pushAccountMismatch(input.userId, 'gift', walletRow?.giftBalance ?? '0.00', netMap.get('gift') ?? '0.00')
 
         return { checkedUsers: 1, mismatches }
       }
@@ -883,17 +900,9 @@ function buildWallet(executor: AppExecutor) {
       for (const row of walletRows) {
         seen.add(row.userId)
         const ledger = netMap.get(row.userId) ?? { recharge: '0.00', gift: '0.00' }
-        const walletTotal = addMoney(row.rechargeBalance, row.giftBalance)
-        const ledgerTotal = addMoney(ledger.recharge, ledger.gift)
 
-        if (compareMoney(walletTotal, ledgerTotal) !== 0) {
-          mismatches.push({
-            userId: row.userId,
-            walletTotal,
-            ledgerTotal,
-            diff: subMoney(walletTotal, ledgerTotal)
-          })
-        }
+        pushAccountMismatch(row.userId, 'recharge', row.rechargeBalance, ledger.recharge)
+        pushAccountMismatch(row.userId, 'gift', row.giftBalance, ledger.gift)
       }
 
       // 有流水但没有钱包行的情况也要报出来（数据被人为清理过）
@@ -903,16 +912,9 @@ function buildWallet(executor: AppExecutor) {
         }
 
         const ledger = netMap.get(userId)!
-        const ledgerTotal = addMoney(ledger.recharge, ledger.gift)
 
-        if (compareMoney(ledgerTotal, '0.00') !== 0) {
-          mismatches.push({
-            userId,
-            walletTotal: '0.00',
-            ledgerTotal,
-            diff: subMoney('0.00', ledgerTotal)
-          })
-        }
+        pushAccountMismatch(userId, 'recharge', '0.00', ledger.recharge)
+        pushAccountMismatch(userId, 'gift', '0.00', ledger.gift)
       }
 
       return { checkedUsers: walletRows.length, mismatches }

@@ -131,10 +131,14 @@ export type WalletLedgerInput = {
   remark?: string | null
 }
 
-/** 对账结果中的一条不一致记录 */
+/** 对账结果中的一条不一致记录（**按账户**逐条给出，避免两账户对冲被掩盖） */
 export type ReconcileMismatch = {
   userId: string
+  /** 不一致的账户：recharge 充值金 / gift 赠送金 */
+  account: WalletAccount
+  /** 该账户的钱包余额 */
   walletTotal: string
+  /** 该账户的流水净额 */
   ledgerTotal: string
   diff: string
 }

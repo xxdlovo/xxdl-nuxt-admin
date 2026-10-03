@@ -115,20 +115,27 @@ function buildRecharge(executor: AppExecutor) {
       isDeleted: 0
     })
 
-    // 锁定优惠码：与充值单号绑定，关闭/失败时释放
-    if (coupon) {
-      await members.lockCoupon({
-        couponId: coupon.couponId,
-        couponCode: coupon.code,
-        userId: input.userId,
-        scene: 'recharge',
-        bizNo: outTradeNo,
-        discountAmount,
-        giftAmount
-      })
-    }
-
+    /**
+     * 渠道下单 + 锁券都放在 try 里：任一失败都要把充值单置 `FL` 并释放占用的优惠码。
+     *
+     * 锁券失败（例如同一用户超出每人可用次数 `couponUsedUp`）如果不进这个分支，
+     * 会留下「充值单已落库 WP、没有支付单、券也没释放」的悬挂状态 ——
+     * 用户页面只能轮询到超时，券的每人次数被白占。
+     */
     try {
+      // 锁定优惠码：与充值单号绑定，关闭/失败时释放
+      if (coupon) {
+        await members.lockCoupon({
+          couponId: coupon.couponId,
+          couponCode: coupon.code,
+          userId: input.userId,
+          scene: 'recharge',
+          bizNo: outTradeNo,
+          discountAmount,
+          giftAmount
+        })
+      }
+
       const order = await payments.createPayment({
         channelId: channel.id,
         outTradeNo,
@@ -140,12 +147,22 @@ function buildRecharge(executor: AppExecutor) {
         origin: input.origin ?? null
       }, { operatorId })
 
-      await repo.attachPayOrder({
-        id: rechargeId,
-        payOrderId: order.id,
-        payChannelCode: order.channelCode,
-        operatorId
-      })
+      /**
+       * 回填支付单信息：失败**不能**走下面的 `FL` 分支 ——
+       * 支付单已经落到渠道侧了，置 `FL` 会造成「渠道能收到钱、本地单据却是失败」的孤岛。
+       * 回填失败时保持充值单 `WP`：回调按 `out_trade_no` 认单照样能入账，
+       * 补偿任务 `listPendingWithPaidOrder` 也是按 `out_trade_no` 关联支付单的，同样能捞回来。
+       */
+      try {
+        await repo.attachPayOrder({
+          id: rechargeId,
+          payOrderId: order.id,
+          payChannelCode: order.channelCode,
+          operatorId
+        })
+      } catch {
+        // 静默：上面的注释说明了为什么可以吞掉
+      }
 
       return {
         rechargeId,
@@ -167,7 +184,7 @@ function buildRecharge(executor: AppExecutor) {
       const message = error instanceof Error ? error.message : '发起支付失败'
 
       await repo.markFailed({ id: rechargeId, reason: message, operatorId })
-      // 发起失败要释放占用的券，避免用户次数被白扣
+      // 发起失败要释放占用的券，避免用户次数被白扣（没锁成功时释放是幂等空操作）
       if (coupon) {
         await members.releaseCoupon({ bizNo: outTradeNo, operatorId })
       }

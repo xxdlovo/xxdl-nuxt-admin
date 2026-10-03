@@ -123,10 +123,11 @@
             <div class="max-h-72 overflow-auto space-y-2">
               <div
                 v-for="item in reconcileResult.mismatches"
-                :key="item.userId"
+                :key="`${item.userId}:${item.account}`"
                 class="rounded-md border border-default p-3 text-xs flex flex-wrap gap-4"
               >
                 <span class="break-all">{{ $ts('module.system.memberBalanceLog.userId') }}: {{ item.userId }}</span>
+                <span>{{ $ts('module.system.memberBalanceLog.account') }}: {{ translate(memberAccountRecord, item.account) }}</span>
                 <span>{{ $ts('module.system.memberBalanceLog.walletTotal') }}: {{ item.walletTotal }}</span>
                 <span>{{ $ts('module.system.memberBalanceLog.ledgerTotal') }}: {{ item.ledgerTotal }}</span>
                 <span class="text-error">{{ $ts('module.system.memberBalanceLog.diff') }}: {{ item.diff }}</span>
@@ -186,7 +187,7 @@ const reconciling = ref(false)
 const reconcileVisible = ref(false)
 const exporting = ref(false)
 const retrying = ref(false)
-const reconcileResult = ref<{ checkedCount: number, mismatches: Array<{ userId: string, walletTotal: string, ledgerTotal: string, diff: string }> }>({
+const reconcileResult = ref<{ checkedCount: number, mismatches: Array<{ userId: string, account: string, walletTotal: string, ledgerTotal: string, diff: string }> }>({
   checkedCount: 0,
   mismatches: []
 })
