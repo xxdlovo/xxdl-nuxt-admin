@@ -2090,6 +2090,51 @@
       "visitCount": "访问量",
       "turnover": "成交额",
       "dealCount": "成交量",
+      "updatedAt": "数据更新于 {time}",
+      "retry": "重试",
+      "loadFailed": "数据加载失败",
+      "orderTrendTitle": "订单趋势（近 14 天）",
+      "myTrendTitle": "我的订单趋势（近 14 天）",
+      "orderStatusDistTitle": "订单状态分布",
+      "myBalancePieTitle": "我的余额构成",
+      "orderCount": "订单数",
+      "orderAmount": "订单金额",
+      "orderStatus": {
+        "WP": "待支付",
+        "OD": "已完成",
+        "CL": "已关闭",
+        "FL": "发起失败"
+      },
+      "balance": {
+        "recharge": "充值金",
+        "gift": "赠送金",
+        "frozen": "冻结中"
+      },
+      "stat": {
+        "userCount": "用户数",
+        "memberCount": "会员数",
+        "goodsCount": "商品数",
+        "myBalance": "充值金",
+        "myGift": "赠送金",
+        "myCoupon": "可用券"
+      },
+      "card": {
+        "todayOrderCount": "今日订单数",
+        "todayOrderAmount": "今日订单金额",
+        "pendingCount": "待支付订单",
+        "pendingFulfillCount": "待交付订单",
+        "totalOrderAmount": "订单总金额",
+        "totalRechargeAmount": "充值总金额",
+        "myBalance": "充值金余额",
+        "myGift": "赠送金余额",
+        "myCoupon": "可用优惠券",
+        "myOrderTotal": "我的订单总数",
+        "myPending": "待支付订单",
+        "myFulfill": "待交付",
+        "myCompleted": "已完成订单",
+        "myConsume": "我的消费金额",
+        "myRecharge": "我的充值金额"
+      },
       "projectNews": {
         "title": "项目动态",
         "moreNews": "更多动态",

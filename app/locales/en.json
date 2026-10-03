@@ -2090,6 +2090,51 @@
       "visitCount": "Visit Count",
       "turnover": "Turnover",
       "dealCount": "Deal Count",
+      "updatedAt": "Data updated at {time}",
+      "retry": "Retry",
+      "loadFailed": "Failed to load data",
+      "orderTrendTitle": "Order Trend (Last 14 Days)",
+      "myTrendTitle": "My Order Trend (Last 14 Days)",
+      "orderStatusDistTitle": "Order Status Distribution",
+      "myBalancePieTitle": "My Balance Breakdown",
+      "orderCount": "Order Count",
+      "orderAmount": "Order Amount",
+      "orderStatus": {
+        "WP": "Pending",
+        "OD": "Completed",
+        "CL": "Closed",
+        "FL": "Failed"
+      },
+      "balance": {
+        "recharge": "Recharge",
+        "gift": "Gift",
+        "frozen": "Frozen"
+      },
+      "stat": {
+        "userCount": "Users",
+        "memberCount": "Members",
+        "goodsCount": "Goods",
+        "myBalance": "Recharge",
+        "myGift": "Gift",
+        "myCoupon": "Coupons"
+      },
+      "card": {
+        "todayOrderCount": "Today's Orders",
+        "todayOrderAmount": "Today's Order Amount",
+        "pendingCount": "Pending Payment",
+        "pendingFulfillCount": "Pending Fulfillment",
+        "totalOrderAmount": "Total Order Amount",
+        "totalRechargeAmount": "Total Recharge Amount",
+        "myBalance": "Recharge Balance",
+        "myGift": "Gift Balance",
+        "myCoupon": "Available Coupons",
+        "myOrderTotal": "My Total Orders",
+        "myPending": "Pending Payment",
+        "myFulfill": "To Be Fulfilled",
+        "myCompleted": "Completed Orders",
+        "myConsume": "My Consumption",
+        "myRecharge": "My Recharge"
+      },
       "projectNews": {
         "title": "Project News",
         "moreNews": "More News",
