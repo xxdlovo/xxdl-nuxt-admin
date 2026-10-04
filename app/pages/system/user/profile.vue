@@ -11,6 +11,7 @@ import {
   type SysUserSetPasswordDTO
 } from '#shared/system/user'
 import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
+import MemberCenter from './components/member-center.vue'
 
 definePageMeta({
   layout: 'system',
@@ -114,6 +115,11 @@ const tabs = computed(() => {
     label: thirdPartyLabel,
     icon: 'i-lucide-link',
     slot: 'thirdParty' as const
+  }, {
+    // 会员中心：自助开通 / 续费会员等级（走 sysMember 的自助接口，无后台权限码）
+    label: $ts('module.system.profile.tabs.member'),
+    icon: 'i-lucide-crown',
+    slot: 'member' as const
   }]
 })
 
@@ -728,6 +734,11 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </UCard>
+        </template>
+
+        <!-- 会员中心：当前等级 / 到期时间 + 可购买等级 + 开通记录（数据走 sysMember 自助接口） -->
+        <template #member>
+          <MemberCenter />
         </template>
       </UTabs>
     </div>

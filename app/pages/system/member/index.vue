@@ -72,6 +72,21 @@ const memberPermissions = useCrudPermissions('system:member')
 const { isAdmin, hasPermission } = useRbacProfile()
 const searchParams = ref<SysMemberQueryDTO>({})
 
+/**
+ * 是否已过期：到期时间统一为 `YYYY-MM-DD HH:mm:ss`。
+ * 用 `Date.parse(value.replace(/-/g, '/'))` 而不是直接 `Date.parse(value)`，
+ * 因为后者解析带空格的日期串在部分浏览器（Safari）返回 NaN。
+ */
+const isExpired = (value?: string | null) => {
+  if (!value) {
+    return false
+  }
+
+  const timestamp = Date.parse(value.replace(/-/g, '/'))
+
+  return Number.isFinite(timestamp) && timestamp < Date.now()
+}
+
 // 资金类动作单独授权，便于客服等角色只读
 const canAdjust = computed(() => isAdmin.value || hasPermission('system:member:adjust'))
 const canGrant = computed(() => isAdmin.value || hasPermission('system:member:grant'))
@@ -227,6 +242,26 @@ const columns = computed<TableColumn<MemberProfileRow>[]>(() => {
       accessorKey: 'levelName',
       header: () => $ts('module.system.member.level'),
       cell: ({ row }) => row.original.levelName || '-'
+    },
+    {
+      accessorKey: 'expireAt',
+      header: () => $ts('module.system.member.expireAtColumn'),
+      // expireAt 为空 = 永不过期（长期等级 / 默认等级）；有值时顺手标注是否已过期
+      cell: ({ row }) => {
+        const expireAt = row.original.expireAt
+
+        if (!expireAt) {
+          return h('span', { class: 'text-muted' }, $ts('module.system.member.neverExpire'))
+        }
+
+        const expired = isExpired(expireAt)
+        const UBadge = resolveComponent('UBadge')
+
+        return h('div', { class: 'flex items-center gap-2' }, [
+          h('span', {}, expireAt),
+          expired ? h(UBadge, { color: 'error', variant: 'soft', size: 'sm', label: $ts('module.system.member.expired') }) : null
+        ])
+      }
     },
     {
       id: 'wallet',

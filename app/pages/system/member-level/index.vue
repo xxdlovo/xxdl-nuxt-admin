@@ -72,6 +72,15 @@ const memberLevelStatusConfig: Readonly<Record<string, BadgeConfig>> = {
   '0': { i18nKey: 'module.system.memberLevel.status.disabled', color: 'neutral' }
 }
 
+/**
+ * 「是否默认等级 / 是否长期等级」徽标：两列都是 tinyint(0|1)，
+ * 语义是「是不是」（不是启停），因此单独一份常量，文案复用 common.yesOrNo.*。
+ */
+const memberLevelYesNoConfig: Readonly<Record<string, BadgeConfig>> = {
+  '1': { i18nKey: 'common.yesOrNo.yes', color: 'success' },
+  '0': { i18nKey: 'common.yesOrNo.no', color: 'neutral' }
+}
+
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
@@ -162,6 +171,34 @@ const columns = computed<TableColumn<SysMemberLevelDto>[]>(() => {
       header: () => $ts('module.system.memberLevel.benefit'),
       cell: ({ row }) => row.original.benefit || '-'
     },
+    {
+      accessorKey: 'price',
+      header: () => $ts('module.system.memberLevel.price'),
+      // price 是 decimal(12,2) 字符串；0 表示免费等级，这里统一显示成两位小数的金额
+      cell: ({ row }) => {
+        const amount = Number(row.original.price ?? 0)
+
+        return $ts('module.system.memberLevel.priceValue', {
+          price: Number.isFinite(amount) ? amount.toFixed(2) : '0.00'
+        })
+      }
+    },
+    {
+      accessorKey: 'durationDays',
+      header: () => $ts('module.system.memberLevel.durationDays'),
+      // 长期等级（isLongTerm=1）或 durationDays=0 都表示不设期限，统一显示「长期」
+      cell: ({ row }) => {
+        const days = Number(row.original.durationDays ?? 0)
+
+        if (Number(row.original.isLongTerm ?? 0) === 1 || days <= 0) {
+          return $ts('module.system.memberLevel.longTerm')
+        }
+
+        return $ts('module.system.memberLevel.durationDaysValue', { days: String(days) })
+      }
+    },
+    useBadgeColumn<SysMemberLevelDto>('isDefault', 'module.system.memberLevel.isDefault', memberLevelYesNoConfig, 0),
+    useBadgeColumn<SysMemberLevelDto>('isLongTerm', 'module.system.memberLevel.isLongTerm', memberLevelYesNoConfig, 0),
     useBadgeColumn<SysMemberLevelDto>('status', 'module.system.memberLevel.statusLabel', memberLevelStatusConfig, 1),
     {
       accessorKey: 'remark',

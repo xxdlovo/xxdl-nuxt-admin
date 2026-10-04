@@ -9,6 +9,12 @@ export type MemberProfileRow = {
   userId?: string | null
   levelId?: string | null
   levelName?: string | null
+  /** 当前等级到期时间；NULL 表示永不过期（长期 / 默认等级） */
+  expireAt?: string | null
+  /** 当前等级生效时间 */
+  levelStartAt?: string | null
+  /** 等级来源：manual / open / renew / upgrade / default / auto_expire */
+  levelSource?: string | null
   inviteCode?: string | null
   inviterId?: string | null
   invitedAt?: string | null
