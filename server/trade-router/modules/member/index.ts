@@ -11,7 +11,8 @@ import {
     SysMemberQuerySchema,
     SysMemberUpdateSchema,
     SysMemberUserOptionQuerySchema,
-    SysMemberCouponCheckSchema
+    SysMemberCouponCheckSchema,
+    SysMemberLevelOptionRespSchema
 } from '#shared/system/member'
 import {
     SysMemberRechargeCreateSchema,
@@ -160,8 +161,14 @@ export const sysMemberRouter = router({
 
     // ── 会员自助：等级价格 / 期限 / 开通续费（登录即可，不需要管理权限） ────────
 
-    /** 可开通的会员等级（价格 / 时长 / 是否长期 / 是否默认） */
+    /**
+     * 可开通的会员等级（价格 / 时长 / 是否长期 / 是否默认 + 服务端算好的开通决策）。
+     *
+     * 显式声明响应契约（`shared/system/member/output.ts`）：前端 `isActive` / `canOpen` /
+     * `blockedReason` 直接来自服务端，不再自己推导；字段与落单硬校验同一份规则。
+     */
     myLevelOptions: protectedProcedure
+        .output(SysMemberLevelOptionRespSchema)
         .query(async ({ ctx }) => {
             return sysMemberService(ctx).myLevelOptions()
         }),

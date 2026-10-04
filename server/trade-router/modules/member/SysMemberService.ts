@@ -16,6 +16,8 @@ import { payOrderService } from '#server/trade-router/domain/pay/PayOrderService
 import { nowForMysql } from '#server/trade-router/domain/pay/utils'
 import { memberService } from '#server/trade-router/domain/member/MemberService'
 import { memberLevelOrderService } from '#server/trade-router/domain/member/MemberLevelOrderService'
+import { resolveLevelOpenDecision, type LevelOpenDecision } from '#server/trade-router/domain/member/levelOpenPolicy'
+import type { LevelRow } from '#server/trade-router/domain/member/repo/levelRepo'
 import { rechargeService } from '#server/trade-router/domain/wallet/RechargeService'
 import { buildGiftGrantBizNo, walletService } from '#server/trade-router/domain/wallet/WalletService'
 import { sysUserRepo } from '#server/sys-router/user/SysUserRepo'
@@ -35,6 +37,10 @@ import type {
 } from '#shared/system/member'
 import type { SysMemberCouponCheckRespDTO } from '#shared/system/member'
 import type {
+    SysMemberLevelOptionDTO,
+    SysMemberLevelOptionRespDTO
+} from '#shared/system/member'
+import type {
     SysMemberLevelOpenDTO,
     SysMemberLevelOrderNoDTO
 } from '#shared/system/memberLevelOrder'
@@ -50,6 +56,34 @@ const SELF_PAGE_LIMIT = 100
 /** 等级期限是否已过期（自助端展示用；`expire_at` 为 NULL 表示永不过期） */
 function isLevelExpired(expireAt: string | null | undefined, now: string): boolean {
     return Boolean(expireAt && expireAt <= now)
+}
+
+/**
+ * 等级行 + 开通决策 → `myLevelOptions` 返回项（契约见 `shared/system/member/output.ts`）。
+ *
+ * 显式白名单而不是展开整行：`isDeleted` / `createdBy` / `updatedBy` 等内部字段不透给个人中心，
+ * 同时让「返回项字段」与共享 Schema 一一对应，改错字段在 typecheck 阶段就能发现。
+ */
+function toLevelOption(level: LevelRow, decision: LevelOpenDecision): SysMemberLevelOptionDTO {
+    return {
+        id: level.id,
+        code: level.code,
+        name: level.name,
+        sortOrder: level.sortOrder ?? null,
+        benefit: level.benefit ?? null,
+        price: level.price,
+        durationDays: level.durationDays,
+        isDefault: level.isDefault,
+        isLongTerm: level.isLongTerm,
+        status: level.status ?? null,
+        remark: level.remark ?? null,
+        createdAt: level.createdAt,
+        updatedAt: level.updatedAt,
+        isCurrent: decision.isCurrent,
+        isActive: decision.isActive,
+        canOpen: decision.canOpen,
+        blockedReason: decision.blockedReason
+    }
 }
 
 export function sysMemberService(ctx: Context) {
@@ -485,11 +519,33 @@ export function sysMemberService(ctx: Context) {
         /**
          * 可开通的会员等级（含价格 / 时长 / 是否长期 / 是否默认）。
          * 与后台下拉同源：`members.listLevels()` 走 `MemberLevelCacheService` 的启用列表缓存。
+         *
+         * 本次新增「可决策字段」：`isCurrent` / `isActive` / `canOpen` / `blockedReason`。
+         * 规则唯一来源是 `levelOpenPolicy.resolveLevelOpenDecision`，与落单前的硬校验
+         * （`MemberLevelOrderService.create` → `assertLevelOpenAllowed`）共用，
+         * 前端只消费结论，不再自己推导「能不能开通」。
          */
-        async myLevelOptions() {
-            requireLogin(ctx)
+        async myLevelOptions(): Promise<SysMemberLevelOptionRespDTO> {
+            const user = requireLogin(ctx)
+            const [levels, member, freePaidLevelIds] = await Promise.all([
+                members.listLevels(),
+                members.getMember(user.id),
+                // 0 元等级「已开通过」的判据：一次取全部，避免按等级数发 N 条查询
+                levelOrders.listFreePaidLevelIds(user.id)
+            ])
+            const now = nowForMysql()
+            const freePaidLevelIdSet = new Set(freePaidLevelIds)
 
-            return await members.listLevels()
+            return levels.map(level => toLevelOption(level, resolveLevelOpenDecision({
+                levelId: level.id,
+                price: level.price,
+                // 与 `MemberLevelOrderService.create` 同口径：时长 0 天同样按长期处理
+                isLongTerm: Number(level.isLongTerm) === 1 || Number(level.durationDays) <= 0,
+                currentLevelId: member?.levelId ?? null,
+                expireAt: member?.expireAt ?? null,
+                now,
+                hasFreePaidOrder: freePaidLevelIdSet.has(level.id)
+            })))
         },
 
         /** 我的开通记录（购买 / 续费单据，倒序） */

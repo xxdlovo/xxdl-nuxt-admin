@@ -24,6 +24,8 @@ export type LevelOrderInsert = typeof sysMemberLevelOrder.$inferInsert
 const STATUS_PENDING = 'WP'
 /** 已生效 */
 const STATUS_ACTIVE = 'OD'
+/** 免费等级固定写入的支付方式（见 createFreeTx） */
+const PAY_MODE_FREE = 'free'
 
 export function levelOrderRepo(executor: AppExecutor) {
   const db = asDb(executor)
@@ -204,6 +206,49 @@ export function levelOrderRepo(executor: AppExecutor) {
         ))
         .orderBy(desc(sysMemberLevelOrder.createdAt))
         .limit(limit)
+    },
+
+    /**
+     * 该用户是否已有过**该等级的免费成功单据**。
+     *
+     * 条件：`user_id` + `level_id` + `pay_mode = 'free'` + `status = 'OD'` + `is_deleted = 0`。
+     * 用途：0 元等级不支持重复开通 / 续费 —— 免费单据生效过一次即视为「已开通」，
+     * 即使之后被后台降级/到期，也不再允许重复薅同一张免费等级。
+     */
+    async existsFreePaidOrder(userId: string, levelId: string): Promise<boolean> {
+      const rows = await db
+        .select({ id: sysMemberLevelOrder.id })
+        .from(sysMemberLevelOrder)
+        .where(and(
+          eq(sysMemberLevelOrder.userId, userId),
+          eq(sysMemberLevelOrder.levelId, levelId),
+          eq(sysMemberLevelOrder.payMode, PAY_MODE_FREE),
+          eq(sysMemberLevelOrder.status, STATUS_ACTIVE),
+          eq(sysMemberLevelOrder.isDeleted, 0)
+        ))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
+    /**
+     * 该用户有过免费成功单据的等级 id 列表（去重在调用方用 Set 处理）。
+     *
+     * 与 `existsFreePaidOrder` 同条件，只把「单等级查询」换成「一次取全部」，
+     * 供 `myLevelOptions` 批量判定，避免按等级数发 N 条查询。
+     */
+    async listFreePaidLevelIds(userId: string): Promise<string[]> {
+      const rows = await db
+        .select({ levelId: sysMemberLevelOrder.levelId })
+        .from(sysMemberLevelOrder)
+        .where(and(
+          eq(sysMemberLevelOrder.userId, userId),
+          eq(sysMemberLevelOrder.payMode, PAY_MODE_FREE),
+          eq(sysMemberLevelOrder.status, STATUS_ACTIVE),
+          eq(sysMemberLevelOrder.isDeleted, 0)
+        ))
+
+      return rows.map(row => row.levelId)
     }
   }
 }

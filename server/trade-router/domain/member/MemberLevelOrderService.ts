@@ -39,6 +39,7 @@ import { toCents } from '../wallet/utils'
 import { levelRepo, type LevelRow } from './repo/levelRepo'
 import { levelOrderRepo, type LevelOrderRow } from './repo/levelOrderRepo'
 import { memberRepo } from './repo/memberRepo'
+import { resolveLevelOpenDecision } from './levelOpenPolicy'
 import type {
   CreateLevelOrderInput,
   CreateLevelOrderResult,
@@ -242,6 +243,51 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       startAt: input.plan.startAt,
       endAt: input.plan.endAt,
       levelSource: input.plan.levelSource
+    }
+  }
+
+  /**
+   * 开通 / 续费的**权威硬校验**（落单前调用）。
+   *
+   * 前端置灰只是体验，这里才是唯一防线：规则与 `sysMember.myLevelOptions` 返回的
+   * `canOpen` / `blockedReason` 同源（`levelOpenPolicy.resolveLevelOpenDecision`），
+   * 因此不会出现「接口说不能开通、落单却放行」的漂移。
+   *
+   * 命中即抛业务错误（前端 toast 直接展示对应文案）：
+   * - `module.system.memberLevelOrder.freeAlreadyOpened`：0 元等级已激活或已有过免费成功单据；
+   * - `module.system.memberLevelOrder.longTermActive`：长期等级已激活。
+   *
+   * 付费等级的续费（同等级）与升级（异等级）不受影响。
+   */
+  async function assertLevelOpenAllowed(input: {
+    userId: string
+    level: LevelRow
+    /** 是否长期等级（`is_long_term = 1` 或 `duration_days <= 0`），由调用方按领域口径传入 */
+    isLongTerm: boolean
+  }): Promise<void> {
+    const member = await members.findByUserId(input.userId)
+    const now = nowForMysql()
+    // 只在免费等级上查「免费成功单据」，付费等级少一次查询（规则内部也只在免费分支读它）
+    const isFree = toCents(String(input.level.price ?? '0.00')) === 0
+    const hasFreePaidOrder = isFree
+      ? await repo.existsFreePaidOrder(input.userId, input.level.id)
+      : false
+    const decision = resolveLevelOpenDecision({
+      levelId: input.level.id,
+      price: input.level.price,
+      isLongTerm: input.isLongTerm,
+      currentLevelId: member?.levelId ?? null,
+      expireAt: member?.expireAt ?? null,
+      now,
+      hasFreePaidOrder
+    })
+
+    if (decision.blockedReason === 'freeAlreadyOpened') {
+      throw new AppError('module.system.memberLevelOrder.freeAlreadyOpened')
+    }
+
+    if (decision.blockedReason === 'longTermActive') {
+      throw new AppError('module.system.memberLevelOrder.longTermActive')
     }
   }
 
@@ -597,10 +643,16 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
     /** 按提交幂等键回读（不过滤软删，见 levelOrderRepo.findByRequestId） */
     getByRequestId: async (requestId: string) => await repo.findByRequestId(requestId),
     listByUser: async (userId: string, limit = 100) => await repo.listByUser(userId, limit),
+    /** 该用户是否已有过该等级的免费成功单据（0 元等级禁止重复开通的判据） */
+    existsFreePaidOrder: async (userId: string, levelId: string) =>
+      await repo.existsFreePaidOrder(userId, levelId),
+    /** 该用户有过免费成功单据的等级 id（`myLevelOptions` 批量判定用，避免 N 次查询） */
+    listFreePaidLevelIds: async (userId: string) => await repo.listFreePaidLevelIds(userId),
     /** 未超时的同参数待支付单据（在线支付重复提交复用） */
     findPendingOnline: async (userId: string, levelId: string) =>
       await repo.findPending({ userId, levelId, payMode: 'online' }),
     getLevelOrThrow,
+    assertLevelOpenAllowed,
     createFreeTx,
     createBalanceTx,
     insertOnlinePendingTx,
@@ -791,6 +843,9 @@ export function memberLevelOrderService(db: AppDb) {
   return {
     getByOutTradeNo: reads.getByOutTradeNo,
     listByUser: reads.listByUser,
+    /** 免费等级重复开通的判据（`myLevelOptions` 与应用层硬校验共用） */
+    existsFreePaidOrder: reads.existsFreePaidOrder,
+    listFreePaidLevelIds: reads.listFreePaidLevelIds,
     markPaid,
     close,
 
@@ -801,7 +856,8 @@ export function memberLevelOrderService(db: AppDb) {
      * 1. **同一 requestId 已落单** → 直接返回该单快照（`reused: true`）：余额 / 免费单是 `OD`，
      *    在线单带回原二维码与 `WP`；落单撞唯一键时同样回读原单，不抛内部错误；
      * 2. 在线支付额外一层「同用户 + 同等级未超时的 WP 单复用」（见 `reusePendingOnline`）；
-     * 3. 都没有 → 按等级价与支付方式走免费 / 余额 / 在线三条通道。
+     * 3. 都没有 → 先做**开通硬校验**（`assertLevelOpenAllowed`：0 元等级禁止重复开通 / 续费、
+     *    长期等级已激活禁止续费），再按等级价与支付方式走免费 / 余额 / 在线三条通道。
      */
     async create(input: CreateLevelOrderInput): Promise<CreateLevelOrderResult> {
       const operatorId = input.operatorId ?? null
@@ -822,6 +878,19 @@ export function memberLevelOrderService(db: AppDb) {
       const durationDays = isLongTerm ? 0 : Math.max(1, Math.floor(Number(level.durationDays) || 0))
       const priceAmount = String(level.price ?? '0.00')
       const isFree = toCents(priceAmount) === 0
+
+      /**
+       * 落单前的权威硬校验（规则与 `myLevelOptions` 的 `canOpen` 同源）：
+       * 0 元等级禁止重复开通 / 续费、长期等级已激活禁止续费。
+       *
+       * 位置在「同一 requestId 幂等回读」之后：重复提交同一张已落单的请求仍然按幂等返回，
+       * 不会因为规则变更把用户已提交的单据判成失败。
+       */
+      await reads.assertLevelOpenAllowed({
+        userId: input.userId,
+        level,
+        isLongTerm
+      })
 
       // 免费等级：用户选的支付方式无意义，服务端固定 free
       if (isFree) {
