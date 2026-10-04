@@ -3,6 +3,7 @@ import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import { randomUuid } from '#shared/utils/uuid'
 import { orderPayModeRecord, payOrderStatusConfig } from '#shared/constants/business'
+import type { SysMemberLevelBlockedReason, SysMemberLevelOptionDTO } from '#shared/system/member'
 import { badgeColorClasses } from '~/composables/badgeColorClasses'
 import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
 
@@ -10,8 +11,14 @@ import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
  * 会员中心（个人中心 → 会员中心 tab）：自助开通 / 续费会员等级。
  *
  * 数据来源全部是 `sysMember` 的自助接口（登录即可访问，不校验后台权限）：
- * - `myLevelOptions` 可购买等级；`myLevelOrders` 我的开通记录；
+ * - `myLevelOptions` 可购买等级（含服务端算好的 `isActive` / `canOpen` / `blockedReason`）；
+ *   `myLevelOrders` 我的开通记录；
  * - `myOpenLevel` 下单；`myLevelOrderStatus` 本地状态；`myLevelOrderSync` 主动向渠道同步。
+ *
+ * 等级卡上的「已激活 / 已过期」徽标与「开通 / 续费」是否可点，一律看服务端结论：
+ * 当前等级且未到期 → 「已激活」；当前等级但已到期 → 「已过期」；`canOpen = false` → 按钮置灰
+ * 并在下方展示 `blockedReason` 对应的原因（免费等级已开通 / 长期等级已激活）。
+ * 服务端落单时用同一份规则再校验一次，前端置灰只是体验。
  *
  * 轮询骨架照搬 `app/pages/system/wallet/index.vue`：
  * 5 秒一次本地状态（`myLevelOrderStatus`），约 30 秒或用户点「同步状态」才向渠道打一次
@@ -21,17 +28,15 @@ import { useToastError, useToastSuccess, useToastWarning } from '~/utils/toast'
  * 不得用于权限或金额判断，约定见 stores/memberProfile.ts 文件头）。
  */
 
-/** 可购买等级（`sysMember.myLevelOptions` 返回项） */
-type MyLevelOption = {
-  id?: string | null
-  name?: string | null
-  benefit?: string | null
-  price?: string | null
-  durationDays?: number | null
-  isLongTerm?: number | null
-  isDefault?: number | null
-  isCurrent?: boolean | number | null
-}
+/**
+ * 可购买等级（`sysMember.myLevelOptions` 返回项）。
+ *
+ * 类型直接用共享契约 `SysMemberLevelOptionDTO`：`isCurrent` / `isActive` / `canOpen` /
+ * `blockedReason` 全部由服务端算好（规则唯一来源见
+ * `server/trade-router/domain/member/levelOpenPolicy.ts`），前端不再自己推导。
+ * 弹窗用到的 `Partial` 场景（`targetLevel` 可能为 null）由工具函数的入参类型承担。
+ */
+type MyLevelOption = SysMemberLevelOptionDTO
 
 /** 开通记录（`sysMember.myLevelOrders` 返回项，字段与开通单据一致） */
 type MyLevelOrder = {
@@ -162,20 +167,41 @@ const priceText = (value?: string | number | null) => {
 }
 
 /** 时长文本：长期等级 / durationDays = 0 显示「长期」 */
-const durationText = (option: MyLevelOption) => {
-  const days = Number(option.durationDays ?? 0)
+const durationText = (option: Partial<MyLevelOption> | null | undefined) => {
+  const days = Number(option?.durationDays ?? 0)
 
-  if (Number(option.isLongTerm ?? 0) === 1 || days <= 0) {
+  if (Number(option?.isLongTerm ?? 0) === 1 || days <= 0) {
     return $ts('module.system.memberLevel.longTerm')
   }
 
   return $ts('module.system.memberLevel.durationDaysValue', { days: String(days) })
 }
 
+/** 该等级是否就是当前等级（服务端 `isCurrent` 为准，前端不再自己比对 levelId） */
+const isCurrentOption = (option: Partial<MyLevelOption> | null | undefined) => option?.isCurrent === true
+
 /** 当前等级 → 「续费」，其它等级 → 「开通/升级」 */
-const actionLabel = (option: MyLevelOption) => Number(option.isCurrent ?? 0) === 1 || option.isCurrent === true
+const actionLabel = (option: Partial<MyLevelOption> | null | undefined) => isCurrentOption(option)
   ? $ts('module.system.profile.memberRenew')
   : $ts('module.system.profile.memberOpen')
+
+/**
+ * 不能开通的可读原因（服务端只回稳定码，文案在前端映射）。
+ *
+ * 置灰按钮下方展示它；服务端落单时抛的是同一语义的 i18n key
+ * （`module.system.memberLevelOrder.*`），措辞与这里一致。
+ */
+const blockedReasonText = (reason?: SysMemberLevelBlockedReason | null) => {
+  if (reason === 'freeAlreadyOpened') {
+    return $ts('module.system.profile.memberBlockedFreeAlreadyOpened')
+  }
+
+  if (reason === 'longTermActive') {
+    return $ts('module.system.profile.memberBlockedLongTermActive')
+  }
+
+  return ''
+}
 
 const isFreeTarget = computed(() => {
   const amount = Number(targetLevel.value?.price ?? 0)
@@ -416,6 +442,14 @@ const startPolling = () => {
 // ── 开通 / 续费 ─────────────────────────────────────────────────────────
 
 const openDialog = (option: MyLevelOption) => {
+  /**
+   * 不允许开通的等级不进弹窗（按钮已置灰，这里防一手状态过期）。
+   * 服务端同样会拦（`MemberLevelOrderService.create` 的硬校验），前端置灰只是体验。
+   */
+  if (option.canOpen === false) {
+    return
+  }
+
   targetLevel.value = option
   payMode.value = 'balance'
   currentOrder.value = null
@@ -583,11 +617,14 @@ onBeforeUnmount(stopPolling)
           v-for="option in levelOptions"
           :key="String(option.id ?? option.name ?? '')"
           class="flex flex-col gap-3 rounded-lg border p-4"
-          :class="Number(option.isCurrent ?? 0) === 1 || option.isCurrent === true ? 'border-primary-400 dark:border-primary-500' : 'border-default'"
+          :class="isCurrentOption(option) ? 'border-primary-400 dark:border-primary-500' : 'border-default'"
         >
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-semibold text-default">{{ option.name || '-' }}</span>
-            <UBadge v-if="Number(option.isCurrent ?? 0) === 1 || option.isCurrent === true" :label="$ts('module.system.profile.memberCurrent')" color="primary" variant="soft" size="sm" />
+            <UBadge v-if="isCurrentOption(option)" :label="$ts('module.system.profile.memberCurrent')" color="primary" variant="soft" size="sm" />
+            <!-- 激活状态：服务端 `isActive` 为准；当前等级但已到期 → 「已过期」而不是「已激活」 -->
+            <UBadge v-if="option.isActive" :label="$ts('module.system.profile.memberActive')" color="success" variant="soft" size="sm" />
+            <UBadge v-else-if="isCurrentOption(option)" :label="$ts('module.system.profile.memberExpiredBadge')" color="warning" variant="soft" size="sm" />
             <UBadge v-if="Number(option.isDefault ?? 0) === 1" :label="$ts('module.system.memberLevel.isDefault')" color="neutral" variant="soft" size="sm" />
           </div>
 
@@ -598,13 +635,21 @@ onBeforeUnmount(stopPolling)
             <span class="text-xs text-muted">{{ durationText(option) }}</span>
           </div>
 
+          <!-- 允许开通 → 按钮原样；不允许 → 置灰并说明原因（服务端同一规则会再拦一次） -->
           <UButton
             block
-            :color="Number(option.isCurrent ?? 0) === 1 || option.isCurrent === true ? 'primary' : 'neutral'"
-            :variant="Number(option.isCurrent ?? 0) === 1 || option.isCurrent === true ? 'solid' : 'outline'"
+            :color="isCurrentOption(option) ? 'primary' : 'neutral'"
+            :variant="isCurrentOption(option) ? 'solid' : 'outline'"
             :label="actionLabel(option)"
+            :disabled="option.canOpen === false"
             @click="openDialog(option)"
           />
+          <p
+            v-if="option.canOpen === false && blockedReasonText(option.blockedReason)"
+            class="text-xs text-warning"
+          >
+            {{ blockedReasonText(option.blockedReason) }}
+          </p>
         </div>
       </div>
     </UCard>
@@ -622,13 +667,13 @@ onBeforeUnmount(stopPolling)
     </UCard>
 
     <!-- 4. 开通 / 续费弹窗：下单后原地切换到二维码 + 轮询 -->
-    <UModal v-model:open="dialogOpen" :title="actionLabel(targetLevel ?? {})" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[560px]' }">
+    <UModal v-model:open="dialogOpen" :title="actionLabel(targetLevel)" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[560px]' }">
       <template #body>
         <div class="space-y-4">
           <div class="flex flex-wrap items-center gap-2">
             <span class="text-base font-semibold text-default">{{ targetLevel?.name || '-' }}</span>
             <UBadge :label="priceText(targetLevel?.price)" color="primary" variant="soft" size="sm" />
-            <UBadge :label="durationText(targetLevel ?? {})" color="neutral" variant="soft" size="sm" />
+            <UBadge :label="durationText(targetLevel)" color="neutral" variant="soft" size="sm" />
           </div>
 
           <!-- 待支付：二维码 / 支付链接 -->
