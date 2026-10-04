@@ -18,14 +18,20 @@
 --      列已存在时改执行一条无害的 SELECT，不会中断脚本、也不会重复加列；
 --   2. 建表：CREATE TABLE IF NOT EXISTS；为兼容「本脚本早期版本已建过该表」的情况，
 --      1.3.2 另有一段 request_id 列 + uk_member_level_order_request 唯一键的守卫补齐段。
---      1.4 的 MODIFY COLUMN（biz_type 注释）用 COLUMN_COMMENT 是否已含 level_open 做守卫，
---      已含则跳过，避免每次执行都重建表。除此之外不会改动既有表结构；
+--      1.4 / 1.5 的 MODIFY COLUMN（列注释）分别用 COLUMN_COMMENT 是否已含 level_open / manual
+--      做守卫，已含则跳过，避免每次执行都重建表。除此之外不会改动既有表结构；
 --   3. 任务行：INSERT ... AS new ON DUPLICATE KEY UPDATE（MySQL 8.0.19+ 别名语法），
 --      命中 id 主键或 job_code 唯一键时只覆盖展示字段，不会产生重复行。
 --   注意：建表用 IF NOT EXISTS 意味着**不会**在已存在的表上补/改除 1.3.2 之外的列。若该表已存在
 --   但不是本脚本定义的形态，请人工核对（Part 3 自检会暴露缺列/缺表）。本脚本**不改动任何既有列、
---   既有数据与既有菜单**，只做新增（唯一的例外是 1.4：只改 sys_member_balance_log.biz_type
---   的列注释，不改列定义、不改数据）。
+--   既有数据与既有菜单**，只做新增（仅有的两个例外是 1.4 与 1.5：只改
+--   sys_member_balance_log.biz_type / sys_member_level_order.pay_mode 的列注释，
+--   不动列定义、不动数据）。
+--
+--   **若你已执行过本脚本的旧版本**（例如 sys_member_level_order.pay_mode 的注释里
+--   还没有 manual）：直接**重跑本脚本**即可对齐 —— 1.5 的守卫会命中并 MODIFY 一次注释，
+--   1.3 的 CREATE TABLE IF NOT EXISTS 与 1.3.2 的守卫都会走 skip 分支，不会重复建表/加列，
+--   也不会动任何既有数据。
 --
 -- 设计要点：
 --   1. 「默认等级全局唯一」（is_default=1 只允许一行）**没有**唯一索引，因为 tinyint 上
@@ -35,7 +41,8 @@
 --   3. **开通单的 requestId 幂等由单据级唯一键保证**：uk_member_level_order_request(request_id)
 --      （与 sys_order.uk_order_request 同一套路），不再依赖「同用户+同等级+同支付方式的
 --      未超时 WP 单复用」去兜底。注意 MySQL 唯一索引允许多个 NULL，故 request_id 为 NULL 的
---      行不参与唯一约束 —— 只有通过自助开通接口下发的单据才带该键（后台补录/历史数据为空值）。
+--      行不参与唯一约束 —— 只有通过自助开通接口下发的单据才带该键（后台手工调整
+--      `pay_mode = 'manual'` 的留痕单、后台补录与历史数据均为空值）。
 --      业务侧仍应把 requestId 拼进冻结单 biz_no（`mlv:{requestId}`），让余额支付在资金层
 --      也能幂等；
 --   4. sys_member_level_order.expire_at 是**支付超时**，sys_member.expire_at 是**等级到期**，
@@ -43,7 +50,9 @@
 --
 -- 本次**不新增/不修改任何字典表**；等级来源 level_source、单据状态 status/pay_mode 取值为
 -- 代码内约定（见下方各列 COMMENT）。1.4 只是把新的钱包流水业务类型 level_open 补进
--- sys_member_balance_log.biz_type 的列注释（钱包侧要真正写出 level_open 属于后端波的改动）。
+-- sys_member_balance_log.biz_type 的列注释，1.5 只是把新的支付方式取值 manual
+-- （后台手工调整等级/期限的留痕单，不动钱）补进 sys_member_level_order.pay_mode 的列注释
+-- （两者都只改注释；WalletService 与 MemberLevelOrderService 里「真正写出」这些取值属于后端代码改动）。
 -- ============================================================================
 
 
@@ -53,6 +62,7 @@
 --   1.2 sys_member 加 3 列（等级到期时间 / 等级生效时间 / 等级来源）
 --   1.3 新表 sys_member_level_order（会员开通单，含 request_id 幂等唯一键）
 --   1.4 sys_member_balance_log.biz_type 列注释补 level_open（只改注释，不改列定义）
+--   1.5 sys_member_level_order.pay_mode 列注释补 manual（只改注释，不改列定义）
 --
 -- 说明：加列一律不写 AFTER，新列由 MySQL 追加到表末尾。这样守卫之间互不依赖，
 --       任一列缺失时都能独立补齐（drizzle / ORM 按列名读写，与列顺序无关）。
@@ -189,7 +199,7 @@ CREATE TABLE IF NOT EXISTS `sys_member_level_order` (
   `duration_days` int NOT NULL DEFAULT '0' COMMENT '本单时长天数快照(0=不设期限/长期)',
   `price_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '等级价快照(元)',
   `pay_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '实付金额(元)；0 元单直接生效',
-  `pay_mode` varchar(20) NOT NULL DEFAULT 'balance' COMMENT '支付方式: balance-余额支付, online-在线支付, free-免费等级直接生效(不走支付)',
+  `pay_mode` varchar(20) NOT NULL DEFAULT 'balance' COMMENT '支付方式: balance-余额支付, online-在线支付, free-免费等级直接生效(不走支付), manual-后台手工调整等级/期限(不动钱，仅留开通流水)',
   `status` varchar(10) NOT NULL DEFAULT 'WP' COMMENT '状态: WP-待支付, OD-已生效, CL-已关闭, FL-失败',
   `freeze_id` varchar(36) DEFAULT NULL COMMENT '关联冻结单ID(sys_member_freeze.id)，余额支付使用',
   `pay_order_id` varchar(36) DEFAULT NULL COMMENT '关联支付单ID(sys_pay_order.id)，在线支付使用',
@@ -256,17 +266,55 @@ DEALLOCATE PREPARE stmt;
 -- 幂等：MODIFY COLUMN 本身可重复执行；再用 COLUMN_COMMENT 是否已包含 level_open 做守卫，
 --   已包含时跳过，避免每次执行都重建表。列定义（varchar(30) NOT NULL）与数据均不变。
 -- 注意：本段只改注释。钱包侧「实际写出 level_open」属于后端波的代码改动。
+--
+-- 守卫条件说明：`COLUMN_COMMENT NOT LIKE '%level_open%'` 选出的是「**还没对齐**的行」，
+--   因此必须是「有行才改」（`COUNT(*) > 0`）。旧版本这里写成了 `COUNT(*) = 0`，判断被写反，
+--   结果是注释缺 level_open 时反而走 skip 分支、永远对不齐（本库现状即如此）；
+--   本次一并修正，重跑本脚本即可真正补齐该注释。列不存在时 COUNT(*) 同样是 0，走 skip 不报错。
 -- ---------------------------------------------------------------------------
 
 SET @ddl := (
   SELECT IF(
-    COUNT(*) = 0,
+    COUNT(*) > 0,
     'ALTER TABLE `sys_member_balance_log` MODIFY COLUMN `biz_type` varchar(30) NOT NULL COMMENT ''业务类型: recharge/register_bonus/gift_system/gift_campaign/adjust/consume_freeze/consume_confirm/consume_release/consume_expire/gift_expire/level_open''',
     'SELECT ''skip: sys_member_balance_log.biz_type 注释已含 level_open'' AS `result`'
   )
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_balance_log' AND COLUMN_NAME = 'biz_type'
     AND COLUMN_COMMENT NOT LIKE '%level_open%'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+
+-- ---------------------------------------------------------------------------
+-- 1.5 开通单支付方式注释更新：新增 manual（后台手工调整等级 / 期限）
+--
+-- 背景：后台「会员管理」手工调整等级与期限时，会在 sys_member_level_order 补一条
+--   pay_mode = 'manual' 的留痕单（status 直接是 OD，price_amount / pay_amount 均为 0.00，
+--   freeze_id / pay_order_id / pay_channel_code / request_id 全为 NULL）——它**不动钱**，
+--   只是让「会员开通记录」能完整反映等级变动来源。注册自动分配默认等级、到期自动降级
+--   以及只改备注/状态的操作都不会写这条记录。
+--   该列由 1.3 的 CREATE TABLE 建立，早期版本建表时的注释里没有 manual，故这里补一次。
+--
+-- 幂等：MODIFY COLUMN 本身可重复执行；再用 COLUMN_COMMENT 是否已包含 manual 做守卫，
+--   已包含时跳过，避免每次执行都重建表。列定义（varchar(20) NOT NULL DEFAULT 'balance'）
+--   与数据均不变；本段只改注释。
+--   守卫条件与修正后的 1.4 同形：`NOT LIKE '%manual%'` 选「还没对齐的行」，`COUNT(*) > 0` 才改。
+--   注意：表若不存在（1.3 未执行成功）本段会走 skip 分支（不报错），但那时 pay_mode 列本身
+--   也不存在，请先确保 1.3 建表成功。
+-- ---------------------------------------------------------------------------
+
+SET @ddl := (
+  SELECT IF(
+    COUNT(*) > 0,
+    'ALTER TABLE `sys_member_level_order` MODIFY COLUMN `pay_mode` varchar(20) NOT NULL DEFAULT ''balance'' COMMENT ''支付方式: balance-余额支付, online-在线支付, free-免费等级直接生效(不走支付), manual-后台手工调整等级/期限(不动钱，仅留开通流水)''',
+    'SELECT ''skip: sys_member_level_order.pay_mode 注释已含 manual'' AS `result`'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_level_order' AND COLUMN_NAME = 'pay_mode'
+    AND COLUMN_COMMENT NOT LIKE '%manual%'
 );
 PREPARE stmt FROM @ddl;
 EXECUTE stmt;
@@ -309,7 +357,8 @@ ON DUPLICATE KEY UPDATE
 
 -- ============================================================================
 -- Part 3：执行结果自检（直接执行，预期：等级 4 列 / 会员 3 列 / 开通单 1 表 /
---   唯一索引 2 个 + 普通索引 3 个 / biz_type 注释含 level_open / 任务 1 条）
+--   唯一索引 2 个 + 普通索引 3 个 / biz_type 注释含 level_open /
+--   pay_mode 注释含 manual / 任务 1 条）
 -- ============================================================================
 
 -- 3.1 加列自检：应为 4
@@ -334,6 +383,15 @@ WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_balance_log' AND CO
 SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_COMMENT
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_balance_log' AND COLUMN_NAME = 'biz_type';
+
+-- 3.4.1 pay_mode 注释自检：应为 1（注释里已含 manual，即 1.5 生效）
+SELECT COUNT(*) AS `pay_mode 注释含 manual(应为1)` FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_level_order' AND COLUMN_NAME = 'pay_mode'
+  AND COLUMN_COMMENT LIKE '%manual%';
+
+SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT
+FROM information_schema.COLUMNS
+WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sys_member_level_order' AND COLUMN_NAME = 'pay_mode';
 
 -- 3.5 索引自检：唯一索引应为 2（out_trade_no / request_id）
 --     STATISTICS 每个索引按「列数」出行（复合索引出多行），故要 COUNT(DISTINCT INDEX_NAME)；
@@ -369,14 +427,14 @@ WHERE `job_code` = 'member:expire-level';
 SELECT `id`, `job_code`, `handler_code`, `cron_expression`, `status`, `sort_order`
 FROM `sys_job` WHERE `job_code` = 'member:expire-level';
 
--- 3.9 列清单核对（预期见上方各 COUNT；含新表 request_id）
+-- 3.9 列清单核对（预期见上方各 COUNT；含新表 request_id 与 pay_mode 注释）
 SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, COLUMN_COMMENT
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE()
   AND (
     (TABLE_NAME = 'sys_member_level' AND COLUMN_NAME IN ('price', 'duration_days', 'is_default', 'is_long_term'))
     OR (TABLE_NAME = 'sys_member' AND COLUMN_NAME IN ('expire_at', 'level_start_at', 'level_source'))
-    OR (TABLE_NAME = 'sys_member_level_order' AND COLUMN_NAME = 'request_id')
+    OR (TABLE_NAME = 'sys_member_level_order' AND COLUMN_NAME IN ('request_id', 'pay_mode'))
   )
 ORDER BY TABLE_NAME, COLUMN_NAME;
 
@@ -409,6 +467,12 @@ SHOW TABLES LIKE 'sys_member_level%';
 --   ALTER TABLE `sys_member_balance_log` MODIFY COLUMN `biz_type` varchar(30) NOT NULL
 --     COMMENT '业务类型: recharge/register_bonus/gift_system/gift_campaign/adjust/consume_freeze/consume_confirm/consume_release/consume_expire/gift_expire';
 --
--- 4.5 回滚后请一并回退代码侧的 drizzle schema 与 shared 契约改动，
+-- 4.5 回滚 1.5 的 pay_mode 注释（把 manual 从注释里去掉，列定义与数据不变）：
+--   ALTER TABLE `sys_member_level_order` MODIFY COLUMN `pay_mode` varchar(20) NOT NULL DEFAULT 'balance'
+--     COMMENT '支付方式: balance-余额支付, online-在线支付, free-免费等级直接生效(不走支付)';
+--
+-- 4.6 回滚后请一并回退代码侧的 drizzle schema 与 shared 契约改动，
 --     并重启服务；本脚本没有触碰任何菜单与字典，无需回滚菜单。
+--     注意：回退代码后，库里已经写入的 pay_mode = 'manual' 历史行仍然保留（那是既成事实的留痕），
+--     列表里会因缺少文案而直接展示原始取值 manual。
 -- ============================================================================
