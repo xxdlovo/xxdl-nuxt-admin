@@ -27,7 +27,12 @@ export type SysMemberListFilters = {
   createdTo?: string | null
 }
 
-/** 列表与详情共用的展示列：会员 + 用户 + 等级 + 钱包 */
+/**
+ * 列表与详情共用的展示列：会员 + 用户 + 等级 + 钱包。
+ *
+ * 会员本表的等级期限列（`expireAt` / `levelStartAt` / `levelSource`）由
+ * `getTableColumns(sysMember)` 整体带出；等级侧的售价与期限需要联表，故显式列出。
+ */
 const profileColumns = {
   ...getTableColumns(sysMember),
   nickname: sysUser.nickname,
@@ -36,6 +41,14 @@ const profileColumns = {
   email: sysUser.email,
   userStatus: sysUser.status,
   levelName: sysMemberLevel.name,
+  /** 展示字段：当前等级售价（元），0 = 免费等级 */
+  levelPrice: sysMemberLevel.price,
+  /** 展示字段：当前等级一次开通的有效天数，0 = 不设期限（长期） */
+  levelDurationDays: sysMemberLevel.durationDays,
+  /** 展示字段：当前等级是否长期等级 */
+  levelIsLongTerm: sysMemberLevel.isLongTerm,
+  /** 展示字段：当前等级是否默认等级 */
+  levelIsDefault: sysMemberLevel.isDefault,
   rechargeBalance: sysMemberWallet.rechargeBalance,
   giftBalance: sysMemberWallet.giftBalance,
   frozenRecharge: sysMemberWallet.frozenRecharge,

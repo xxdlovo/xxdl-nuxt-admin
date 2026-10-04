@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, ne } from 'drizzle-orm'
 import { CommonRepo } from '#server/drizzle/CommonRepo'
 import { sysMemberLevel } from '~~/server/drizzle/schema'
 import { SysMemberLevelBaseSchema } from '#shared/system/memberLevel/common'
@@ -25,6 +25,26 @@ export const sysMemberLevelRepo = (ctx: Context) => {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /**
+     * 把某个等级设为**唯一**默认等级（规则 2）：同事务内先清掉其它行的 is_default，再置位自己。
+     *
+     * 放在一个事务里是为了不给「同时存在两个默认等级」留窗口 ——
+     * 读取方（`MemberService.findDefaultLevel`）取的是第一条命中的默认等级。
+     */
+    async setDefault(id: string) {
+      return await ctx.db.transaction(async (tx) => {
+        await tx
+          .update(sysMemberLevel)
+          .set({ isDefault: 0 })
+          .where(and(eq(sysMemberLevel.isDefault, 1), ne(sysMemberLevel.id, id)))
+
+        await tx
+          .update(sysMemberLevel)
+          .set({ isDefault: 1 })
+          .where(eq(sysMemberLevel.id, id))
+      })
     },
 
     /** 等级列表排序：sortOrder 升序 → 创建时间升序 */

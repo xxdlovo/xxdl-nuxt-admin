@@ -17,6 +17,10 @@ import {
     SysMemberRechargeCreateSchema,
     SysMemberRechargeOutTradeNoSchema
 } from '#shared/system/memberRecharge'
+import {
+    SysMemberLevelOpenSchema,
+    SysMemberLevelOrderNoSchema
+} from '#shared/system/memberLevelOrder'
 import { sysMemberService } from './SysMemberService'
 
 const listProc = proc({ permission: 'system:member:list' })
@@ -152,5 +156,37 @@ export const sysMemberRouter = router({
     myInvitees: protectedProcedure
         .query(async ({ ctx }) => {
             return sysMemberService(ctx).myInvitees()
+        }),
+
+    // ── 会员自助：等级价格 / 期限 / 开通续费（登录即可，不需要管理权限） ────────
+
+    /** 可开通的会员等级（价格 / 时长 / 是否长期 / 是否默认） */
+    myLevelOptions: protectedProcedure
+        .query(async ({ ctx }) => {
+            return sysMemberService(ctx).myLevelOptions()
+        }),
+
+    /** 我的开通记录 */
+    myLevelOrders: protectedProcedure
+        .query(async ({ ctx }) => {
+            return sysMemberService(ctx).myLevelOrders()
+        }),
+
+    /** 自助开通 / 续费等级：余额直接生效，在线返回二维码三件套 */
+    myOpenLevel: protectedProcedure.input(SysMemberLevelOpenSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myOpenLevel(input)
+        }),
+
+    /** 查询开通单状态（只读本地库，供页面轮询） */
+    myLevelOrderStatus: protectedProcedure.input(SysMemberLevelOrderNoSchema)
+        .query(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myLevelOrderStatus(input)
+        }),
+
+    /** 主动同步开通单状态（向渠道查询，已支付则生效） */
+    myLevelOrderSync: protectedProcedure.input(SysMemberLevelOrderNoSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysMemberService(ctx).myLevelOrderSync(input)
         })
 })

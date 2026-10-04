@@ -8,6 +8,7 @@
  */
 import { createHash } from 'node:crypto'
 import { AppError } from '#server/utils/appError'
+import { isDuplicateKeyError } from '#server/utils/dbError'
 import type { AppExecutor } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { buildEnvFallbackChannel, listEnabledChannelsByCode } from './PayChannelResolver'
@@ -62,15 +63,6 @@ export type PayNotifyOptions = {
 
 function sha256(value: string) {
   return createHash('sha256').update(value, 'utf8').digest('hex')
-}
-
-function isDuplicateKeyError(error: unknown) {
-  return Boolean(
-    error
-    && typeof error === 'object'
-    && ((error as { code?: string }).code === 'ER_DUP_ENTRY'
-      || (error as { errno?: number }).errno === 1062)
-  )
 }
 
 function textResponse(statusCode: number, body: string): PayNotifyResponse {

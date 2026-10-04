@@ -25,6 +25,7 @@ import { sysMemberBalanceLogRouter } from '#server/trade-router/modules/memberBa
 import { sysMemberCouponRouter } from '#server/trade-router/modules/memberCoupon'
 import { sysMemberFreezeRouter } from '#server/trade-router/modules/memberFreeze'
 import { sysMemberLevelRouter } from '#server/trade-router/modules/memberLevel'
+import { sysMemberLevelOrderRouter } from '#server/trade-router/modules/memberLevelOrder'
 import { sysMemberRechargeRouter } from '#server/trade-router/modules/memberRecharge'
 import { sysSystemLogRouter } from '#server/sys-router/systemLog'
 import { sysUserRoleRouter } from '#server/sys-router/userRole'
@@ -67,6 +68,7 @@ export const appRouter = router({
     sysMemberCoupon: sysMemberCouponRouter,
     sysMemberFreeze: sysMemberFreezeRouter,
     sysMemberLevel: sysMemberLevelRouter,
+    sysMemberLevelOrder: sysMemberLevelOrderRouter,
     sysMemberRecharge: sysMemberRechargeRouter,
     systemLog: sysSystemLogRouter,
     sysUserRole: sysUserRoleRouter,

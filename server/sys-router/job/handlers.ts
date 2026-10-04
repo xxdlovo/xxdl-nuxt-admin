@@ -169,6 +169,24 @@ const orderExpireCloseHandler: SysJobHandler = {
   }
 }
 
+/**
+ * 会员等级到期降级：
+ * 扫描 `sys_member.status = 1 AND expire_at IS NOT NULL AND expire_at <= now` 的档案，
+ * 把等级回落到**默认等级**（`sys_member_level.is_default = 1`；没有默认等级则 `levelId = NULL`），
+ * 同时 `expire_at = NULL`、`level_source = 'auto_expire'`、`level_start_at = now`。
+ *
+ * 逐条独立事务、单条失败不影响其余（与 `order:expire-close` 同形态）；
+ * 降级 SQL 里会再判一次 `expire_at <= now`，避免扫描后刚续费的用户被误降级。
+ */
+const memberExpireLevelHandler: SysJobHandler = {
+  code: 'member:expire-level',
+  name: 'Expire member levels',
+  description: 'Downgrade members whose level period has expired back to the default level.',
+  async run({ db }) {
+    return await memberService(db).expireLevels()
+  }
+}
+
 const handlers = [
   cleanLogHandler,
   resetDemoDataHandler,
@@ -176,6 +194,7 @@ const handlers = [
   memberExpireGiftHandler,
   memberBackfillProfileHandler,
   memberReconcileHandler,
+  memberExpireLevelHandler,
   orderExpireCloseHandler,
 ] as const
 

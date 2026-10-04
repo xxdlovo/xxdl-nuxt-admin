@@ -15,9 +15,9 @@
  * 发布方：`dispatchPaidOrder`（支付回调）调用 `markPaid`；`order:expire-close` 任务调用 `expireClose`。
  */
 import { AppError } from '#server/utils/appError'
+import { isDuplicateKeyError } from '#server/utils/dbError'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
-import { isDuplicateKeyError } from '../wallet/repo/sqlUtils'
 import { addMinutes, buildOutTradeNo, nowForMysql } from '../pay/utils'
 import { payOrderService } from '../pay/PayOrderService'
 import { goodsServiceIn } from '../goods/GoodsService'

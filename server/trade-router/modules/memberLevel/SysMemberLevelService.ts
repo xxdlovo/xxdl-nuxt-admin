@@ -2,6 +2,7 @@ import { sysMemberLevelRepo } from './SysMemberLevelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
 import { memberLevelCacheService } from '#server/sys-router/storage/cache/MemberLevelCacheService'
+import { normalizeMoney, toCents } from '#server/trade-router/domain/wallet/utils'
 import type { OrmPageResp } from '#server/utils/ApiResp'
 import type {
     SysMemberLevelAddDTO,
@@ -11,6 +12,39 @@ import type {
     SysMemberLevelUpdateDTO
 } from '#shared/system/memberLevel'
 import { randomUuid } from '#shared/utils/uuid'
+
+/**
+ * 价格 / 时长 / 长期 三者的一致性校验（规则 1，放 Service 层）：
+ * - `price > 0`（付费等级）：`isLongTerm` 必须为 0，且 `durationDays >= 1`；
+ * - `price = 0`（免费等级）：`isLongTerm` 可设 1；此时把 `durationDays` 归 0，
+ *   避免出现「长期但有时长」这种自相矛盾的配置；
+ * - `durationDays = 0` 且 `isLongTerm = 0` 的免费等级按「不设期限（长期）」处理，
+ *   与 shared/system/memberLevel/common.ts 的注释保持一致。
+ */
+function normalizePricePlan(data: {
+    price?: string | number | null
+    durationDays?: number | null
+    isLongTerm?: number | null
+}): { price: string, durationDays: number, isLongTerm: number } {
+    const price = normalizeMoney(data.price ?? '0.00', { allowZero: true })
+    const isPaid = toCents(price) > 0
+    const isLongTerm = Number(data.isLongTerm ?? 0) === 1 ? 1 : 0
+    const durationDays = Math.max(0, Math.floor(Number(data.durationDays ?? 0) || 0))
+
+    if (isPaid && isLongTerm === 1) {
+        throw new AppError('module.system.memberLevel.longTermRequiresFreePrice')
+    }
+
+    if (isPaid && durationDays < 1) {
+        throw new AppError('module.system.memberLevel.durationDaysRequired')
+    }
+
+    return {
+        price,
+        durationDays: isLongTerm === 1 ? 0 : durationDays,
+        isLongTerm
+    }
+}
 
 export function sysMemberLevelService(ctx: Context) {
     const repo = sysMemberLevelRepo(ctx)
@@ -24,12 +58,21 @@ export function sysMemberLevelService(ctx: Context) {
                 throw new AppError('module.system.memberLevel.codeExists')
             }
 
+            const plan = normalizePricePlan(data)
+            const id = randomUuid()
+
             await repo.create({
                 ...data,
-                id: randomUuid(),
+                ...plan,
+                id,
                 // 缺省启用：契约 Schema 已声明 default，这里兜底直接调用 Service 的情况
                 status: data.status ?? 1
             })
+
+            // 设为默认等级：清掉其它等级的 is_default（全局唯一），并随缓存失效生效
+            if (Number(data.isDefault ?? 0) === 1) {
+                await repo.setDefault(id)
+            }
 
             await levelCache.invalidate()
 
@@ -62,8 +105,15 @@ export function sysMemberLevelService(ctx: Context) {
                 throw new AppError('module.system.memberLevel.codeExists')
             }
 
-            // 启停、排序、改名都会影响启用列表（含缓存里的 name / sortOrder），一律失效
-            await repo.updateById(id, data)
+            const plan = normalizePricePlan(data)
+
+            // 启停、排序、改名、价格与期限都会影响启用列表（含缓存里的展示字段），一律失效
+            await repo.updateById(id, { ...data, ...plan })
+
+            if (Number(data.isDefault ?? 0) === 1) {
+                await repo.setDefault(id)
+            }
+
             await levelCache.invalidate()
 
             return true

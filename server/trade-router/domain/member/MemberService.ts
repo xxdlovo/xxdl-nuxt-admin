@@ -8,12 +8,12 @@
  * 事务：`memberService(db)` 的写方法自带事务；已在事务中的调用方用 `memberServiceIn(tx)`。
  */
 import { AppError } from '#server/utils/appError'
+import { isDuplicateKeyError } from '#server/utils/dbError'
 import { memberLevelCacheService } from '#server/sys-router/storage/cache/MemberLevelCacheService'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { nowForMysql } from '../pay/utils'
 import { walletServiceIn } from '../wallet/WalletService'
-import { isDuplicateKeyError } from '../wallet/repo/sqlUtils'
 import {
   compareMoney,
   fromCents,
@@ -23,13 +23,35 @@ import type { CouponResolveResult, CouponScene } from '../wallet/types'
 import { couponRepo, type CouponRow } from './repo/couponRepo'
 import { couponUseRepo } from './repo/couponUseRepo'
 import { inviteCodeRepo } from './repo/inviteCodeRepo'
-import { levelRepo } from './repo/levelRepo'
+import { levelRepo, type LevelRow } from './repo/levelRepo'
 import { memberRepo, type MemberRow } from './repo/memberRepo'
-import type { CouponUseInput, MemberOnboardResult, MemberOnboardSource } from './types'
+import type {
+  CouponUseInput,
+  ExpireLevelsResult,
+  MemberLevelSource,
+  MemberOnboardResult,
+  MemberOnboardSource
+} from './types'
 
 /** 注册赠金配置键（在「系统参数」里维护；未配置或为 0 表示不赠送） */
 export const REGISTER_BONUS_AMOUNT_KEY = 'member_register_bonus_amount'
 export const REGISTER_BONUS_EXPIRE_DAYS_KEY = 'member_register_bonus_expire_days'
+
+/** 等级到期降级任务的单轮扫描上限（与 order:expire-close 同口径） */
+export const MEMBER_EXPIRE_LEVEL_BATCH_SIZE = 200
+
+/** 天 → 毫秒（等级时长期限按自然日顺延） */
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000)
+}
+
+/**
+ * 布尔标记归一：Schema 用 `z.union([z.number(), z.boolean()])` 兼容 1/0 与 true/false。
+ * 只有明确为 true / 1 才算「是」，其余（false / 0 / null / undefined）都算「否」。
+ */
+function toBooleanFlag(value: boolean | number | null | undefined): boolean {
+  return value === true || Number(value) === 1
+}
 
 /** 邀请码字符集：去掉容易混淆的 0/O/1/I */
 const INVITE_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -101,12 +123,25 @@ function buildMember(executor: AppExecutor) {
    *
    * 幂等：同一 userId 重复调用只返回既有档案，不重复发注册赠金
    * （赠金本身也有 `register_bonus:{userId}` 幂等键兜底）。
+   *
+   * 等级归属（规则 2 / 9）：
+   * - 显式传了 `levelId`（后台手工建档选等级）→ 用它，`levelSource = 'manual'`；
+   *   此时 `expireAt` 按传入值落库（不传 / null = 永不过期，与 SysMemberAddSchema 的注释一致）；
+   * - 没传 → 自动分配**全局默认等级**（`is_default = 1`），`expireAt = NULL`（永久不过期）、
+   *   `levelSource = 'default'`、`levelStartAt = now`；
+   * - 没有配置默认等级 → 维持原状（`levelId = NULL`）。
+   *
+   * 长期等级（`is_long_term = 1` 或 `duration_days = 0`）恒不过期，传入的 expireAt 会被忽略。
    */
   async function onboard(input: {
     userId: string
     inviteCode?: string | null
     source: MemberOnboardSource
     operatorId?: string | null
+    /** 显式指定等级（后台建档用）；不传则分配默认等级 */
+    levelId?: string | null
+    /** 显式到期时间 `YYYY-MM-DD HH:mm:ss`；null / 不传 = 永不过期 */
+    expireAt?: string | null
   }): Promise<MemberOnboardResult> {
     const operatorId = input.operatorId ?? null
     const existing = await members.findByUserId(input.userId)
@@ -124,12 +159,20 @@ function buildMember(executor: AppExecutor) {
 
     const inviteCode = await generateInviteCode()
     const memberId = randomUuid()
+    const assignment = await resolveInitialLevel({
+      levelId: input.levelId ?? null,
+      expireAt: input.expireAt
+    })
 
     try {
       await members.insert({
         id: memberId,
         userId: input.userId,
         inviteCode,
+        levelId: assignment.levelId,
+        expireAt: assignment.expireAt,
+        levelStartAt: assignment.levelStartAt,
+        levelSource: assignment.levelSource,
         status: 1,
         remark: input.source === 'oauth' ? '第三方首次登录建档' : '注册建档',
         createdBy: operatorId,
@@ -144,12 +187,21 @@ function buildMember(executor: AppExecutor) {
 
       const concurrent = await members.findByUserId(input.userId)
 
+      /**
+       * 冲突必须确实是「同 userId 并发建档」才按幂等返回：
+       * 邀请码唯一键（uk_member_invite_code）撞车时也满足 isDuplicateKeyError，
+       * 但档案并没有建成，静默返回会让调用方以为建档成功（用户永远没有档案）。
+       */
+      if (!concurrent) {
+        throw error
+      }
+
       return {
-        memberId: concurrent?.id ?? memberId,
-        userId: input.userId,
-        inviteCode: concurrent?.inviteCode ?? inviteCode,
+        memberId: concurrent.id,
+        userId: concurrent.userId,
+        inviteCode: concurrent.inviteCode,
         created: false,
-        inviterId: concurrent?.inviterId ?? null,
+        inviterId: concurrent.inviterId ?? null,
         bonusAmount: '0.00'
       }
     }
@@ -284,11 +336,91 @@ function buildMember(executor: AppExecutor) {
     return { inviterId: resolved.inviterUserId }
   }
 
-  /** 手工指定等级（等级不自动升降） */
+  /**
+   * 是否「永不过期」的等级：显式长期等级，或免费（price=0）且不设时长的等级。
+   * 规则 1 的硬约束：这类等级下的会员 `expire_at` 恒为 NULL。
+   */
+  function isLongTermLevel(level: LevelRow): boolean {
+    return Number(level.isLongTerm) === 1 || Number(level.durationDays) <= 0
+  }
+
+  /**
+   * 全局默认等级（`is_default = 1`，且启用中）。
+   *
+   * 走 `listLevels()`：它内部复用 `MemberLevelCacheService` 的启用列表缓存，
+   * 等级写入口（SysMemberLevelService）改 is_default 后会显式失效该缓存，
+   * 这里不再单独查库、也不新建第二个缓存 key。
+   * 停用/删除的等级不会出现在启用列表里，等价于「没有配置默认等级」。
+   */
+  async function findDefaultLevel(): Promise<LevelRow | null> {
+    const levels = await listLevels()
+
+    return levels.find(item => Number(item.isDefault) === 1) ?? null
+  }
+
+  /**
+   * 建档时的等级归属：显式传入优先，否则分配默认等级。
+   * 显式传入的等级必须是启用中的等级（否则后台建档会静默落到不可用等级上）。
+   */
+  async function resolveInitialLevel(input: {
+    levelId: string | null
+    expireAt?: string | null
+  }): Promise<{
+    levelId: string | null
+    expireAt: string | null
+    levelStartAt: string | null
+    levelSource: MemberLevelSource | null
+  }> {
+    const now = nowForMysql()
+
+    if (input.levelId) {
+      const level = await levels.findById(input.levelId)
+
+      if (!level || !isActiveStatus(level.status)) {
+        throw new AppError('module.system.member.levelNotAvailable')
+      }
+
+      return {
+        levelId: level.id,
+        expireAt: isLongTermLevel(level) ? null : (input.expireAt ?? null),
+        levelStartAt: now,
+        levelSource: 'manual'
+      }
+    }
+
+    const fallback = await findDefaultLevel()
+
+    if (!fallback) {
+      // 没有配置默认等级：维持既有行为（levelId = NULL，后续由后台/任务补）
+      return { levelId: null, expireAt: null, levelStartAt: null, levelSource: null }
+    }
+
+    return {
+      levelId: fallback.id,
+      // 默认等级永久不过期
+      expireAt: null,
+      levelStartAt: now,
+      levelSource: 'default'
+    }
+  }
+
+  /**
+   * 手工指定等级与期限（后台运营）。
+   *
+   * 期限优先级（与 SysMemberChangeLevelSchema 的注释一致）：
+   * 1. 目标等级本身是长期等级（或 `longTerm = true`）→ `expire_at = NULL`；
+   * 2. 显式传了 `expireAt` → 写该时间（`null` = 清除到期，等同长期）；
+   * 3. 两者都没有 → 按目标等级的 `durationDays` 推导（`now + durationDays` 天）。
+   *
+   * `levelStartAt` 只在等级**确实变化**时重置为 now：只改期限不该把生效时间往后挪。
+   * `levelSource` 一律写 `manual`（这是一次人工操作）。
+   */
   async function changeLevel(input: {
     userId: string
     levelId: string
     remark?: string | null
+    expireAt?: string | null
+    longTerm?: boolean | number | null
     operatorId?: string | null
   }) {
     const operatorId = input.operatorId ?? null
@@ -298,11 +430,34 @@ function buildMember(executor: AppExecutor) {
       throw new AppError('module.system.member.levelNotAvailable')
     }
 
+    const member = await members.findByUserId(input.userId)
+
+    if (!member) {
+      throw new AppError('module.system.member.notFound')
+    }
+
+    const now = nowForMysql()
+    const longTerm = toBooleanFlag(input.longTerm) || isLongTermLevel(level)
+    let expireAt: string | null
+
+    if (longTerm) {
+      expireAt = null
+    } else if (input.expireAt !== undefined) {
+      expireAt = input.expireAt
+    } else {
+      expireAt = nowForMysql(addDays(new Date(), Number(level.durationDays)))
+    }
+
+    const levelChanged = member.levelId !== input.levelId
     const affected = await members.changeLevel({
       userId: input.userId,
       levelId: input.levelId,
-      changedAt: nowForMysql(),
-      remark: input.remark ?? null,
+      changedAt: now,
+      ...(levelChanged ? { startAt: now } : {}),
+      expireAt,
+      levelSource: 'manual',
+      // 不传 remark = 不动既有备注；传 null = 清空
+      ...(input.remark !== undefined ? { remark: input.remark } : {}),
       operatorId
     })
 
@@ -311,6 +466,34 @@ function buildMember(executor: AppExecutor) {
     }
 
     return true
+  }
+
+  /**
+   * 单个会员的到期降级（**调用方保证事务边界**，由 `expireLevels` 逐条包事务）。
+   *
+   * 降到默认等级（没有默认等级则 `levelId = NULL`），并把 `expire_at` 清空成永久、
+   * `level_source = 'auto_expire'`、`level_start_at = now`。
+   * 返回 false 表示条件更新未命中（并发下已被续费/他人处理），跳过即可。
+   */
+  async function expireMemberLevel(input: {
+    id: string
+    now: string
+    operatorId?: string | null
+  }): Promise<boolean> {
+    const fallback = await findDefaultLevel()
+    const affected = await members.expireLevel({
+      id: input.id,
+      now: input.now,
+      levelId: fallback?.id ?? null,
+      operatorId: input.operatorId ?? null
+    })
+
+    return affected > 0
+  }
+
+  /** 等级到期降级的扫描候选（`member:expire-level` 任务用） */
+  async function listExpiredLevelCandidates(now: string, limit = MEMBER_EXPIRE_LEVEL_BATCH_SIZE) {
+    return await members.listExpiredLevelCandidates(now, limit)
   }
 
   /**
@@ -459,8 +642,22 @@ function buildMember(executor: AppExecutor) {
       })
     } catch (error) {
       if (isDuplicateKeyError(error)) {
-        return { locked: true, reused: true }
+        /**
+         * 撞 `uk_member_coupon_use(coupon_id, biz_no)` 只说明「该业务单号已有占用记录」，
+         * 必须回读确认它确实存在才敢按幂等返回。
+         *
+         * 不能无条件 `return { locked: true }`：冲突也可能来自主键（极端情况），
+         * 或并发已提交的行在当前快照里读不到 —— 那时券其实没锁上，
+         * 静默返回成功会让订单/充值带着「已锁券」的假象继续走下去。
+         * 查不到就原样抛出（修复前走的就是抛出分支，因此不存在行为倒退）。
+         */
+        const locked = await couponUses.findByBizNo(input.bizNo)
+
+        if (locked) {
+          return { locked: true, reused: true }
+        }
       }
+
       throw error
     }
 
@@ -544,6 +741,9 @@ function buildMember(executor: AppExecutor) {
     listInvitees,
     countInvitees,
     listLevels,
+    findDefaultLevel,
+    expireMemberLevel,
+    listExpiredLevelCandidates,
     listMyCoupons,
     listUnprofiledUsers,
     searchUserOptions,
@@ -571,7 +771,40 @@ export function memberService(db: AppDb) {
     grantRegisterBonus: async (userId: string, operatorId: string | null) => await run(tx => buildMember(tx).grantRegisterBonus(userId, operatorId)),
     resolveCoupon: reads.resolveCoupon,
     markCouponUsed: reads.markCouponUsed,
-    releaseCoupon: reads.releaseCoupon
+    releaseCoupon: reads.releaseCoupon,
+
+    /**
+     * 等级到期降级（`member:expire-level` 任务）：
+     * 扫到期档案 → **逐条独立事务**降级到默认等级，单条失败不影响其余
+     * （与 `OrderService.expireClose` 的形态一致）。
+     */
+    async expireLevels(limit = MEMBER_EXPIRE_LEVEL_BATCH_SIZE): Promise<ExpireLevelsResult> {
+      const now = nowForMysql()
+      const rows = await reads.listExpiredLevelCandidates(now, limit)
+      const failures: Array<{ userId: string, message: string }> = []
+      let changedCount = 0
+
+      for (const row of rows) {
+        try {
+          const changed = await run(tx => buildMember(tx).expireMemberLevel({
+            id: row.id,
+            now,
+            operatorId: null
+          }))
+
+          if (changed) {
+            changedCount += 1
+          }
+        } catch (error) {
+          failures.push({
+            userId: row.userId,
+            message: error instanceof Error ? error.message : 'unknown error'
+          })
+        }
+      }
+
+      return { scanned: rows.length, changedCount, failures }
+    }
   }
 }
 

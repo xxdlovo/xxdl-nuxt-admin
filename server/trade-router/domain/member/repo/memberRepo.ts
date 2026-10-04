@@ -1,7 +1,7 @@
 /**
  * 会员档案 mapper（数据访问层）。
  */
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, lte, or, sql } from 'drizzle-orm'
 import { sysConfig, sysMember, sysUser } from '#server/drizzle/schema'
 import { asDb, type AppExecutor } from '#server/drizzle/db'
 import { affectedRows } from '../../wallet/repo/sqlUtils'
@@ -159,12 +159,23 @@ export function memberRepo(executor: AppExecutor) {
       return affectedRows(result)
     },
 
-    /** 手工指定等级 */
+    /**
+     * 写入会员等级与期限（手工指定 / 开通续费共用）。
+     *
+     * 语义约定：可选字段传 `undefined` = 不动该列；传 `null` = 显式置 NULL。
+     * 这样手工改等级（没传期限）不会意外清掉或重置既有到期时间。
+     *
+     * 幂等由调用方保证（开通链路是「同事务内先抢到单据 WP→OD 条件更新」，
+     * 手工改等级是人工操作），这里只做「行存在且未删除」的条件更新。
+     */
     async changeLevel(input: {
       userId: string
       levelId: string
       changedAt: string
-      remark: string | null
+      startAt?: string | null
+      expireAt?: string | null
+      levelSource?: string | null
+      remark?: string | null
       operatorId: string | null
     }) {
       const result: unknown = await db
@@ -172,10 +183,62 @@ export function memberRepo(executor: AppExecutor) {
         .set({
           levelId: input.levelId,
           levelChangedAt: input.changedAt,
-          levelRemark: input.remark,
-          updatedBy: input.operatorId
+          updatedBy: input.operatorId,
+          ...(input.startAt !== undefined ? { levelStartAt: input.startAt } : {}),
+          ...(input.expireAt !== undefined ? { expireAt: input.expireAt } : {}),
+          ...(input.levelSource !== undefined ? { levelSource: input.levelSource } : {}),
+          ...(input.remark !== undefined ? { levelRemark: input.remark } : {})
         })
         .where(and(eq(sysMember.userId, input.userId), eq(sysMember.isDeleted, 0)))
+
+      return affectedRows(result)
+    },
+
+    /**
+     * 等级到期的会员（`member:expire-level` 任务扫描）。
+     * 只取启用中的档案：停用账号不必降级。
+     */
+    async listExpiredLevelCandidates(now: string, limit: number): Promise<MemberRow[]> {
+      return await db
+        .select()
+        .from(sysMember)
+        .where(and(
+          eq(sysMember.isDeleted, 0),
+          eq(sysMember.status, 1),
+          isNotNull(sysMember.expireAt),
+          lte(sysMember.expireAt, now)
+        ))
+        .orderBy(asc(sysMember.expireAt))
+        .limit(limit)
+    },
+
+    /**
+     * 到期降级：条件里再判一次 `expire_at <= now`，
+     * 避免「扫描后、降级前」用户刚续费（expire_at 被顺延）却被误降级。
+     * affectedRows = 0 即已被续费/他人处理，跳过即可。
+     */
+    async expireLevel(input: {
+      id: string
+      now: string
+      levelId: string | null
+      operatorId: string | null
+    }) {
+      const result: unknown = await db
+        .update(sysMember)
+        .set({
+          levelId: input.levelId,
+          expireAt: null,
+          levelStartAt: input.now,
+          levelSource: 'auto_expire',
+          levelChangedAt: input.now,
+          updatedBy: input.operatorId
+        })
+        .where(and(
+          eq(sysMember.id, input.id),
+          eq(sysMember.isDeleted, 0),
+          isNotNull(sysMember.expireAt),
+          lte(sysMember.expireAt, input.now)
+        ))
 
       return affectedRows(result)
     },

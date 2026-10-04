@@ -24,6 +24,7 @@ export type WalletDirection = 'in' | 'out'
  * - gift_campaign     活动赠送
  * - adjust            手工调账（加/减）
  * - consume_confirm   业务消费确认实扣（预扣被真正扣掉的那一刻）
+ * - level_open        会员等级开通 / 续费扣款（与商城消费区分，便于分别统计口径）
  * - gift_expire       赠送金过期扣减
  */
 export type WalletBizType =
@@ -33,6 +34,7 @@ export type WalletBizType =
   | 'gift_campaign'
   | 'adjust'
   | 'consume_confirm'
+  | 'level_open'
   | 'gift_expire'
 
 /** 赠送金来源 */

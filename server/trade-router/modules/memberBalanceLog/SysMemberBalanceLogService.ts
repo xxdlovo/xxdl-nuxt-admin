@@ -52,6 +52,7 @@ const BIZ_TYPE_LABEL: Record<string, string> = {
     gift_campaign: '活动赠送',
     adjust: '手工调账',
     consume_confirm: '消费实扣',
+    level_open: '等级购买',
     gift_expire: '赠送金过期'
 }
 

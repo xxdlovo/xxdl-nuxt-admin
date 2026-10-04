@@ -14,12 +14,12 @@
  * 因此 `余额 = Σ(in) − Σ(out)` 恒成立（对账见 `assertConsistency`）。
  */
 import { AppError } from '#server/utils/appError'
+import { isDuplicateKeyError } from '#server/utils/dbError'
 import { asDb, type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { balanceLogRepo } from './repo/balanceLogRepo'
 import { freezeRepo, type FreezeRow } from './repo/freezeRepo'
 import { giftGrantRepo } from './repo/giftGrantRepo'
-import { isDuplicateKeyError } from './repo/sqlUtils'
 import { rechargeRepo } from './repo/rechargeRepo'
 import { walletRepo, type WalletRow } from './repo/walletRepo'
 import type {
@@ -27,6 +27,7 @@ import type {
   FreezeSettleResult,
   ReconcileMismatch,
   WalletAccount,
+  WalletBizType,
   WalletSnapshot
 } from './types'
 import {
@@ -568,9 +569,22 @@ function buildWallet(executor: AppExecutor) {
           }
     },
 
-    /** 确认实扣：扣余额 + 扣赠送金批次 + 累计消费；只有冻结中的单子能确认 */
-    async confirm(input: { freezeId?: string | null; bizNo?: string | null; operatorId?: string | null }): Promise<FreezeSettleResult> {
+    /**
+     * 确认实扣：扣余额 + 扣赠送金批次 + 累计消费；只有冻结中的单子能确认。
+     *
+     * `bizType` 可选覆盖：默认写 `consume_confirm`（商城 / 订单侧行为不变），
+     * 会员等级开通传 `level_open`，让「等级购买」与「商城消费」在流水里可区分。
+     * 注意它会进入幂等键 `buildDedupKey(bizType, bizNo, account)` ——
+     * 同一 `bizNo` + 同一账户仍然只可能有一条流水（bizNo 由冻结单唯一键保证唯一）。
+     */
+    async confirm(input: {
+      freezeId?: string | null
+      bizNo?: string | null
+      operatorId?: string | null
+      bizType?: WalletBizType
+    }): Promise<FreezeSettleResult> {
       const operatorId = input.operatorId ?? null
+      const bizType: WalletBizType = input.bizType ?? 'consume_confirm'
       const row = input.freezeId
         ? await freezes.findById(input.freezeId)
         : input.bizNo ? await freezes.findByBizNo(input.bizNo) : null
@@ -616,7 +630,7 @@ function buildWallet(executor: AppExecutor) {
           account: 'gift',
           direction: 'out',
           amount: row.giftAmount,
-          bizType: 'consume_confirm',
+          bizType,
           bizNo: row.bizNo,
           operatorId,
           remark: row.subject ?? null
@@ -630,7 +644,7 @@ function buildWallet(executor: AppExecutor) {
           account: 'recharge',
           direction: 'out',
           amount: row.rechargeAmount,
-          bizType: 'consume_confirm',
+          bizType,
           bizNo: row.bizNo,
           operatorId,
           remark: row.subject ?? null
@@ -931,6 +945,16 @@ function buildWallet(executor: AppExecutor) {
 
     findFreezeById(freezeId: string) {
       return freezes.findById(freezeId)
+    },
+
+    /** 幂等流水是否真的落库（`reuseCredit` 回落前的凭据校验） */
+    hasAppliedLog(dedupKey: string) {
+      return logs.existsByDedupKey(dedupKey)
+    },
+
+    /** 赠送金批次是否真的落库（撞 `uk_member_gift_biz` 时的凭据） */
+    findGiftGrantByBizNo(bizNo: string) {
+      return grants.findByBizNo(bizNo)
     }
   }
 }
@@ -951,7 +975,31 @@ export function walletService(db: AppDb) {
   const reads = buildWallet(db)
   const run = async <T>(fn: (tx: AppTx) => Promise<T>): Promise<T> => await db.transaction(async tx => await fn(tx))
 
-  async function reuseCredit(input: Parameters<ReturnType<typeof buildWallet>['credit']>[0]): Promise<CreditResult> {
+  /**
+   * 幂等回落：`AlreadyAppliedError` 只证明「撞了唯一键」，还必须核实**凭据确实存在**
+   * 才能声明 `reused`。
+   *
+   * 冲突有两个来源，因此两种凭据都要查：
+   * 1. 流水幂等键 `uk_member_log_dedup`（`insertLog` 抛出）；
+   * 2. 赠送金批次业务号 `uk_member_gift_biz`（`grants.insert` 抛出，批次先于流水落库）。
+   *
+   * 两者都查不到（主键碰撞，或并发已提交的行读不到）说明本次入账无法确认，
+   * 必须把原始错误原样抛出 —— 绝不能静默返回 `reused: true` 谎报「这笔钱已经加过」。
+   * 修复前判定恒 false、走的就是抛出分支，所以这里不存在行为倒退，只是把
+   * 「能不能确认」讲清楚。
+   */
+  async function reuseCredit(
+    input: Parameters<ReturnType<typeof buildWallet>['credit']>[0],
+    error: unknown
+  ): Promise<CreditResult> {
+    const dedupKey = buildDedupKey(input.bizType, input.bizNo, input.account)
+    const applied = await reads.hasAppliedLog(dedupKey)
+      || (input.account === 'gift' && Boolean(await reads.findGiftGrantByBizNo(input.bizNo)))
+
+    if (!applied) {
+      throw error
+    }
+
     return {
       userId: input.userId,
       account: input.account,
@@ -972,7 +1020,7 @@ export function walletService(db: AppDb) {
         return await run(tx => buildWallet(tx).credit(input))
       } catch (error) {
         if (error instanceof AlreadyAppliedError) {
-          return await reuseCredit(input)
+          return await reuseCredit(input, error)
         }
         throw error
       }
@@ -989,7 +1037,7 @@ export function walletService(db: AppDb) {
             amount: input.amount,
             bizType: 'adjust',
             bizNo: buildAdjustBizNo(input.requestId)
-          })
+          }, error)
         }
         throw error
       }
