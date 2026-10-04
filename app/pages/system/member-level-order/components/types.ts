@@ -45,10 +45,14 @@ export type MemberLevelOrderDetail = MemberLevelOrderRow & MemberLevelOrderLinke
  * 支付方式 → 文案 key。
  *
  * balance / online 与订单模块同义，直接复用 `module.system.order.payMode.*`；
- * `free` 是开通单特有（0 元免费等级由服务端写入），才新增一条文案。
+ * `free` / `manual` 是开通单特有，服务端才会写入（用户不可选），因此各新增一条文案：
+ * - `free`   —— 0 元免费等级开通；
+ * - `manual` —— 后台「会员管理」手工调整等级 / 期限补的留痕单（不动钱，所以文案里不带「支付」字样）。
+ * 列表页、详情弹窗与搜索下拉都读这一份映射，新增取值不需要改页面。
  */
 export const memberLevelOrderPayModeRecord: Record<string, string> = {
   balance: 'module.system.order.payMode.balance',
   online: 'module.system.order.payMode.online',
-  free: 'module.system.memberLevelOrder.payMode.free'
+  free: 'module.system.memberLevelOrder.payMode.free',
+  manual: 'module.system.memberLevelOrder.payMode.manual'
 }

@@ -4,7 +4,7 @@ import { SysMemberLevelOrderBaseSchema } from './common'
 /**
  * 会员开通单响应（单据本体 + 联表展示字段）。
  * 金额保持 decimal(12,2) 的字符串形态；`payMode` / `status` 与表内取值一一对应
- * （`payMode` 含服务端写入的 `free`）。
+ * （`payMode` 含服务端写入的 `free` / `manual`，前端只多一个展示文案，不出现新按钮）。
  * userId 对应的会员信息由后台列表/详情联表带出，会员侧接口不返回。
  * 后台列表页 `/system/member-level-order` 需要 userId / createdAt / createdBy / updatedBy /
  * payOrderId / payChannelCode 等列，故这些字段一并保留（`isDeleted` 不对外暴露）。

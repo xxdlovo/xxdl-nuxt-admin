@@ -247,6 +247,71 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
   }
 
   /**
+   * 后台「会员管理」手工调整等级 / 期限的**留痕单**（`pay_mode = 'manual'`，落 `OD`）。
+   *
+   * 为什么落这里而不是余额流水：手工调整**不动钱**，往 `sys_member_balance_log` 写任何一条
+   * 都会破坏「余额 = Σ流水」的账实等式；而「会员开通记录」本身是等级变动台账，正合适。
+   *
+   * 调用约定（见 `MemberService.changeLevel` / `onboard`）：
+   * - **必须由调用方在自身事务内调用**（`memberLevelOrderServiceIn(tx)`），让留痕与改档案同生共死；
+   *   因此本方法只挂在事务内版本上，`memberLevelOrderService(db)` 刻意不暴露它。
+   * - 只由「后台手工开通 / 手工调整」触发，**不用于**注册自动分配默认等级（`levelSource = 'default'`）、
+   *   到期自动降级（`levelSource = 'auto_expire'`）、以及只改备注/状态的操作 ——
+   *   这三类都不是「开通/续费」行为，写进来只会污染开通记录。
+   *
+   * 时间字段口径：`startAt` / `endAt` 与写回 `sys_member` 的 `level_start_at` / `expire_at` 完全一致
+   * （长期等级 `end_at = NULL`），`paid_at` / `effective_at` 记本次生效时刻
+   * （手工调整没有「支付时间」，但 OD 单的时间字段要自洽，便于按时间轴排查）。
+   */
+  async function recordManualTx(input: {
+    userId: string
+    /** 调整后的目标等级（名称 / 时长快照按此等级的当前配置取） */
+    levelId: string
+    /** 调整后的等级生效开始时间（= 写回的 sys_member.level_start_at） */
+    startAt: string
+    /** 调整后的等级到期时间；null = 长期/永不过期（= 写回的 sys_member.expire_at） */
+    endAt: string | null
+    /** 后台调整原因（写 remark），由调用方给文案 */
+    remark: string
+    operatorId: string | null
+  }): Promise<{ orderId: string, outTradeNo: string }> {
+    /**
+     * 这里只校验「等级存在」，**不重复做启用判定**：调用方（会员档案侧）已经按
+     * `MemberService.isActiveStatus` 的口径放行过本次调整，而 `getLevelOrThrow` 用的是更严的
+     * `status === 1`（把 status 为 NULL 的等级视为不可用）。两处判据不一致会让「档案改成功、
+     * 留痕抛错」把整笔事务回滚，属行为倒退；等级状态该由档案侧一处说了算。
+     */
+    const level = await levels.findById(input.levelId)
+
+    if (!level) {
+      throw new AppError('module.system.member.levelNotAvailable')
+    }
+
+    const orderId = randomUuid()
+    const outTradeNo = buildOutTradeNo('MLV')
+    const now = nowForMysql()
+    const isLongTerm = Number(level.isLongTerm) === 1 || Number(level.durationDays) <= 0
+
+    await repo.insertManual({
+      id: orderId,
+      outTradeNo,
+      userId: input.userId,
+      levelId: level.id,
+      levelName: level.name,
+      durationDays: isLongTerm ? 0 : Math.max(1, Math.floor(Number(level.durationDays) || 0)),
+      startAt: input.startAt,
+      // 长期等级恒为 NULL：即便调用方传了值也不落库（规则 1 的硬约束）
+      endAt: isLongTerm ? null : input.endAt,
+      paidAt: now,
+      effectiveAt: now,
+      remark: truncateText(input.remark, 255),
+      operatorId: input.operatorId
+    })
+
+    return { orderId, outTradeNo }
+  }
+
+  /**
    * 开通 / 续费的**权威硬校验**（落单前调用）。
    *
    * 前端置灰只是体验，这里才是唯一防线：规则与 `sysMember.myLevelOptions` 返回的
@@ -660,9 +725,25 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
     failOnlineTx,
     closeTx,
     markPaidTx,
+    /**
+     * 后台手工调整的留痕单：**只挂事务内版本**（不挂 `memberLevelOrderService(db)`），
+     * 强制调用方把它放进「改会员档案」的同一事务里，避免留痕与档案分叉。
+     */
+    recordManualTx,
     toCreateResult,
     toStatusResult
   }
+}
+
+/**
+ * 绑定到已有事务的开通单域服务（调用方保证事务边界）。
+ *
+ * 与 `walletServiceIn` / `memberServiceIn` 同形：`buildMemberLevelOrder(executor)` 本来就是
+ * executor 绑定版，这里再导出同义入口，让「在别人的事务里用」这件事在调用点一眼可见
+ * （当前唯一使用者是 `MemberService.changeLevel` / `onboard` 的手工调整留痕）。
+ */
+export function memberLevelOrderServiceIn(executor: AppExecutor) {
+  return buildMemberLevelOrder(executor)
 }
 
 /**

@@ -14,6 +14,7 @@ import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { nowForMysql } from '../pay/utils'
 import { walletServiceIn } from '../wallet/WalletService'
+import { memberLevelOrderServiceIn } from './MemberLevelOrderService'
 import {
   compareMoney,
   fromCents,
@@ -77,6 +78,8 @@ function buildMember(executor: AppExecutor) {
   const coupons = couponRepo(executor)
   const couponUses = couponUseRepo(executor)
   const wallet = walletServiceIn(executor)
+  /** 等级留痕：与建档/改等级**同一事务**（手工调整不动钱，只写开通记录） */
+  const levelOrders = memberLevelOrderServiceIn(executor)
 
   /** 生成一个未被占用的邀请码（唯一索引仍是最终保证） */
   async function generateInviteCode() {
@@ -130,6 +133,9 @@ function buildMember(executor: AppExecutor) {
    * - 没传 → 自动分配**全局默认等级**（`is_default = 1`），`expireAt = NULL`（永久不过期）、
    *   `levelSource = 'default'`、`levelStartAt = now`；
    * - 没有配置默认等级 → 维持原状（`levelId = NULL`）。
+   *
+   * 留痕：显式传 `levelId` 的「后台手工开通」会在**同一事务**里补一条
+   * `sys_member_level_order`（`pay_mode = 'manual'`，不动钱）；自动分配默认等级不写（见下方代码注释）。
    *
    * 长期等级（`is_long_term = 1` 或 `duration_days = 0`）恒不过期，传入的 expireAt 会被忽略。
    */
@@ -204,6 +210,24 @@ function buildMember(executor: AppExecutor) {
         inviterId: concurrent.inviterId ?? null,
         bonusAmount: '0.00'
       }
+    }
+
+    /**
+     * 手工建档留痕（与建档**同一事务**，写失败则整笔回滚）：
+     * 只有显式传了 `levelId`（`levelSource = 'manual'`）才算「后台手工开通」，补一条
+     * `pay_mode = 'manual'` 的开通流水；注册 / 第三方首登自动分配默认等级
+     * （`levelSource = 'default'`）不是开通行为，刻意不写 —— 否则每个新注册用户都会凭空多一条记录。
+     * 上面两处早返回（已建档幂等 / 并发撞唯一键）都不会走到这里，天然不会重复留痕。
+     */
+    if (assignment.levelSource === 'manual' && assignment.levelId) {
+      await levelOrders.recordManualTx({
+        userId: input.userId,
+        levelId: assignment.levelId,
+        startAt: assignment.levelStartAt ?? nowForMysql(),
+        endAt: assignment.expireAt,
+        remark: '后台手工建档指定会员等级/期限',
+        operatorId
+      })
     }
 
     // 会员专属邀请码：与档案上的 invite_code 保持一致
@@ -414,6 +438,17 @@ function buildMember(executor: AppExecutor) {
    *
    * `levelStartAt` 只在等级**确实变化**时重置为 now：只改期限不该把生效时间往后挪。
    * `levelSource` 一律写 `manual`（这是一次人工操作）。
+   *
+   * 留痕（与改档案**同一事务**）：
+   * - 仅当**等级或到期时间确实变化**时，才往 `sys_member_level_order` 补一条
+   *   `pay_mode = 'manual'` 的开通流水（见 `MemberLevelOrderService.recordManualTx`）；
+   *   两者都没变（例如只改备注、或把同一个到期时间原样回传）= 不是开通/续费行为，**不写**；
+   * - 刻意**不写**的另外两类（都不是「开通/续费」）：
+   *   1. 注册自动分配默认等级（`levelSource = 'default'`，走 `resolveInitialLevel` 的兜底分支）；
+   *   2. 等级到期自动降级（`levelSource = 'auto_expire'`，见 `expireMemberLevel`，本函数不参与）；
+   *   写进去只会污染开通记录，让「会员开通记录」退化成操作日志。
+   * - 手工调整**不动钱**：不开冻结、不扣余额、**绝不写 `sys_member_balance_log`**
+   *   （写了就破坏「余额 = Σ流水」的账实等式）。
    */
   async function changeLevel(input: {
     userId: string
@@ -449,6 +484,18 @@ function buildMember(executor: AppExecutor) {
     }
 
     const levelChanged = member.levelId !== input.levelId
+    /**
+     * 到期时间是否真的变了：undefined（没传期限）统一归一成 null 再比，
+     * 避免「没传」与「本来就是永久」被误判成一次变更。
+     * 等级与到期时间都没变 → 本次不是开通/续费行为，不写开通流水（见函数头注释）。
+     */
+    const expireChanged = (member.expireAt ?? null) !== (expireAt ?? null)
+    /**
+     * 留痕单的生效起点与写回档案的 `level_start_at` 同口径：
+     * 等级变了才重置为 now，只改期限则保留原生效时间（与 memberRepo.changeLevel 的 startAt 规则一致）。
+     */
+    const levelStartAt = levelChanged ? now : (member.levelStartAt ?? now)
+
     const affected = await members.changeLevel({
       userId: input.userId,
       levelId: input.levelId,
@@ -465,6 +512,22 @@ function buildMember(executor: AppExecutor) {
       throw new AppError('module.system.member.notFound')
     }
 
+    /**
+     * 留痕：与上面的档案变更在**同一事务**里（本函数只会通过 `memberServiceIn(tx)` /
+     * `memberService(db)` 的事务执行），写失败则整笔回滚，绝不会出现「档案改了、记录没有」。
+     * 备注优先用后台填写的等级变更备注，没填则给一句兜底说明。
+     */
+    if (levelChanged || expireChanged) {
+      await levelOrders.recordManualTx({
+        userId: input.userId,
+        levelId: input.levelId,
+        startAt: levelStartAt,
+        endAt: expireAt,
+        remark: String(input.remark ?? '').trim() || '后台手工调整会员等级/期限',
+        operatorId
+      })
+    }
+
     return true
   }
 
@@ -474,6 +537,9 @@ function buildMember(executor: AppExecutor) {
    * 降到默认等级（没有默认等级则 `levelId = NULL`），并把 `expire_at` 清空成永久、
    * `level_source = 'auto_expire'`、`level_start_at = now`。
    * 返回 false 表示条件更新未命中（并发下已被续费/他人处理），跳过即可。
+   *
+   * 刻意**不写**开通流水：到期降级是被动到期，不是「开通/续费」行为，
+   * 写进 `sys_member_level_order` 只会污染开通记录（见 `changeLevel` 的同类说明）。
    */
   async function expireMemberLevel(input: {
     id: string

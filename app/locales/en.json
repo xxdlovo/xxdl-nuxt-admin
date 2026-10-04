@@ -1676,7 +1676,8 @@
         "amount": "Amount",
         "payModeLabel": "Payment method",
         "payMode": {
-          "free": "Free activation"
+          "free": "Free activation",
+          "manual": "Manual adjustment"
         },
         "statusLabel": "Status",
         "payOrderId": "Linked pay order",

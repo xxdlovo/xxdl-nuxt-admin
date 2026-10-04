@@ -6,7 +6,8 @@ import { ApiRequestSchema } from '#shared/types/common'
  * 开通会员（购买 / 续费等级）。
  *
  * - `payMode` 只允许用户选 `balance` / `online` 两种；价格为 0 的免费等级由服务端
- *   自行写入 `free`（用户不感知支付），因此这里**不包含** `free`；
+ *   自行写入 `free`，后台手工调整等级 / 期限由服务端自行写入 `manual`（同样不涉及支付），
+ *   因此这里**不包含** `free` 与 `manual`（后两者都是服务端内部取值，前端永远不能传）；
  * - `requestId` 是幂等键：前端每次提交生成，服务端据此防止连点/重试造成重复开单。
  *   单据级由 `uk_member_level_order_request(request_id)` 唯一键保证「同一 requestId 只落一单」
  *   （命中即复用原单并返回 `reused = true`）；余额支付还会把它拼进冻结业务号

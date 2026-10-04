@@ -1676,7 +1676,8 @@
         "amount": "金额",
         "payModeLabel": "支付方式",
         "payMode": {
-          "free": "免费开通"
+          "free": "免费开通",
+          "manual": "后台调整"
         },
         "statusLabel": "状态",
         "payOrderId": "关联支付单号",

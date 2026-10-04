@@ -56,8 +56,11 @@ export type CouponValidation = {
  */
 export type MemberLevelSource = 'manual' | 'open' | 'renew' | 'upgrade' | 'default' | 'auto_expire'
 
-/** 开通单支付方式：balance 余额 / online 在线 / free 免费等级（服务端写入） */
-export type LevelOrderPayMode = 'balance' | 'online' | 'free'
+/**
+ * 开通单支付方式：balance 余额 / online 在线 / free 免费等级（服务端写入）/
+ * manual 后台手工调整等级与期限（服务端写入，不动钱，仅留开通流水）。
+ */
+export type LevelOrderPayMode = 'balance' | 'online' | 'free' | 'manual'
 
 /** 开通单状态：WP 待支付 / OD 已生效 / CL 已关闭 / FL 失败 */
 export type LevelOrderStatus = 'WP' | 'OD' | 'CL' | 'FL'
@@ -78,8 +81,11 @@ export type LevelEffectResult = {
 export type CreateLevelOrderInput = {
   userId: string
   levelId: string
-  /** 用户选择的支付方式；price = 0 时服务端忽略它并落 free */
-  payMode: Exclude<LevelOrderPayMode, 'free'>
+  /**
+   * 用户选择的支付方式；price = 0 时服务端忽略它并落 free。
+   * `free` / `manual` 都是服务端内部取值（后者见 `recordManualTx`），用户永远不能传。
+   */
+  payMode: Exclude<LevelOrderPayMode, 'free' | 'manual'>
   /** 幂等键（前端每次提交生成）：余额支付用它做冻结业务号，重复提交复用原单 */
   requestId: string
   /** 当前请求 origin：渠道未配 notify_url 时用于推导回调地址 */

@@ -8,7 +8,10 @@ import z from 'zod'
  *
  * 与其他单据的关系：
  * - 余额支付走 sys_member_freeze（freeze_id），在线支付走 sys_pay_order（pay_order_id）；
- * - 价格 = 0 的免费等级不走任何支付，pay_mode = 'free'，创建即生效（status = 'OD'）。
+ * - 价格 = 0 的免费等级不走任何支付，pay_mode = 'free'，创建即生效（status = 'OD'）；
+ * - 后台「会员管理」手工调整等级 / 期限时补一条 pay_mode = 'manual' 的流水（不涉及任何资金：
+ *   price_amount / pay_amount 均为 0.00、freeze_id / pay_order_id / pay_channel_code 全为 NULL，
+ *   落单即 status = 'OD'）。它不是支付行为，只是让「会员开通记录」能完整反映等级变动来源。
  *
  * 幂等：
  * - 单据级由 `requestId` 的唯一键（uk_member_level_order_request）保证，同一 requestId 只落一单；
@@ -19,8 +22,13 @@ import z from 'zod'
  * 本单产生的等级有效期区间记在 startAt / endAt（endAt 为 null 表示长期/不设期限）。
  */
 
-/** 支付方式：balance 余额支付 / online 在线支付 / free 免费等级直接生效（服务端在 price=0 时写入，用户不可选） */
-export const SysMemberLevelOrderPayModeSchema = z.enum(['balance', 'online', 'free'])
+/**
+ * 支付方式：
+ * - `balance` 余额支付 / `online` 在线支付 / `free` 免费等级直接生效（服务端在 price=0 时写入，用户不可选）；
+ * - `manual` 后台手工调整等级 / 期限（服务端写入，**不对用户开放**，见 `SysMemberLevelOpenSchema`）。
+ *   `manual` 不动钱，仅用于在开通记录里留痕，不产生任何余额流水。
+ */
+export const SysMemberLevelOrderPayModeSchema = z.enum(['balance', 'online', 'free', 'manual'])
 export type SysMemberLevelOrderPayModeDTO = z.infer<typeof SysMemberLevelOrderPayModeSchema>
 
 /** 单据状态：WP 待支付 / OD 已生效 / CL 已关闭 / FL 失败 */
@@ -35,7 +43,7 @@ export const SysMemberLevelOrderBaseSchema = z.object({
      * 下单请求幂等键（自助开通时由前端每次提交生成），全表唯一
      * （uk_member_level_order_request）：同一 requestId 只允许一张开通单，重复提交命中唯一键即复用原单。
      * 可空 —— MySQL 唯一索引允许多个 NULL，故 request_id 为空的行不参与唯一约束
-     * （后台补录 / 历史数据为空值，此时不具备幂等语义）。
+     * （后台手工调整 `pay_mode = 'manual'` / 后台补录 / 历史数据为空值，此时不具备幂等语义）。
      */
     requestId: z.string().nullish(),
     /** 开通会员的用户ID（sys_user.id） */
@@ -50,7 +58,7 @@ export const SysMemberLevelOrderBaseSchema = z.object({
     priceAmount: z.union([z.string(), z.number()]).nullish(),
     /** 实付金额（元）；0 元单（免费等级）直接生效 */
     payAmount: z.union([z.string(), z.number()]).nullish(),
-    /** 支付方式：balance / online / free */
+    /** 支付方式：balance / online / free / manual（manual 仅服务端后台调整时写入） */
     payMode: SysMemberLevelOrderPayModeSchema.nullish(),
     /** 状态：WP 待支付 / OD 已生效 / CL 已关闭 / FL 失败 */
     status: SysMemberLevelOrderStatusSchema.nullish(),

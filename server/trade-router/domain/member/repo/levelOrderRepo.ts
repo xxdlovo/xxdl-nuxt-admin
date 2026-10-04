@@ -26,6 +26,8 @@ const STATUS_PENDING = 'WP'
 const STATUS_ACTIVE = 'OD'
 /** 免费等级固定写入的支付方式（见 createFreeTx） */
 const PAY_MODE_FREE = 'free'
+/** 后台手工调整等级/期限固定写入的支付方式（见 insertManual） */
+const PAY_MODE_MANUAL = 'manual'
 
 export function levelOrderRepo(executor: AppExecutor) {
   const db = asDb(executor)
@@ -101,6 +103,64 @@ export function levelOrderRepo(executor: AppExecutor) {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /**
+     * 后台手工调整等级/期限的留痕单（`pay_mode = 'manual'`，直接落 `OD`）。
+     *
+     * 与三条支付通道的本质区别：**手工调整不动钱**，所以这里把「没有资金」这件事写死在 mapper 里 ——
+     * `price_amount` / `pay_amount` 固定 `'0.00'`，`freeze_id` / `pay_order_id` / `pay_channel_code`
+     * 与 `expire_at`（支付超时）固定 NULL，`request_id` 也固定 NULL（人工操作没有幂等键，
+     * `uk_member_level_order_request` 允许多个 NULL）。
+     * **绝不写 `sys_member_balance_log`**：一旦写了，「余额 = Σ流水」的账实等式与对账就崩了。
+     *
+     * 由调用方保证与「改会员档案」在同一事务内（见 `MemberLevelOrderService.recordManualTx`）。
+     */
+    async insertManual(values: {
+      id: string
+      outTradeNo: string
+      userId: string
+      levelId: string
+      levelName: string
+      /** 目标等级配置的时长快照（0 = 长期），仅作信息用途，不代表本单收过费 */
+      durationDays: number
+      /** 调整后的等级生效开始时间（= sys_member.level_start_at） */
+      startAt: string
+      /** 调整后的等级到期时间；null = 长期/永不过期（= sys_member.expire_at） */
+      endAt: string | null
+      /** 生效时刻（手工调整没有「支付时间」，这里记生效时刻，保证 OD 单的时间字段自洽） */
+      paidAt: string
+      effectiveAt: string
+      /** 后台调整原因（写 remark） */
+      remark: string | null
+      operatorId: string | null
+    }) {
+      await db.insert(sysMemberLevelOrder).values({
+        id: values.id,
+        outTradeNo: values.outTradeNo,
+        requestId: null,
+        userId: values.userId,
+        levelId: values.levelId,
+        levelName: values.levelName,
+        durationDays: values.durationDays,
+        priceAmount: '0.00',
+        payAmount: '0.00',
+        payMode: PAY_MODE_MANUAL,
+        status: STATUS_ACTIVE,
+        freezeId: null,
+        payOrderId: null,
+        payChannelCode: null,
+        startAt: values.startAt,
+        endAt: values.endAt,
+        paidAt: values.paidAt,
+        effectiveAt: values.effectiveAt,
+        expireAt: null,
+        failReason: null,
+        remark: values.remark,
+        createdBy: values.operatorId,
+        updatedBy: values.operatorId,
+        isDeleted: 0
+      })
     },
 
     /** 余额支付：回填冻结单 id（冻结单的 attach 反向存 orderId，用于 requestId 幂等回溯） */

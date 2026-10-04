@@ -118,6 +118,9 @@ export function sysMemberService(ctx: Context) {
          *
          * 后台选的等级与期限会一并落到档案上（此前 `levelId` 被静默忽略，属既有 bug）：
          * 显式选了等级 → 用它（`levelSource = 'manual'`）；没选 → 分配全局默认等级。
+         *
+         * 留痕：显式选了等级时，领域层会在**同一事务**里补一条「会员开通记录」
+         * （`pay_mode = 'manual'`，不动钱）；分配默认等级不写（那不是开通行为）。
          */
         async create(data: SysMemberAddDTO): Promise<boolean> {
             const user = await users.getActiveById(data.userId)
@@ -154,6 +157,10 @@ export function sysMemberService(ctx: Context) {
          *
          * `longTerm` 不是表字段，只用于告诉领域层「按长期处理」，绝不能落进 drizzle 的 set()。
          * `expireAt === undefined` 表示本次不改期限，`null` 表示清除到期（等同长期）。
+         *
+         * 留痕：本入口只在 `levelTouched`（等级 / 期限 / 长期标记有改动）时才调领域层，
+         * 而领域层还会再判一次「等级或到期时间是否确实变化」—— 两者都拦不住的纯备注 / 状态编辑
+         * 不会产生「会员开通记录」（`pay_mode = 'manual'`），避免开通记录退化成操作日志。
          */
         async updateById(id: string, data: SysMemberUpdateDTO): Promise<boolean> {
             const current = await repo.getById(id)
@@ -271,6 +278,9 @@ export function sysMemberService(ctx: Context) {
          * 手工指定会员等级与期限。
          * 期限优先级见领域层 `memberService.changeLevel`：长期 → null，
          * 显式 expireAt 优先，都没有则按目标等级的 durationDays 推导。
+         *
+         * 留痕：等级或到期时间确实变化时，领域层会在**同一事务**里补一条「会员开通记录」
+         * （`pay_mode = 'manual'`，不动钱、不写余额流水）；原样回传同一等级与到期时间不写。
          */
         async changeLevel(input: SysMemberChangeLevelDTO) {
             await members.changeLevel({
