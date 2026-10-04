@@ -60,6 +60,7 @@ export type SysMemberWalletRespDTO = z.infer<typeof SysMemberWalletRespSchema>
  * 会员档案响应。
  * levelName / nickname / inviterName / wallet 为 Service 关联查询拼装的展示字段，不是 sys_member 表字段，
  * 因此未加入 common.ts 的 Base Schema。
+ * expireAt / levelStartAt / levelSource 是 sys_member 表字段（等级期限与来源）。
  */
 export const SysMemberRespSchema = z.object({
     id: SysMemberBaseSchema.shape.id,
@@ -67,6 +68,12 @@ export const SysMemberRespSchema = z.object({
     levelId: SysMemberBaseSchema.shape.levelId,
     levelChangedAt: SysMemberBaseSchema.shape.levelChangedAt,
     levelRemark: SysMemberBaseSchema.shape.levelRemark,
+    /** 当前等级到期时间；null = 永不过期（长期/默认等级） */
+    expireAt: SysMemberBaseSchema.shape.expireAt,
+    /** 当前等级生效时间 */
+    levelStartAt: SysMemberBaseSchema.shape.levelStartAt,
+    /** 等级来源：manual/open/renew/upgrade/default/auto_expire */
+    levelSource: SysMemberBaseSchema.shape.levelSource,
     inviteCode: SysMemberBaseSchema.shape.inviteCode,
     inviterId: SysMemberBaseSchema.shape.inviterId,
     inviteCodeId: SysMemberBaseSchema.shape.inviteCodeId,
@@ -81,6 +88,28 @@ export const SysMemberRespSchema = z.object({
     nickname: z.string().nullish(),
     /** 展示字段：上级会员昵称 */
     inviterName: z.string().nullish(),
+    /**
+     * 展示字段（派生）：当前等级的时长天数，用于前端展示「已开通 X 天」。
+     * 来源：Service 联表 sys_member_level.duration_days 带出；等级未配置或被删除时为 null。
+     */
+    levelDurationDays: z.number().nullish(),
+    /**
+     * 展示字段（派生）：当前等级是否长期（0 否 / 1 是），与 sys_member_level.is_long_term 对齐。
+     * 来源：Service 联表 sys_member_level.is_long_term 带出；等级未配置或被删除时为 null。
+     * 与 `expireAt = null` 的关系：长期等级必有 expireAt = null，但 expireAt = null 也可能是
+     * 默认等级或后台手工清除到期时间，故两者不能互相推导，前端判断「永不过期」应以 expireAt 为准。
+     */
+    levelIsLongTerm: z.number().nullish(),
+    /**
+     * 展示字段（派生）：当前等级的售价（元，2 位小数字符串）。
+     * 来源：Service 联表 sys_member_level.price 带出；等级未配置或被删除时为 null。
+     */
+    levelPrice: z.string().nullish(),
+    /**
+     * 展示字段（派生）：当前等级是否默认等级（0 否 / 1 是），与 sys_member_level.is_default 对齐。
+     * 来源：Service 联表带出；新注册用户会被自动分配默认等级且永不过期。
+     */
+    levelIsDefault: z.number().nullish(),
     /** 展示字段：余额快照，按需返回（详情页带出，列表页通常不返回） */
     wallet: SysMemberWalletRespSchema.nullish(),
 })

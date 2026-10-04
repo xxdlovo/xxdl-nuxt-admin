@@ -17,6 +17,7 @@ import { sysMemberFreeze } from "./system/memberFreeze"
 import { sysMemberGiftGrant } from "./system/memberGiftGrant"
 import { sysMemberInviteCode } from "./system/memberInviteCode"
 import { sysMemberLevel } from "./system/memberLevel"
+import { sysMemberLevelOrder } from "./system/memberLevelOrder"
 import { sysMemberRecharge } from "./system/memberRecharge"
 import { sysMemberWallet } from "./system/memberWallet"
 import { sysMenu } from "./system/menu"
@@ -56,6 +57,7 @@ export {
   sysMemberGiftGrant,
   sysMemberInviteCode,
   sysMemberLevel,
+  sysMemberLevelOrder,
   sysMemberRecharge,
   sysMemberWallet,
   sysMenu,

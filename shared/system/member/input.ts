@@ -7,6 +7,7 @@ export const SysMemberAddSchema = SysMemberBaseSchema.pick({
     userId: true,
     levelId: true,
     levelRemark: true,
+    expireAt: true,
     inviteCode: true,
     inviterId: true,
     inviteCodeId: true,
@@ -17,6 +18,8 @@ export const SysMemberAddSchema = SysMemberBaseSchema.pick({
     userId: z.string().min(1, 'form.required').max(36, 'form.required'),
     levelId: z.string().max(36).nullish(),
     levelRemark: z.string().max(255).nullish(),
+    /** 当前等级到期时间 YYYY-MM-DD HH:mm:ss；留空 = 永不过期（长期/默认等级） */
+    expireAt: z.string().max(30).nullish(),
     /** 邀请码：表内唯一，留空由服务端生成，填了则校验唯一性 */
     inviteCode: z.string().max(20).nullish(),
     inviterId: z.string().max(36).nullish(),
@@ -30,12 +33,15 @@ export type SysMemberAddDTO = z.infer<typeof SysMemberAddSchema>
 export const SysMemberUpdateSchema = SysMemberBaseSchema.pick({
     levelId: true,
     levelRemark: true,
+    expireAt: true,
     status: true,
     remark: true,
 }).extend({
     id: z.string().nonempty('form.id.required'),
     levelId: z.string().max(36).nullish(),
     levelRemark: z.string().max(255).nullish(),
+    /** 当前等级到期时间 YYYY-MM-DD HH:mm:ss；null = 清除到期时间（改为永不过期） */
+    expireAt: z.string().max(30).nullish(),
     status: z.number().nullish(),
     remark: z.string().max(255).nullish(),
 })
@@ -99,10 +105,25 @@ export const SysMemberGrantSchema = z.object({
 })
 export type SysMemberGrantDTO = z.infer<typeof SysMemberGrantSchema>
 
-/** 变更会员等级：写入 levelId 的同时记录 levelChangedAt / levelRemark */
+/**
+ * 变更会员等级：写入 levelId 的同时记录 levelChangedAt / levelRemark。
+ *
+ * 期限参数二选一，语义如下：
+ * - `longTerm = true`：按长期处理，服务端把 `sys_member.expire_at` 置 NULL（永不过期），
+ *   并写 levelSource（默认 manual）；传了 longTerm 时忽略 expireAt；
+ * - `expireAt`：显式到期时间（YYYY-MM-DD HH:mm:ss），null = 清除到期（等同长期）；
+ * - 两者都不传：服务端按目标等级的 durationDays 推导到期时间
+ *   （durationDays=0 或 isLongTerm=1 时置 NULL），并在得到 null 时把 levelSource 标为 manual。
+ *
+ * 注意：本 Schema 只做形态校验，「到期时间是否合法 / 是否允许长期」由 Service 判定。
+ */
 export const SysMemberChangeLevelSchema = z.object({
     userId: z.string().min(1, 'form.required').max(36, 'form.required'),
     levelId: z.string().min(1, 'form.required').max(36, 'form.required'),
+    /** 到期时间 YYYY-MM-DD HH:mm:ss；null = 长期 / 清除到期 */
+    expireAt: z.string().max(30).nullish(),
+    /** true 表示按长期处理（服务端据此把 expire_at 置 NULL）；兼容布尔与 1/0 */
+    longTerm: z.union([z.number(), z.boolean()]).nullish(),
     remark: z.string().max(255).nullish(),
 })
 export type SysMemberChangeLevelDTO = z.infer<typeof SysMemberChangeLevelSchema>

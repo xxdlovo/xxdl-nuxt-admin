@@ -141,7 +141,9 @@ export const memberBizTypeRecord: Record<string, string> = {
     gift_campaign: 'module.system.member.bizType.giftCampaign',
     adjust: 'module.system.member.bizType.adjust',
     consume_confirm: 'module.system.member.bizType.consumeConfirm',
-    gift_expire: 'module.system.member.bizType.giftExpire'
+    gift_expire: 'module.system.member.bizType.giftExpire',
+    // 等级购买 / 续费（写入 sys_member_balance_log.biz_type；与「商城消费 consume_confirm」区分）
+    level_open: 'module.system.member.bizType.levelOpen'
 }
 
 /** 赠送金来源 */

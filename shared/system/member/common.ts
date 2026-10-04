@@ -3,8 +3,15 @@ import z from 'zod'
 /**
  * 会员档案基础 Schema —— 与 sys_member 表结构保持一致。
  * 所有字段统一 nullish()，便于 pick() / extend() 复用；必填规则在 input.ts 覆盖。
- * levelChangedAt / invitedAt / createdAt / updatedAt 均为字符串，格式 YYYY-MM-DD HH:mm:ss。
+ * levelChangedAt / invitedAt / expireAt / levelStartAt / createdAt / updatedAt 均为字符串，
+ * 格式 YYYY-MM-DD HH:mm:ss。
  * 注意：nickname / levelName / wallet 等展示字段不属于本表，只出现在 output.ts。
+ *
+ * 等级期限语义：
+ * - `expireAt` 为**当前等级到期时间**，NULL 表示永不过期（长期等级 / 默认等级）；
+ * - `levelStartAt` 为当前等级生效时间；
+ * - `levelSource` 为等级来源：manual 手工 / open 新开通 / renew 续费 / upgrade 升级 /
+ *   default 注册默认分配 / auto_expire 到期降级。
  */
 export const SysMemberBaseSchema = z.object({
     id: z.string().nullish(),
@@ -14,6 +21,12 @@ export const SysMemberBaseSchema = z.object({
     levelChangedAt: z.string().nullish(),
     /** 等级变更备注（与 remark 区分：仅记录等级相关说明） */
     levelRemark: z.string().nullish(),
+    /** 当前等级到期时间；NULL 表示永不过期（长期/默认等级） */
+    expireAt: z.string().nullish(),
+    /** 当前等级生效时间 */
+    levelStartAt: z.string().nullish(),
+    /** 等级来源：manual/open/renew/upgrade/default/auto_expire */
+    levelSource: z.string().nullish(),
     inviteCode: z.string().nullish().meta({ query: 'like' }),
     inviterId: z.string().nullish(),
     inviteCodeId: z.string().nullish(),
