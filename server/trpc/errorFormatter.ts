@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server'
 import { getCookie, getHeader } from 'h3'
 import type { TRPCFormattedError } from '#shared/types/common'
 import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
+import { resolveRequestId } from '#server/utils/requestId'
 import { createLocaleT } from '#server/utils/serverI18n'
 
 type ErrorFormatterOpts = {
@@ -141,7 +142,10 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
             code: trpcCode,
             httpStatus,
             stack: includeErrorStack() ? error.stack : undefined,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            // evlog 宽事件的 requestId（请求进入路由处理前就已确定），
+            // 前端可据此对齐 .data/evlogs 运行日志与 sys_system_log 的 traceId
+            requestId: resolveRequestId(ctx?.event)
         } as TRPCFormattedError,
     }
 }

@@ -89,8 +89,17 @@ export default defineNuxtConfig({
         '@nuxtjs/mdc',
         // @nuxt/content 负责扫描 content.config.ts 并注册 Markdown 查询与渲染能力。
         // @nuxtjs/mdc 同样在 package.json 中显式声明，以适配 pnpm 的严格依赖解析。
-        '@nuxt/content'
+        '@nuxt/content',
+        // evlog：请求级宽事件日志。每个 /api/trpc 请求在响应结束时输出一条
+        // 带业务上下文的结构化事件（dev 彩色树形，生产 JSON）。
+        'evlog/nuxt'
     ],
+    evlog: {
+        // 事件中的服务名，便于多服务场景区分
+        env: { service: 'xxdl-nuxt-admin' },
+        // 只对 tRPC 请求生成宽事件，避免 /api/_nuxt_icon/** 等噪音
+        include: ['/api/trpc/**']
+    },
     // trpc-nuxt 2.1.x 的产物内部使用了 Nuxt 虚拟模块 #imports，
     // 该虚拟模块只能在 Nuxt 构建管线中解析。若不 transpile 该包，
     // Nitro 会把 node_modules 中的 ESM 直接交给 Node 解析，
@@ -108,6 +117,12 @@ export default defineNuxtConfig({
         // OpenAPI 文档端点开关（/api/openapi.json、/api/docs）。
         // 默认开启；设置 NUXT_OPENAPI_ENABLED=false 可整体关闭并返回 404。
         openapiEnabled: process.env.NUXT_OPENAPI_ENABLED !== 'false',
+        // evlog 文件日志（server/plugins/evlog-drain.ts）的落盘目录。
+        // 默认 .data/evlogs/app；.data 已在 .gitignore 中，可用 NUXT_EVLOG_FS_DIR 覆盖。
+        evlogFsDir: process.env.EVLOG_FS_DIR ?? '.data/evlogs/app',
+        // evlog 文件日志的最低写入等级：trace | debug | info | warn | error | fatal。
+        // 低于该等级的事件不落盘；缺省复用项目已有的 LOG_LEVEL，可用 NUXT_EVLOG_FS_LEVEL 覆盖。
+        evlogFsLevel: process.env.EVLOG_FS_LEVEL ?? process.env.LOG_LEVEL ?? 'info',
         // 支付渠道密钥的 AES-256-GCM 主密钥：32 字节，base64 或 64 位 hex。
         // 这里必须留空字符串占位，真实值由运行时环境变量 NUXT_PAY_CONFIG_KEY 覆盖
         // （dev 从 .env 读取，生产由部署环境注入），不能把密钥写进仓库。

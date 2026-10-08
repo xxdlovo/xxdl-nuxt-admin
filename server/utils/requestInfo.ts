@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { getHeader, getMethod, getRequestIP, getRequestURL } from 'h3'
+import { resolveRequestId } from './requestId'
 
 /**
  * 无法从请求中解析到明确值时的兜底文案。
@@ -51,15 +52,16 @@ function parseOs(userAgent: string) {
  * 2. x-real-ip
  * 3. h3 getRequestIP
  *
- * traceId 优先使用网关或前端传入的 x-request-id，缺失时生成新的 UUID，
- * 便于后续把系统日志、登录日志和应用错误串联起来排查。
+ * traceId 优先复用 evlog 宽事件里的 requestId（见 server/utils/requestId.ts），
+ * 使系统日志、登录日志、应用错误与 .data/evlogs 的运行日志共用同一个 id；
+ * 没有运行日志时退回网关或前端传入的 x-request-id，最后才生成新的 UUID。
  */
 export function getRequestInfo(event: H3Event) {
   const userAgent = getHeader(event, 'user-agent') ?? ''
   const forwardedIp = getHeader(event, 'x-forwarded-for')?.split(',')[0]?.trim()
   const realIp = getHeader(event, 'x-real-ip')?.trim()
   const ip = forwardedIp || realIp || getRequestIP(event) || UNKNOWN
-  const traceId = getHeader(event, 'x-request-id') || crypto.randomUUID()
+  const traceId = resolveRequestId(event) ?? getHeader(event, 'x-request-id') ?? crypto.randomUUID()
   const requestUrl = getRequestURL(event)
 
   return {

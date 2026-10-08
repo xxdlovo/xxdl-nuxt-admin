@@ -7,4 +7,5 @@ export interface TRPCFormattedError {
     stack?: string;            // 堆栈信息（仅开发环境）
     path?: string;             // 错误路径
     timestamp?: string;         // 时间戳（可选）
+    requestId?: string;        // 本次请求的 evlog requestId，用于把前端报错与运行/业务日志对齐
 }

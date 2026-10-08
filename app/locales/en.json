@@ -42,6 +42,8 @@
     "detail": "Detail",
     "copy": "Copy",
     "copySuccess": "Copied",
+    "copyRequestId": "Copy request ID",
+    "requestId": "Request ID",
     "format": "Format",
     "compact": "Compact",
     "check": "Check",

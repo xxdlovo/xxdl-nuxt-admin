@@ -42,6 +42,8 @@
     "detail": "详情",
     "copy": "复制",
     "copySuccess": "复制成功",
+    "copyRequestId": "复制请求ID",
+    "requestId": "请求ID",
     "format": "格式化",
     "compact": "紧凑显示",
     "check": "勾选",
