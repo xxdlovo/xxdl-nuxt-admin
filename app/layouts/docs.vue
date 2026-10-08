@@ -111,6 +111,44 @@ const docsNavigation = computed(() => {
 // 通过 provide/inject 共享同一份已转换过路由前缀的数据，防止两个视图的链接规则漂移。
 provide('docs-navigation', docsNavigation)
 
+/**
+ * 找出当前路由在导航树中的位置（各级分组的索引链）。
+ */
+function findPathChain(items: ContentNavigationItem[], path: string, chain: number[] = []): number[] {
+  for (const [index, item] of items.entries()) {
+    if (item.path === path) {
+      return [...chain, index]
+    }
+
+    if (item.children?.length) {
+      const found = findPathChain(item.children, path, [...chain, index])
+
+      if (found.length) {
+        return found
+      }
+    }
+  }
+
+  return []
+}
+
+/**
+ * 左侧导航的重建标识：当前页面所属的「祖先分组链」。
+ *
+ * UContentNavigation 的展开状态由 reka-ui AccordionRoot 的 `default-value` 决定，
+ * 而 `default-value` 只在组件挂载时读取一次 —— 搜索跳转到另一个分组后，
+ * 组件内部虽然重算了 default-value，已经挂载的 Accordion 并不会跟着展开，
+ * 于是出现「搜索过去后左侧菜单没展开」的现象。
+ *
+ * 因此把祖先分组链当作 key：链变化时整棵导航树重建，目标分组（含子分组）随之展开；
+ * 同一条链内跳转不会重建，用户手动展开的其它分组仍然保留。
+ */
+const navigationKey = computed(() => {
+  const chain = findPathChain(docsNavigation.value, route.path)
+
+  return chain.length ? `docs-nav-${chain.join('-')}` : 'docs-nav-root'
+})
+
 const docsSearchSections = computed(() => {
   // UContentSearch 使用文件 id 作为跳转地址。内容索引中的 id 不带 `/docs`，
   // 因此需要与左侧导航一样补齐当前站点的应用路由前缀，点击搜索结果才能抵达正确页面。
@@ -177,8 +215,12 @@ const docsSearchSections = computed(() => {
                 并禁用所有分组触发器。default-open=true 只会自动展开当前页面所属分组，
                 其他分组会因此保持折叠且无法点击，看起来像是目录没有加载。
                 保留组件默认的 collapsible=true 后，当前分组仍自动展开，其他分组也可手动展开。
+
+                key 绑定祖先分组链：搜索/跳转到别的分组时重建导航，让目标分组自动展开
+                （default-open 只在挂载时生效，路由变化本身不会改变已展开的分组）。
               -->
               <UContentNavigation
+                :key="navigationKey"
                 :navigation="docsNavigation"
                 :default-open="true"
                 variant="link"

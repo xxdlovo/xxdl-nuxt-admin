@@ -5,7 +5,7 @@
     </div>
 
     <UCard class="flex-1 min-h-0 flex flex-col overflow-hidden" :ui="{ body: 'flex flex-col h-full p-0 sm:p-0' }">
-      <UButton @click="loadDictload">测试</UButton>
+<!--      <UButton @click="loadDictload">测试</UButton>-->
       <TableWithPagination
         ref="table"
         :data="data"
