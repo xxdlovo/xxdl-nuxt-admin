@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysMemberFreezeRepo } from './SysMemberFreezeRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -22,6 +23,8 @@ function uniqIds(ids: string[]) {
 
 export function sysMemberFreezeService(ctx: Context) {
     const repo = sysMemberFreezeRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberFreeze')
     // 释放涉及余额回退，资金逻辑全部收敛在领域层，这里只做校验与透传
     const wallet = walletService(ctx.db)
 
@@ -35,6 +38,7 @@ export function sysMemberFreezeService(ctx: Context) {
             }
 
             await repo.updateById(id, { remark: data.remark ?? null })
+            log.info('memberFreeze updated', { memberFreeze: { action: 'update', id } })
             return true
         },
 
@@ -50,6 +54,7 @@ export function sysMemberFreezeService(ctx: Context) {
             }
 
             await repo.remove(id)
+            log.info('memberFreeze removed', { memberFreeze: { action: 'remove', id } })
             return true
         },
 
@@ -71,6 +76,7 @@ export function sysMemberFreezeService(ctx: Context) {
             }
 
             await repo.batchRemove(uniqueIds)
+            log.info('memberFreeze batch removed', { memberFreeze: { action: 'batchRemove', count: uniqueIds.length } })
             return uniqueIds.length
         },
 
@@ -80,6 +86,8 @@ export function sysMemberFreezeService(ctx: Context) {
             if (!pojo) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('memberFreeze fetched', { memberFreeze: { action: 'getOne' } })
 
             return pojo as SysMemberFreezeDto
         },
@@ -91,13 +99,20 @@ export function sysMemberFreezeService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
+            log.info('memberFreeze fetched', { memberFreeze: { action: 'getById', id } })
+
             return pojo as SysMemberFreezeDto
         },
 
         async page(req: SysMemberFreezePageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, createdFrom, createdTo, ...dto } = req
 
-            return await repo.pageWithRange(page, pageSize, dto, { createdFrom, createdTo })
+            const result = await repo.pageWithRange(page, pageSize, dto, { createdFrom, createdTo })
+            log.info('memberFreeze page queried', {
+                memberFreeze: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         /**
@@ -111,11 +126,14 @@ export function sysMemberFreezeService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
-            return await wallet.release({
+            const result = await wallet.release({
                 freezeId: row.id,
                 reason: req.reason,
                 operatorId: ctx.user?.id ?? null
             })
+            log.info('memberFreeze released', { memberFreeze: { action: 'release', id: row.id } })
+
+            return result
         }
     }
 }

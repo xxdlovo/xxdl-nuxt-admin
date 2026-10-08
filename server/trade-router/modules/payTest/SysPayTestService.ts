@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 /**
  * 扫码支付测试模块的 Service：渠道可用性校验、统一下单、状态查询、模拟回调。
  *
@@ -34,6 +35,8 @@ export function isSimulateEnabled() {
  */
 export function sysPayTestService(ctx: Context) {
     const repo = sysPayTestRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/payTest')
     const orders = payOrderService(ctx.db)
     const dispatcher = payNotifyDispatcher(ctx.db)
 
@@ -96,7 +99,9 @@ export function sysPayTestService(ctx: Context) {
     return {
         /** 渠道下拉 / ScanPay 组件解析渠道：只暴露可公开字段 */
         async listChannels() {
-            return await repo.listEnabledChannels()
+            const list = await repo.listEnabledChannels()
+            log.info('payTest channels listed', { payTest: { action: 'listChannels', count: list.length } })
+            return list
         },
 
         /** 发起扫码支付（bizType 留空默认 test，只有 test 订单允许被模拟支付） */
@@ -115,18 +120,23 @@ export function sysPayTestService(ctx: Context) {
                 bizType: input.bizType?.trim() || 'test',
                 origin: meta.origin
             }, meta)
+            log.info('payTest order created', { payTest: { action: 'create', id: order.id } })
 
             return await toStatus(order)
         },
 
         /** 订单快照（只读本地库） */
         async getStatus(orderId: string) {
-            return await toStatus(await getOrderOrThrow(orderId))
+            const status = await toStatus(await getOrderOrThrow(orderId))
+            log.info('payTest status fetched', { payTest: { action: 'getStatus', id: orderId } })
+            return status
         },
 
         /** 主动查询渠道并推进状态（页面轮询与「查询状态」按钮共用） */
         async syncStatus(orderId: string, meta: PayOperatorMeta = {}) {
-            return await toStatus(await orders.queryPayment(orderId, meta))
+            const status = await toStatus(await orders.queryPayment(orderId, meta))
+            log.info('payTest status synced', { payTest: { action: 'syncStatus', id: orderId } })
+            return status
         },
 
         /** 本地模拟支付成功：走与真实回调完全相同的验签 + 幂等链路 */
@@ -136,6 +146,7 @@ export function sysPayTestService(ctx: Context) {
             }
 
             const outcome = await dispatcher.simulatePaid(orderId, meta)
+            log.info('payTest payment simulated', { payTest: { action: 'simulatePaid', id: orderId } })
 
             return {
                 processResult: outcome.processResult,

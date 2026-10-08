@@ -9,6 +9,7 @@
  */
 import { AppError } from '#server/utils/appError'
 import { isDuplicateKeyError } from '#server/utils/dbError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { memberLevelCacheService } from '#server/sys-router/storage/cache/MemberLevelCacheService'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
@@ -80,6 +81,9 @@ function buildMember(executor: AppExecutor) {
   const wallet = walletServiceIn(executor)
   /** 等级留痕：与建档/改等级**同一事务**（手工调整不动钱，只写开通记录） */
   const levelOrders = memberLevelOrderServiceIn(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/member')
 
   /** 生成一个未被占用的邀请码（唯一索引仍是最终保证） */
   async function generateInviteCode() {
@@ -274,6 +278,8 @@ function buildMember(executor: AppExecutor) {
     // 注册赠金：读系统配置，按配置金额与有效期发放（幂等键 register_bonus:{userId}）
     const bonusAmount = await grantRegisterBonus(input.userId, operatorId)
 
+    log.info('member created', { member: { action: 'onboard', id: memberId, userId: input.userId } })
+
     return {
       memberId,
       userId: input.userId,
@@ -310,6 +316,10 @@ function buildMember(executor: AppExecutor) {
       reason: '注册赠金',
       operatorId
     })
+
+    if (!result.reused) {
+      log.info('member gift granted', { member: { action: 'grantRegisterBonus', userId } })
+    }
 
     return result.reused ? '0.00' : result.amount
   }
@@ -356,6 +366,8 @@ function buildMember(executor: AppExecutor) {
     if (resolved.inviteCodeId) {
       await inviteCodes.incrementUsedCount(resolved.inviteCodeId, operatorId)
     }
+
+    log.info('member inviter bound', { member: { action: 'bindInviter', userId: input.userId } })
 
     return { inviterId: resolved.inviterUserId }
   }
@@ -528,6 +540,10 @@ function buildMember(executor: AppExecutor) {
       })
     }
 
+    log.info('member level changed', {
+      member: { action: 'changeLevel', userId: input.userId, levelId: input.levelId }
+    })
+
     return true
   }
 
@@ -553,6 +569,10 @@ function buildMember(executor: AppExecutor) {
       levelId: fallback?.id ?? null,
       operatorId: input.operatorId ?? null
     })
+
+    if (affected > 0) {
+      log.info('member level changed', { member: { action: 'expireMemberLevel', id: input.id } })
+    }
 
     return affected > 0
   }
@@ -733,17 +753,29 @@ function buildMember(executor: AppExecutor) {
       throw new AppError('module.system.member.couponUsedUp')
     }
 
+    log.info('member coupon locked', {
+      member: { action: 'lockCoupon', id: input.couponId, userId: input.userId }
+    })
+
     return { locked: true, reused: false }
   }
 
   /** 核销优惠码（充值到账） */
   async function markCouponUsed(input: { bizNo: string; operatorId?: string | null }) {
-    return await couponUses.markUsed(input.bizNo, nowForMysql(), input.operatorId ?? null)
+    const affected = await couponUses.markUsed(input.bizNo, nowForMysql(), input.operatorId ?? null)
+
+    log.info('member coupon used', { member: { action: 'markCouponUsed', id: input.bizNo } })
+
+    return affected
   }
 
   /** 释放优惠码（充值关闭 / 消费失败） */
   async function releaseCoupon(input: { bizNo: string; operatorId?: string | null }) {
-    return await couponUses.markReleased(input.bizNo, nowForMysql(), input.operatorId ?? null)
+    const affected = await couponUses.markReleased(input.bizNo, nowForMysql(), input.operatorId ?? null)
+
+    log.info('member coupon released', { member: { action: 'releaseCoupon', id: input.bizNo } })
+
+    return affected
   }
 
   /** 会员档案（自助接口用） */

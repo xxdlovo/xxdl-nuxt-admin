@@ -11,6 +11,7 @@
  * 三重保证重复回调/重复补偿不会重复加钱。
  */
 import { AppError } from '#server/utils/appError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { buildOutTradeNo, nowForMysql } from '../pay/utils'
@@ -65,6 +66,9 @@ function buildRecharge(executor: AppExecutor) {
   const members = memberServiceIn(executor)
   const channels = payChannelRepo(executor)
   const payments = payOrderService(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/recharge')
 
   /** 发起充值：解析优惠码 → 落充值单 → 锁券 → 调支付模块下单 */
   async function create(input: CreateRechargeInput): Promise<CreateRechargeResult> {
@@ -163,6 +167,8 @@ function buildRecharge(executor: AppExecutor) {
       } catch {
         // 静默：上面的注释说明了为什么可以吞掉
       }
+
+      log.info('recharge created', { recharge: { action: 'create', id: rechargeId, outTradeNo, amount } })
 
       return {
         rechargeId,
@@ -266,6 +272,8 @@ function buildRecharge(executor: AppExecutor) {
       await members.markCouponUsed({ bizNo: outTradeNo, operatorId })
     }
 
+    log.info('recharge credited', { recharge: { action: 'credit', id: row.id, outTradeNo, amount: row.amount } })
+
     return { outTradeNo, credited: true, reused: false, amount: row.amount, giftAmount: row.giftAmount }
   }
 
@@ -330,6 +338,8 @@ function buildRecharge(executor: AppExecutor) {
       await members.releaseCoupon({ bizNo: row.outTradeNo, operatorId })
     }
 
+    log.info('recharge closed', { recharge: { action: 'close', id: row.id, outTradeNo: row.outTradeNo } })
+
     return { closed: true, reused: false }
   }
 
@@ -358,6 +368,8 @@ function buildRecharge(executor: AppExecutor) {
         })
       }
     }
+
+    log.info('recharge retried', { recharge: { action: 'retryPending', count: rows.length } })
 
     return { scanned: rows.length, results }
   }

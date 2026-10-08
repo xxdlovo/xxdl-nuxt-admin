@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysOauthConfigRepo } from './SysOauthConfigRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -14,6 +15,8 @@ import { randomUuid } from '#shared/utils/uuid'
 
 export function sysOauthConfigService(ctx: Context) {
     const repo = sysOauthConfigRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/sys-router/oauthConfig')
 
     /**
      * 取全部「已启用且未删除」的平台配置，按 sortOrder 升序。
@@ -29,36 +32,48 @@ export function sysOauthConfigService(ctx: Context) {
             const uuid = randomUuid()         // 自动生成主键
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
+            log.info('oauthConfig created', { oauthConfig: { action: 'create', id: uuid } })
             return true
         },
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            log.info('oauthConfig removed', { oauthConfig: { action: 'remove', id } })
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            log.info('oauthConfig batch removed', { oauthConfig: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
         async updateById(id: string, data: SysOauthConfigUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
+            log.info('oauthConfig updated', { oauthConfig: { action: 'update', id } })
             return true
         },
         async getOne(req: SysOauthConfigQueryDTO): Promise<SysOauthConfigDto> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oauthConfig fetched', { oauthConfig: { action: 'getOne' } })
             return pojo
         },
         async getById(id: string): Promise<SysOauthConfigDto> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oauthConfig fetched', { oauthConfig: { action: 'getById', id } })
             return pojo
         },
         async page(req: SysOauthConfigPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto)
+            const result = await repo.page(page, pageSize, dto)
+            log.info('oauthConfig page queried', {
+                oauthConfig: { action: 'page', page, pageSize, total: result.total }
+            })
+            return result
         },
         async list(dto: any): Promise<SysOauthConfigDto[]> {
-            return await repo.list(dto)
+            const list = await repo.list(dto)
+            log.info('oauthConfig listed', { oauthConfig: { action: 'list', count: list.length } })
+            return list
         },
 
         /**
@@ -67,6 +82,9 @@ export function sysOauthConfigService(ctx: Context) {
          */
         async getEnabledByPlatform(platform: string): Promise<SysOauthConfigDto | null> {
             const row = await repo.findEnabledByPlatform(platform)
+            log.info('oauthConfig enabled platform fetched', {
+                oauthConfig: { action: 'getEnabledByPlatform', platform }
+            })
 
             return (row as SysOauthConfigDto | undefined) ?? null
         },
@@ -80,13 +98,19 @@ export function sysOauthConfigService(ctx: Context) {
         async listEnabledPlatforms(): Promise<SysOauthEnabledPlatformDTO[]> {
             const rows = await listEnabledRows()
 
-            return rows
+            const list = rows
                 .filter(row => !!row.platform && !!row.platformName)
                 .map(row => ({
                     platform: String(row.platform).trim().toLowerCase(),
                     platformName: row.platformName as string,
                     icon: row.icon ?? null
                 }))
+
+            log.info('oauthConfig enabled platforms listed', {
+                oauthConfig: { action: 'listEnabledPlatforms', count: list.length }
+            })
+
+            return list
         },
     }
 }

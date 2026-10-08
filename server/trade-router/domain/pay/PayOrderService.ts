@@ -6,6 +6,7 @@
  * 取数写数一律通过 repo/payOrderRepo、repo/payNotifyLogRepo（mapper 层）。
  */
 import { AppError } from '#server/utils/appError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import type { AppExecutor } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { getPayChannelRuntimeById, resolvePayChannel } from './PayChannelResolver'
@@ -55,6 +56,9 @@ export type CreatePayOrderInput = {
 export function payOrderService(executor: AppExecutor) {
   const orderRepo = payOrderRepo(executor)
   const logRepo = payNotifyLogRepo(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/payOrder')
 
   async function getByIdOrThrow(orderId: string): Promise<PayOrderRow> {
     const row = await orderRepo.findById(orderId)
@@ -188,7 +192,11 @@ export function payOrderService(executor: AppExecutor) {
         throw new AppError('module.system.payOrder.createFailed', { message, cause: error })
       }
 
-      return await getByIdOrThrow(id)
+      const row = await getByIdOrThrow(id)
+
+      log.info('payOrder created', { payOrder: { action: 'createPayment', id, outTradeNo } })
+
+      return row
     },
 
     /**
@@ -281,7 +289,13 @@ export function payOrderService(executor: AppExecutor) {
         }
       }
 
-      return await getByIdOrThrow(orderId)
+      const row = await getByIdOrThrow(orderId)
+
+      log.info('payOrder synced', {
+        payOrder: { action: 'queryPayment', id: row.id, outTradeNo: row.outTradeNo, status: row.status }
+      })
+
+      return row
     },
 
     /** 本地关闭：仅未支付订单可关闭（虎皮椒等平台无取消接口，因此只改本地状态） */
@@ -298,7 +312,11 @@ export function payOrderService(executor: AppExecutor) {
         updatedBy: meta.operatorId ?? null
       })
 
-      return await getByIdOrThrow(orderId)
+      const row = await getByIdOrThrow(orderId)
+
+      log.info('payOrder closed', { payOrder: { action: 'closePayment', id: orderId } })
+
+      return row
     },
 
     /** 过期未支付订单列表（对账任务备用） */

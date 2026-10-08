@@ -1,4 +1,5 @@
 //#server/trade-router/modules/order
+import { useLogger } from 'evlog'
 /**
  * 订单模块 Service：后台管理（查询 / 备注 / 确认 / 关闭 / 同步 / 交付 / 统计）
  * + 会员自助（我的订单 / 下单 / 确认 / 取消 / 同步） + 商城浏览。
@@ -73,6 +74,8 @@ function toMallCard(
 
 export function sysOrderService(ctx: Context) {
     const repo = sysOrderRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/order')
     // 下单 / 确认 / 关闭 / 交付 / 同步：一律调领域，模块层不改状态、不动资金
     const orders = orderService(ctx.db)
     const goods = goodsService(ctx.db)
@@ -122,6 +125,7 @@ export function sysOrderService(ctx: Context) {
 
             if (!pojo) throw new AppError('common.notExist')
 
+            log.info('order fetched', { order: { action: 'getOne' } })
             return pojo as SysOrderRespDTO
         },
 
@@ -131,23 +135,32 @@ export function sysOrderService(ctx: Context) {
 
             if (!profile) throw new AppError('common.notExist')
 
+            log.info('order fetched', { order: { action: 'getById', id } })
             return profile as SysOrderRespDTO
         },
 
         async page(req: SysOrderPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, amountMin, amountMax, createdFrom, createdTo, ...dto } = req
 
-            return await repo.pageWithProfile(page, pageSize, dto, {
+            const result = await repo.pageWithProfile(page, pageSize, dto, {
                 amountMin,
                 amountMax,
                 createdFrom,
                 createdTo
             })
+
+            log.info('order page queried', {
+                order: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         /** 订单只允许改备注：金额与状态由业务动作（确认/关闭/交付）驱动，其余字段一律忽略 */
         async update(input: SysOrderUpdateDTO): Promise<boolean> {
             await repo.updateById(input.id, { remark: input.remark ?? null })
+
+            log.info('order updated', { order: { action: 'update', id: input.id } })
 
             return true
         },
@@ -155,6 +168,8 @@ export function sysOrderService(ctx: Context) {
         async remove(id: string): Promise<boolean> {
             await assertRemovable([id])
             await repo.remove(id)
+
+            log.info('order removed', { order: { action: 'remove', id } })
 
             return true
         },
@@ -165,50 +180,72 @@ export function sysOrderService(ctx: Context) {
             await assertRemovable(uniqueIds)
             await repo.batchRemove(uniqueIds)
 
+            log.info('order batch removed', { order: { action: 'batchRemove', count: uniqueIds.length } })
+
             return uniqueIds.length
         },
 
         /** 确认支付（余额单实扣）：冻结确认 + 置已完成 + 核销券 + 加销量由领域层完成 */
         async confirm(input: SysOrderConfirmDTO) {
-            return await orders.confirm({
+            const result = await orders.confirm({
                 orderId: input.id,
                 operatorId: operatorId()
             })
+
+            log.info('order confirmed', { order: { action: 'confirm', id: input.id } })
+
+            return result
         },
 
         /** 后台关闭：释放冻结 / 优惠码 / 回滚库存，来源标记为 admin */
         async close(input: SysOrderCloseDTO) {
-            return await orders.cancel({
+            const result = await orders.cancel({
                 orderId: input.id,
                 reason: input.reason ?? null,
                 source: 'admin',
                 operatorId: operatorId()
             })
+
+            log.info('order closed', { order: { action: 'close', id: input.id } })
+
+            return result
         },
 
         /** 主动同步在线支付状态（向渠道查询，已支付则按幂等路径推进订单） */
         async sync(input: SysOrderSyncDTO) {
-            return await orders.sync({
+            const result = await orders.sync({
                 orderId: input.id,
                 operatorId: operatorId()
             })
+
+            log.info('order synced', { order: { action: 'sync', id: input.id } })
+
+            return result
         },
 
         /** 服务类订单交付（已支付且待交付时才允许） */
         async fulfill(input: SysOrderFulfillDTO) {
-            return await orders.fulfill({
+            const result = await orders.fulfill({
                 orderId: input.id,
                 remark: input.remark ?? null,
                 operatorId: operatorId()
             })
+
+            log.info('order fulfilled', { order: { action: 'fulfill', id: input.id } })
+
+            return result
         },
 
         /** 看板统计：区间成交 + 待支付 / 待交付 / 今日 */
         async summary(input: SysOrderSummaryDTO) {
-            return await orders.summary({
+            const result = await orders.summary({
                 createdFrom: input.createdFrom ?? null,
                 createdTo: input.createdTo ?? null
             })
+
+            log.info('order summary queried', { order: { action: 'summary' } })
+
+            return result
         },
 
         /**
@@ -217,7 +254,11 @@ export function sysOrderService(ctx: Context) {
          * 订单归属的用户可能还没有档案，因此这里不做强制收敛。
          */
         async userOptions(input: SysMemberUserOptionQueryDTO) {
-            return await members.searchUserOptions(input)
+            const result = await members.searchUserOptions(input)
+
+            log.info('order user options listed', { order: { action: 'userOptions', count: result.length } })
+
+            return result
         },
 
         // ── 会员自助（protectedProcedure，仅需登录） ───────────────────────
@@ -235,12 +276,18 @@ export function sysOrderService(ctx: Context) {
                 pageSize
             })
 
+            log.info('order my page queried', {
+                order: { action: 'myPage', page, pageSize, total: result.total }
+            })
+
             return { ...result, page, pageSize }
         },
 
         /** 我的订单详情：按订单号读单并校验归属 */
         async myDetail(input: SysOrderNoDTO) {
             const { order } = await requireMyOrder(input.orderNo)
+
+            log.info('order fetched', { order: { action: 'myDetail', id: order.id } })
 
             return order
         },
@@ -252,45 +299,61 @@ export function sysOrderService(ctx: Context) {
         async myCreate(input: SysOrderCreateDTO) {
             const user = requireLogin(ctx)
 
-            return await orders.create({
+            const result = await orders.create({
                 ...input,
                 userId: user.id,
                 operatorId: user.id,
                 // 渠道未配 notify_url 时用当前请求 origin 推导回调地址
                 origin: getRequestURL(ctx.event).origin
             })
+
+            log.info('order created', { order: { action: 'myCreate', id: result.orderId } })
+
+            return result
         },
 
         /** 我的订单确认支付（余额单） */
         async myConfirm(input: SysOrderNoDTO) {
-            const { user } = await requireMyOrder(input.orderNo)
+            const { user, order } = await requireMyOrder(input.orderNo)
 
-            return await orders.confirm({
+            const result = await orders.confirm({
                 orderNo: input.orderNo,
                 operatorId: user.id
             })
+
+            log.info('order confirmed', { order: { action: 'myConfirm', id: order.id } })
+
+            return result
         },
 
         /** 我的订单取消：来源固定 user，原因固定「用户取消」 */
         async myCancel(input: SysOrderNoDTO) {
-            const { user } = await requireMyOrder(input.orderNo)
+            const { user, order } = await requireMyOrder(input.orderNo)
 
-            return await orders.cancel({
+            const result = await orders.cancel({
                 orderNo: input.orderNo,
                 reason: '用户取消',
                 source: 'user',
                 operatorId: user.id
             })
+
+            log.info('order cancelled', { order: { action: 'myCancel', id: order.id } })
+
+            return result
         },
 
         /** 我的在线订单主动同步状态 */
         async mySync(input: SysOrderNoDTO) {
-            const { user } = await requireMyOrder(input.orderNo)
+            const { user, order } = await requireMyOrder(input.orderNo)
 
-            return await orders.sync({
+            const result = await orders.sync({
                 orderNo: input.orderNo,
                 operatorId: user.id
             })
+
+            log.info('order synced', { order: { action: 'mySync', id: order.id } })
+
+            return result
         },
 
         /**
@@ -315,6 +378,8 @@ export function sysOrderService(ctx: Context) {
             }
 
             const payOrder = await payOrderService(ctx.db).getById(order.payOrderId)
+
+            log.info('order payment queried', { order: { action: 'myPayment', id: order.id } })
 
             return {
                 orderNo: order.orderNo,
@@ -364,6 +429,8 @@ export function sysOrderService(ctx: Context) {
                 return toMallCard(row, price, price.priceSource === 'level' ? levelName : null)
             })
 
+            log.info('order mall listed', { order: { action: 'mallList', count: list.length } })
+
             return {
                 list,
                 total: goodsPage.total,
@@ -391,6 +458,8 @@ export function sysOrderService(ctx: Context) {
             const levelId = member?.levelId ?? null
             const levelName = levels.find(item => item.id === levelId)?.name ?? null
             const price = await goods.resolvePrice({ goods: row, levelId })
+
+            log.info('order mall fetched', { order: { action: 'mallDetail', id: input.goodsId } })
 
             return toMallCard(row, price, price.priceSource === 'level' ? levelName : null)
         }

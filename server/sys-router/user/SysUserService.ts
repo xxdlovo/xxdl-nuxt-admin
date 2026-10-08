@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysUserRepo } from './SysUserRepo'
 import { sysUserRoleRepo } from '#server/sys-router/userRole/SysUserRoleRepo'
 import { sysRoleRepo } from '#server/sys-router/role/SysRoleRepo'
@@ -42,6 +43,8 @@ export function sysUserService(ctx: Context) {
   const userRoleRepo = sysUserRoleRepo(ctx)
   const roleRepo = sysRoleRepo(ctx)
   const rbacCache = rbacCacheService()
+  // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+  const log = useLogger(ctx.event, 'server/sys-router/user')
 
   return {
     async create(data: SysUserAddDTO): Promise<boolean> {
@@ -51,6 +54,7 @@ export function sysUserService(ctx: Context) {
         password: await hashUserPassword(data.password)
       }
       await repo.create(pojo)
+      log.info('user created', { user: { action: 'create', id: pojo.id } })
       return true
     },
 
@@ -76,6 +80,7 @@ export function sysUserService(ctx: Context) {
         isAdmin: 0,
         status: 1
       })
+      log.info('user registered', { user: { action: 'register', id: userId } })
 
       /**
        * 注册即开会员档案（含注册赠金与邀请绑定）。
@@ -101,12 +106,14 @@ export function sysUserService(ctx: Context) {
     async remove(id: string): Promise<boolean> {
       await repo.remove(id)
       await rbacCache.invalidateUser(id)
+      log.info('user removed', { user: { action: 'remove', id } })
       return true
     },
 
     async batchRemove(ids: string[]): Promise<number> {
       await repo.batchRemove(ids)
       await Promise.all(ids.map(id => rbacCache.invalidateUser(id)))
+      log.info('user batch removed', { user: { action: 'batchRemove', count: ids.length } })
       return ids.length
     },
 
@@ -136,6 +143,7 @@ export function sysUserService(ctx: Context) {
         throw new AppError('common.notExist')
       }
 
+      log.info('user updated', { user: { action: 'update', id } })
       return true
     },
 
@@ -145,6 +153,7 @@ export function sysUserService(ctx: Context) {
     async resetPassword(data: SysUserResetPasswordDTO): Promise<boolean> {
       const password = await hashUserPassword(data.password)
       await repo.updatePasswordById(data.id, password)
+      log.info('user password reset', { user: { action: 'resetPassword', id: data.id } })
       return true
     },
 
@@ -153,11 +162,13 @@ export function sysUserService(ctx: Context) {
       if (!pojo) {
         throw new AppError('common.notExist')
       }
+      log.info('user fetched', { user: { action: 'getOne' } })
       return omitPassword(pojo) as SysUserDto
     },
 
     async getById(id: string): Promise<SysUserDto | null> {
       const pojo = await repo.getByIdWithDept(id)
+      log.info('user fetched', { user: { action: 'getById', id } })
       return omitPassword(pojo) as SysUserDto | null
     },
 
@@ -169,6 +180,7 @@ export function sysUserService(ctx: Context) {
      */
     async getPasswordStatus(id: string): Promise<{ hasPassword: boolean } | null> {
       const password = await repo.getPasswordById(id)
+      log.info('user password status fetched', { user: { action: 'getPasswordStatus', id } })
 
       if (password === null) return null
 
@@ -178,6 +190,7 @@ export function sysUserService(ctx: Context) {
     async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {
       const { page, pageSize, ...dto } = req
       const result = await repo.pageWithDept(page, pageSize, dto)
+      log.info('user page queried', { user: { action: 'page', page, pageSize, total: result.total } })
       return {
         ...result,
         list: result.list.map(omitPassword)
@@ -186,6 +199,7 @@ export function sysUserService(ctx: Context) {
 
     async list(dto: any): Promise<SysUserDto[]> {
       const result = await repo.listWithDept(dto)
+      log.info('user listed', { user: { action: 'list', count: result.length } })
       return result.map(omitPassword) as SysUserDto[]
     },
 
@@ -193,7 +207,9 @@ export function sysUserService(ctx: Context) {
      * Read the role IDs already linked to a user for the edit form.
      */
     async listAssignedRoleIds(req: SysUserRoleAssignedIdsQueryDTO): Promise<string[]> {
-      return await userRoleRepo.listAssignedRoleIds(req)
+      const ids = await userRoleRepo.listAssignedRoleIds(req)
+      log.info('user assigned role ids listed', { user: { action: 'listAssignedRoleIds', count: ids.length } })
+      return ids
     },
 
     /**
@@ -225,11 +241,14 @@ export function sysUserService(ctx: Context) {
       await userRoleRepo.createActiveAssignments(data.userId, insertRoleIds, operatorId)
       await rbacCache.invalidateUser(data.userId)
 
+      log.info('user roles assigned', { user: { action: 'assignRoles', id: data.userId } })
       return true
     },
 
     async getLoginUserByUsername(username: string) {
-      return await repo.getLoginUserByUsername(username)
+      const loginUser = await repo.getLoginUserByUsername(username)
+      log.info('user login profile fetched', { user: { action: 'getLoginUserByUsername' } })
+      return loginUser
     }
   }
 }

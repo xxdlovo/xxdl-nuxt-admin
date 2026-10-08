@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysHomeRepo } from './SysHomeRepo'
 import type { Context } from '#server/trpc/context'
 import { orderService } from '#server/trade-router/domain/order/OrderService'
@@ -85,6 +86,8 @@ function buildTrend(
  */
 export function sysHomeService(ctx: Context) {
   const repo = sysHomeRepo(ctx)
+  // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+  const log = useLogger(ctx.event, 'server/sys-router/home')
 
   /** 管理员：全平台 */
   async function adminOverview(dates: string[], from: string, to: string): Promise<SysHomeOverviewRespDTO> {
@@ -171,7 +174,10 @@ export function sysHomeService(ctx: Context) {
       const to = `${dates[dates.length - 1]} 23:59:59`
 
       if (ctx.user?.isAdmin === 1) {
-        return await adminOverview(dates, from, to)
+        const result = await adminOverview(dates, from, to)
+        log.info('home overview queried', { home: { action: 'overview', scope: 'admin' } })
+
+        return result
       }
 
       // 个人分支必须有明确的 userId：拿不到宁可直接报未登录，也绝不退化成全平台聚合
@@ -180,7 +186,10 @@ export function sysHomeService(ctx: Context) {
         throw new AppError('auth.unauthorized')
       }
 
-      return await selfOverview(userId, dates, from, to)
+      const result = await selfOverview(userId, dates, from, to)
+      log.info('home overview queried', { home: { action: 'overview', scope: 'self' } })
+
+      return result
     }
   }
 }

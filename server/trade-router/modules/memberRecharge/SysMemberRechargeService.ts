@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysMemberRechargeRepo } from './SysMemberRechargeRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -34,6 +35,8 @@ function isBlank(value: unknown) {
 
 export function sysMemberRechargeService(ctx: Context) {
     const repo = sysMemberRechargeRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberRecharge')
     // 关闭充值单要释放占用的优惠码，会员领域逻辑不在这里重复实现
     const member = memberService(ctx.db)
     // 补录成「已到账」时走领域到账（唯一到账入口），保证幂等与余额一致
@@ -57,11 +60,12 @@ export function sysMemberRechargeService(ctx: Context) {
             const outTradeNo = data.outTradeNo?.trim() || buildOutTradeNo('PAY')
             /** 补录成「已到账」时，先落 WP 再走领域到账，保证「有单据必有钱」且幂等 */
             const shouldCredit = status === CREDITED_STATUS
+            const uuid = randomUuid()
 
             try {
                 await repo.create({
                     ...data,
-                    id: randomUuid(),
+                    id: uuid,
                     outTradeNo,
                     amount,
                     giftAmount,
@@ -79,6 +83,8 @@ export function sysMemberRechargeService(ctx: Context) {
                 }
                 throw error
             }
+
+            log.info('memberRecharge created', { memberRecharge: { action: 'create', id: uuid } })
 
             if (shouldCredit) {
                 await recharges.credit(outTradeNo, ctx.user?.id ?? null)
@@ -98,6 +104,7 @@ export function sysMemberRechargeService(ctx: Context) {
             }
 
             await repo.updateById(id, { remark: data.remark ?? null })
+            log.info('memberRecharge updated', { memberRecharge: { action: 'update', id } })
             return true
         },
 
@@ -113,6 +120,7 @@ export function sysMemberRechargeService(ctx: Context) {
             }
 
             await repo.remove(id)
+            log.info('memberRecharge removed', { memberRecharge: { action: 'remove', id } })
             return true
         },
 
@@ -134,6 +142,7 @@ export function sysMemberRechargeService(ctx: Context) {
             }
 
             await repo.batchRemove(uniqueIds)
+            log.info('memberRecharge batch removed', { memberRecharge: { action: 'batchRemove', count: uniqueIds.length } })
             return uniqueIds.length
         },
 
@@ -143,6 +152,8 @@ export function sysMemberRechargeService(ctx: Context) {
             if (!pojo) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('memberRecharge fetched', { memberRecharge: { action: 'getOne' } })
 
             return pojo as SysMemberRechargeDto
         },
@@ -158,18 +169,25 @@ export function sysMemberRechargeService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
+            log.info('memberRecharge fetched', { memberRecharge: { action: 'getById', id } })
+
             return profile
         },
 
         async page(req: SysMemberRechargePageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, amountMin, amountMax, createdFrom, createdTo, ...dto } = req
 
-            return await repo.pageWithRange(page, pageSize, dto, {
+            const result = await repo.pageWithRange(page, pageSize, dto, {
                 amountMin,
                 amountMax,
                 createdFrom,
                 createdTo
             })
+            log.info('memberRecharge page queried', {
+                memberRecharge: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         /**
@@ -186,6 +204,7 @@ export function sysMemberRechargeService(ctx: Context) {
                 reason: req.reason ?? null,
                 operatorId: ctx.user?.id ?? null
             })
+            log.info('memberRecharge closed', { memberRecharge: { action: 'close', id: req.id } })
 
             return result.closed || result.reused
         },
@@ -195,11 +214,16 @@ export function sysMemberRechargeService(ctx: Context) {
          * 充值只能落到已有会员档案的用户，这里固定 scope=member，忽略前端传的 scope。
          */
         async userOptions(input: SysMemberUserOptionQueryDTO) {
-            return await member.searchUserOptions({
+            const list = await member.searchUserOptions({
                 keyword: input.keyword ?? null,
                 limit: input.limit,
                 scope: 'member'
             })
+            log.info('memberRecharge user options listed', {
+                memberRecharge: { action: 'userOptions', count: list.length }
+            })
+
+            return list
         }
     }
 }

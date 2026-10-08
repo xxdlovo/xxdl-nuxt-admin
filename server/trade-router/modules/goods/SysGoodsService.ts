@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysGoodsRepo } from './SysGoodsRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -27,6 +28,8 @@ type SysGoodsLevelPriceRow = Pick<
 
 export function sysGoodsService(ctx: Context) {
     const repo = sysGoodsRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/goods')
     // 上下架校验、等级价解析、库存与销量等业务规则全部收敛在领域层，这里只做入参校验与透传
     const goods = goodsService(ctx.db)
     // 等级是会员域的字典数据，商品域不跨域查询，模块层负责合并
@@ -40,22 +43,27 @@ export function sysGoodsService(ctx: Context) {
          * price 是 decimal(12,2)，drizzle 按字符串读写，这里只做类型适配不做金额校验。
          */
         async create(data: SysGoodsAddDTO): Promise<boolean> {
+            const uuid = randomUuid()
+
             await repo.create({
                 ...data,
-                id: randomUuid(),
+                id: uuid,
                 price: String(data.price)
             })
+            log.info('goods created', { goods: { action: 'create', id: uuid } })
 
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            log.info('goods removed', { goods: { action: 'remove', id } })
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            log.info('goods batch removed', { goods: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
 
@@ -73,6 +81,7 @@ export function sysGoodsService(ctx: Context) {
                 ...rest,
                 price: String(rest.price)
             })
+            log.info('goods updated', { goods: { action: 'update', id } })
 
             return true
         },
@@ -80,12 +89,14 @@ export function sysGoodsService(ctx: Context) {
         async getOne(req: SysGoodsQueryDTO): Promise<SysGoodsRespDTO> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('goods fetched', { goods: { action: 'getOne' } })
             return pojo as SysGoodsRespDTO
         },
 
         async getById(id: string): Promise<SysGoodsRespDTO> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('goods fetched', { goods: { action: 'getById', id } })
             return pojo as SysGoodsRespDTO
         },
 
@@ -105,6 +116,7 @@ export function sysGoodsService(ctx: Context) {
                 createdFrom,
                 createdTo
             })
+            log.info('goods page queried', { goods: { action: 'page', page, pageSize, total: result.total } })
 
             const list = (result.list ?? []) as SysGoodsRespDTO[]
             const goodsIds = list
@@ -126,7 +138,9 @@ export function sysGoodsService(ctx: Context) {
 
         /** 等级下拉：只取启用中的会员等级，供商品弹窗配置等级价（其余等级不需要配价） */
         async levelOptions() {
-            return await members.listLevels()
+            const list = await members.listLevels()
+            log.info('goods level options listed', { goods: { action: 'levelOptions', count: list.length } })
+            return list
         },
 
         /**
@@ -149,12 +163,15 @@ export function sysGoodsService(ctx: Context) {
             ])
             const nameById = new Map<string, string>(levels.map(level => [level.id, level.name]))
 
-            return rows.map(row => ({
+            const list = rows.map(row => ({
                 levelId: row.levelId,
                 levelName: nameById.get(row.levelId) ?? null,
                 price: row.price,
                 remark: row.remark
             }))
+            log.info('goods level prices fetched', { goods: { action: 'levelPrices', id: goodsId, count: list.length } })
+
+            return list
         },
 
         /**
@@ -162,11 +179,14 @@ export function sysGoodsService(ctx: Context) {
          * 返回实际写入的行数（items 为空即清空该商品的等级价）。
          */
         async saveLevelPrices(input: SysGoodsLevelPricesSaveDTO): Promise<number> {
-            return await goods.saveLevelPrices({
+            const count = await goods.saveLevelPrices({
                 goodsId: input.goodsId,
                 items: input.items,
                 operatorId: operatorId()
             })
+            log.info('goods level prices saved', { goods: { action: 'saveLevelPrices', id: input.goodsId, count } })
+
+            return count
         }
     }
 }

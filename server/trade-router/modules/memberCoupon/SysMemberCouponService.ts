@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysMemberCouponRepo } from './SysMemberCouponRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -57,6 +58,8 @@ function withUsedRate(row: SysMemberCouponDto): SysMemberCouponRespDTO {
 
 export function sysMemberCouponService(ctx: Context) {
     const repo = sysMemberCouponRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberCoupon')
 
     return {
         /** 新增：code 全局唯一 + 类型/面值校验，缺省值兜底与契约 Schema 的 default 一致 */
@@ -70,9 +73,11 @@ export function sysMemberCouponService(ctx: Context) {
 
             assertCouponValue(type, data.value)
 
+            const id = randomUuid()
+
             await repo.create({
                 ...data,
-                id: randomUuid(),
+                id,
                 code,
                 type,
                 value: toDecimalText(data.value),
@@ -85,16 +90,24 @@ export function sysMemberCouponService(ctx: Context) {
                 usedCount: 0
             })
 
+            log.info('memberCoupon created', { memberCoupon: { action: 'create', id } })
+
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+
+            log.info('memberCoupon removed', { memberCoupon: { action: 'remove', id } })
+
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+
+            log.info('memberCoupon batch removed', { memberCoupon: { action: 'batchRemove', count: ids.length } })
+
             return ids.length
         },
 
@@ -125,24 +138,32 @@ export function sysMemberCouponService(ctx: Context) {
                 perUserLimit: rest.perUserLimit ?? 1
             })
 
+            log.info('memberCoupon updated', { memberCoupon: { action: 'update', id } })
+
             return true
         },
 
         async getOne(req: SysMemberCouponQueryDTO): Promise<SysMemberCouponRespDTO> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('memberCoupon fetched', { memberCoupon: { action: 'getOne' } })
             return withUsedRate(pojo as SysMemberCouponDto)
         },
 
         async getById(id: string): Promise<SysMemberCouponRespDTO> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('memberCoupon fetched', { memberCoupon: { action: 'getById', id } })
             return withUsedRate(pojo as SysMemberCouponDto)
         },
 
         async page(req: SysMemberCouponPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, createdFrom, createdTo, ...dto } = req
             const result = await repo.pageWithRange(page, pageSize, dto, { createdFrom, createdTo })
+
+            log.info('memberCoupon page queried', {
+                memberCoupon: { action: 'page', page, pageSize, total: result.total }
+            })
 
             return {
                 ...result,
@@ -171,6 +192,10 @@ export function sysMemberCouponService(ctx: Context) {
                 ? { status: COUPON_STATUS_VOID, remark: reason }
                 : { status: COUPON_STATUS_VOID })
 
+            log.info('memberCoupon voided', {
+                memberCoupon: { action: 'voidCoupon', id: data.id, status: COUPON_STATUS_VOID }
+            })
+
             return true
         },
 
@@ -187,7 +212,13 @@ export function sysMemberCouponService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
-            return await repo.pageUses(req.couponId, req.page, req.pageSize)
+            const result = await repo.pageUses(req.couponId, req.page, req.pageSize)
+
+            log.info('memberCoupon uses queried', {
+                memberCoupon: { action: 'uses', page: req.page, pageSize: req.pageSize, total: result.total }
+            })
+
+            return result
         }
     }
 }

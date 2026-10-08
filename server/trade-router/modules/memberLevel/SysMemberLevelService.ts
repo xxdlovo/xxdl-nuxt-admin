@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysMemberLevelRepo } from './SysMemberLevelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -48,6 +49,8 @@ function normalizePricePlan(data: {
 
 export function sysMemberLevelService(ctx: Context) {
     const repo = sysMemberLevelRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberLevel')
     // 等级启用列表是全局缓存，所有写入口成功之后都要显式失效（TTL 只是兜底）
     const levelCache = memberLevelCacheService()
 
@@ -76,18 +79,21 @@ export function sysMemberLevelService(ctx: Context) {
 
             await levelCache.invalidate()
 
+            log.info('memberLevel created', { memberLevel: { action: 'create', id } })
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
             await levelCache.invalidate()
+            log.info('memberLevel removed', { memberLevel: { action: 'remove', id } })
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
             await levelCache.invalidate()
+            log.info('memberLevel batch removed', { memberLevel: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
 
@@ -116,25 +122,33 @@ export function sysMemberLevelService(ctx: Context) {
 
             await levelCache.invalidate()
 
+            log.info('memberLevel updated', { memberLevel: { action: 'update', id } })
             return true
         },
 
         async getOne(req: SysMemberLevelQueryDTO): Promise<SysMemberLevelDto> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('memberLevel fetched', { memberLevel: { action: 'getOne' } })
             return pojo as SysMemberLevelDto
         },
 
         async getById(id: string): Promise<SysMemberLevelDto> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('memberLevel fetched', { memberLevel: { action: 'getById', id } })
             return pojo as SysMemberLevelDto
         },
 
         async page(req: SysMemberLevelPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
 
-            return await repo.page(page, pageSize, dto, repo.levelListOrder())
+            const result = await repo.page(page, pageSize, dto, repo.levelListOrder())
+            log.info('memberLevel page queried', {
+                memberLevel: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         /**
@@ -143,6 +157,7 @@ export function sysMemberLevelService(ctx: Context) {
          */
         async list(dto: SysMemberLevelQueryDTO): Promise<SysMemberLevelDto[]> {
             const rows = await repo.list({ ...dto, status: 1 }, repo.levelListOrder())
+            log.info('memberLevel listed', { memberLevel: { action: 'list', count: rows.length } })
 
             return rows as SysMemberLevelDto[]
         }

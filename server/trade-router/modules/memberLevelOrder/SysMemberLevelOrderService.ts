@@ -1,4 +1,5 @@
 //#server/trade-router/modules/memberLevelOrder
+import { useLogger } from 'evlog'
 /**
  * 会员开通单模块 Service（后台管理）。
  *
@@ -30,6 +31,8 @@ const STATUS_PENDING = 'WP'
 
 export function sysMemberLevelOrderService(ctx: Context) {
     const repo = sysMemberLevelOrderRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberLevelOrder')
     // 关闭 / 同步：状态机与资金在领域层，模块层不改状态、不动余额
     const orders = memberLevelOrderService(ctx.db)
 
@@ -58,10 +61,16 @@ export function sysMemberLevelOrderService(ctx: Context) {
         async page(req: SysMemberLevelOrderPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, createdFrom, createdTo, ...dto } = req
 
-            return await repo.pageWithProfile(page, pageSize, dto as Record<string, unknown>, {
+            const result = await repo.pageWithProfile(page, pageSize, dto as Record<string, unknown>, {
                 createdFrom: createdFrom ?? null,
                 createdTo: createdTo ?? null
             })
+
+            log.info('memberLevelOrder page queried', {
+                memberLevelOrder: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         async getById(id: string) {
@@ -70,6 +79,8 @@ export function sysMemberLevelOrderService(ctx: Context) {
             if (!profile) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('memberLevelOrder fetched', { memberLevelOrder: { action: 'getById', id } })
 
             return profile
         },
@@ -99,6 +110,8 @@ export function sysMemberLevelOrderService(ctx: Context) {
                 operatorId: operatorId()
             })
 
+            log.info('memberLevelOrder closed', { memberLevelOrder: { action: 'close', id: input.id } })
+
             return result.closed || result.reused
         },
 
@@ -110,15 +123,21 @@ export function sysMemberLevelOrderService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
-            return await orders.sync({
+            const result = await orders.sync({
                 outTradeNo: row.outTradeNo,
                 operatorId: operatorId()
             })
+
+            log.info('memberLevelOrder synced', { memberLevelOrder: { action: 'sync', id: input.id } })
+
+            return result
         },
 
         async remove(id: string): Promise<boolean> {
             await assertRemovable([id])
             await repo.remove(id)
+
+            log.info('memberLevelOrder removed', { memberLevelOrder: { action: 'remove', id } })
 
             return true
         },
@@ -132,6 +151,10 @@ export function sysMemberLevelOrderService(ctx: Context) {
 
             await assertRemovable(uniqueIds)
             await repo.batchRemove(uniqueIds)
+
+            log.info('memberLevelOrder batch removed', {
+                memberLevelOrder: { action: 'batchRemove', count: uniqueIds.length }
+            })
 
             return uniqueIds.length
         }

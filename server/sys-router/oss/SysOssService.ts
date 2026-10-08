@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysOssRepo } from './SysOssRepo'
 import type { Context } from '#server/trpc/context';
 import { AppError } from '#server/utils/appError'
@@ -18,6 +19,8 @@ export type SysOssUploadFileInput = {
 
 export function sysOssService(ctx: Context) {
     const repo = sysOssRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/sys-router/oss')
     const configRepo = sysOssConfigRepo(ctx)
 
     const service = {
@@ -25,42 +28,56 @@ export function sysOssService(ctx: Context) {
             const uuid = randomUuid()
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
+            log.info('oss created', { oss: { action: 'create', id: uuid } })
             return true
         },
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            log.info('oss removed', { oss: { action: 'remove', id } })
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            log.info('oss batch removed', { oss: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
         async updateById(id: string, data: SysOssUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
+            log.info('oss updated', { oss: { action: 'update', id } })
             return true
         },
         async getOne(req: SysOssQueryDTO): Promise<SysOssDto> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oss fetched', { oss: { action: 'getOne' } })
             return pojo
         },
         async getById(id: string): Promise<SysOssDto> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oss fetched', { oss: { action: 'getById', id } })
             return pojo
         },
         async page(req: SysOssPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.pageRecent(page, pageSize, dto)
+            const result = await repo.pageRecent(page, pageSize, dto)
+            log.info('oss page queried', { oss: { action: 'page', page, pageSize, total: result.total } })
+            return result
         },
         async list(dto: any): Promise<SysOssDto[]> {
-            return await repo.listRecent(dto)
+            const list = await repo.listRecent(dto)
+            log.info('oss listed', { oss: { action: 'list', count: list.length } })
+            return list
         },
         async listUploadConfigs() {
-            return await configRepo.listUploadable()
+            const list = await configRepo.listUploadable()
+            log.info('oss upload configs listed', { oss: { action: 'listUploadConfigs', count: list.length } })
+            return list
         },
         async getDefaultUploadConfig() {
-            return await configRepo.getDefaultUploadable()
+            const config = await configRepo.getDefaultUploadable()
+            log.info('oss default upload config fetched', { oss: { action: 'getDefaultUploadConfig' } })
+            return config
         },
         async uploadFile(input: SysOssUploadFileInput): Promise<SysOssDto> {
             if (!input.fileName) {
@@ -109,6 +126,7 @@ export function sysOssService(ctx: Context) {
             }
 
             await repo.createUploadRecord(record)
+            log.info('oss uploaded', { oss: { action: 'uploadFile', id } })
             return record
         },
 
@@ -129,12 +147,14 @@ export function sysOssService(ctx: Context) {
                 throw new AppError('module.system.oss.uploadConfigUnavailable')
             }
 
-            return await service.uploadFile({
+            const record = await service.uploadFile({
                 configId: config.id,
                 fileName: input.fileName,
                 contentType,
                 body: input.body
             })
+            // uploadFile 内部已经记了 'oss uploaded'，这里不重复记日志
+            return record
         }
     }
 

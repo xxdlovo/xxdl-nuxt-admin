@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import type { Context, AuthUser } from '#server/trpc/context'
 import { sysMenuService } from '#server/sys-router/menu/SysMenuService'
 import { sysRoleService } from '#server/sys-router/role/SysRoleService'
@@ -58,6 +59,9 @@ export function authService(ctx: Context) {
   const cache = rbacCacheService()
   const roleService = sysRoleService(ctx)
   const menuService = sysMenuService(ctx)
+  // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+  const log = useLogger(ctx.event, 'server/sys-router/auth')
+
   return {
     /**
      * Build the current user's RBAC read model for frontend menus and permission checks.
@@ -72,12 +76,17 @@ export function authService(ctx: Context) {
       const flatMenus = uniqById(menus)
       const menuTreeItems = flatMenus.filter(menu => menu.visible === 0 && menu.type !== 2)
 
-      return {
+      const profile = {
         user,
         roles: roleItems,
         permissions: flatMenus.map(menu => menu.code),
         menus: buildMenuTree(menuTreeItems)
       }
+      log.info('auth rbac profile fetched', {
+        auth: { action: 'getRbacProfile', count: profile.permissions.length }
+      })
+
+      return profile
     },
 
     /**
@@ -90,7 +99,10 @@ export function authService(ctx: Context) {
         ? await cache.getAdminMenus(() => menuService.listEnabledForAdmin())
         : uniqById((await Promise.all(roleItems.map(role => cache.getRoleMenus(role.code, () => menuService.listEnabledByRoleIds([role.id]))))).flat())
 
-      return Array.from(new Set(menus.map(menu => menu.code)))
+      const codes = Array.from(new Set(menus.map(menu => menu.code)))
+      log.info('auth permission codes listed', { auth: { action: 'listPermissionCodes', count: codes.length } })
+
+      return codes
     },
 
     /** 注册：受系统配置里的注册开关控制 */
@@ -101,7 +113,10 @@ export function authService(ctx: Context) {
         throw new AppError('auth.registerDisabled')
       }
 
-      return await sysUserService(ctx).register(input)
+      const result = await sysUserService(ctx).register(input)
+      log.info('auth registered', { auth: { action: 'register' } })
+
+      return result
     },
 
     /** 登录：账号密码校验 → 写会话 → 记登录日志（失败也记） */
@@ -138,6 +153,7 @@ export function authService(ctx: Context) {
 
         ctx.user = sessionUser
         await logRecorder(ctx).loginSuccess()
+        log.info('auth logged in', { auth: { action: 'login', id: user.id } })
 
         return sessionUser
       }
@@ -149,12 +165,14 @@ export function authService(ctx: Context) {
 
     async logout() {
       await clearUserSession(ctx.event)
+      log.info('auth logged out', { auth: { action: 'logout' } })
 
       return true
     },
 
     async me() {
       const session = await getUserSession(ctx.event)
+      log.info('auth current user fetched', { auth: { action: 'me' } })
 
       return session.user ?? null
     },
@@ -167,10 +185,13 @@ export function authService(ctx: Context) {
       // 还是「修改密码」（必须输入原密码）。
       const passwordStatus = await sysUserService(ctx).getPasswordStatus(user.id)
 
-      return {
+      const profile = {
         ...(current ?? {}),
         hasPassword: passwordStatus?.hasPassword ?? true
       }
+      log.info('auth profile fetched', { auth: { action: 'myProfile', id: user.id } })
+
+      return profile
     },
 
     /** 更新自己的资料，并同步刷新会话里的用户信息 */
@@ -211,6 +232,8 @@ export function authService(ctx: Context) {
       })
 
       ctx.user = nextUser
+      log.info('auth profile updated', { auth: { action: 'updateProfile', id: user.id } })
+
       return nextUser
     },
 
@@ -226,11 +249,14 @@ export function authService(ctx: Context) {
         throw new AppError('auth.invalidCredentials')
       }
 
-      return await sysUserService(ctx).resetPassword({
+      const result = await sysUserService(ctx).resetPassword({
         id: user.id,
         password: input.password,
         confirmPassword: input.confirmPassword
       })
+      log.info('auth password updated', { auth: { action: 'changePassword', id: user.id } })
+
+      return result
     },
 
     /**
@@ -262,11 +288,14 @@ export function authService(ctx: Context) {
         }
       }
 
-      return await sysUserService(ctx).resetPassword({
+      const result = await sysUserService(ctx).resetPassword({
         id: user.id,
         password: input.password,
         confirmPassword: input.confirmPassword
       })
+      log.info('auth password set', { auth: { action: 'setPassword', id: user.id } })
+
+      return result
     }
   }
 }

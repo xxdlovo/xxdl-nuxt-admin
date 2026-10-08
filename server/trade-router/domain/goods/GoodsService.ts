@@ -5,6 +5,7 @@
  * 订单域通过 `goodsServiceIn(tx)` 复用同一个事务内的商品能力。
  */
 import { AppError } from '#server/utils/appError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { normalizeMoney } from '../wallet/utils'
@@ -22,6 +23,9 @@ export type GoodsLevelPriceView = {
 export function buildGoods(executor: AppExecutor) {
   const goods = goodsRepo(executor)
   const levelPrices = goodsLevelPriceRepo(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/goods')
 
   /** 取一件可下单的商品，不存在/已下架分别给出明确错误 */
   async function assertPurchasable(goodsId: string): Promise<GoodsRow> {
@@ -164,6 +168,10 @@ export function buildGoods(executor: AppExecutor) {
 
     await levelPrices.insertMany(rows)
 
+    log.info('goods level prices saved', {
+      goods: { action: 'saveLevelPrices', id: input.goodsId, count: rows.length }
+    })
+
     return rows.length
   }
 
@@ -174,16 +182,26 @@ export function buildGoods(executor: AppExecutor) {
     if (affected === 0) {
       throw new AppError('module.system.order.stockNotEnough')
     }
+
+    log.info('goods stock decreased', { goods: { action: 'decreaseStock', id: goodsId, quantity } })
   }
 
   /** 回滚库存（取消/关闭订单时调用；不限库存商品不动库存） */
   async function rollbackStock(goodsId: string, quantity: number) {
-    return await goods.increaseStock(goodsId, quantity)
+    const affected = await goods.increaseStock(goodsId, quantity)
+
+    log.info('goods stock rolled back', { goods: { action: 'rollbackStock', id: goodsId, quantity } })
+
+    return affected
   }
 
   /** 累加销量（支付完成后调用一次） */
   async function increaseSales(goodsId: string, quantity: number) {
-    return await goods.increaseSales(goodsId, quantity)
+    const affected = await goods.increaseSales(goodsId, quantity)
+
+    log.info('goods sales increased', { goods: { action: 'increaseSales', id: goodsId, quantity } })
+
+    return affected
   }
 
   /** 商城分页（只列上架商品） */

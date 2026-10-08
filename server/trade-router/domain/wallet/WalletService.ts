@@ -14,6 +14,7 @@
  * 因此 `余额 = Σ(in) − Σ(out)` 恒成立（对账见 `assertConsistency`）。
  */
 import { AppError } from '#server/utils/appError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { isDuplicateKeyError } from '#server/utils/dbError'
 import { asDb, type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
@@ -180,6 +181,9 @@ function buildWallet(executor: AppExecutor) {
   const logs = balanceLogRepo(executor)
   const freezes = freezeRepo(executor)
   const recharges = rechargeRepo(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/wallet')
 
   /** 读钱包行；没有则返回 null（读接口不产生副作用） */
   async function findWallet(userId: string) {
@@ -337,6 +341,10 @@ function buildWallet(executor: AppExecutor) {
 
       // 快速路径：命中幂等键直接返回，不再进入写链路
       if (await logs.existsByDedupKey(dedupKey)) {
+        log.info('wallet credited', {
+          wallet: { action: 'credit', userId: input.userId, account: input.account, amount, bizNo: input.bizNo, reused: true }
+        })
+
         return {
           userId: input.userId,
           account: input.account,
@@ -400,6 +408,10 @@ function buildWallet(executor: AppExecutor) {
         remark: input.remark ?? null
       })
 
+      log.info('wallet credited', {
+        wallet: { action: 'credit', userId: input.userId, account: input.account, amount, bizNo: input.bizNo, reused: false }
+      })
+
       return { userId: input.userId, account: input.account, amount, balance: after, reused: false, grantId }
     },
 
@@ -426,6 +438,10 @@ function buildWallet(executor: AppExecutor) {
       const dedupKey = buildDedupKey('adjust', bizNo, input.account)
 
       if (await logs.existsByDedupKey(dedupKey)) {
+        log.info('wallet adjusted', {
+          wallet: { action: 'adjust', userId: input.userId, account: input.account, amount, bizNo }
+        })
+
         return {
           userId: input.userId,
           account: input.account,
@@ -481,6 +497,10 @@ function buildWallet(executor: AppExecutor) {
         await consumeGiftBatches(input.userId, amount, operatorId)
       }
 
+      log.info('wallet adjusted', {
+        wallet: { action: 'adjust', userId: input.userId, account: input.account, amount, bizNo }
+      })
+
       return { userId: input.userId, account: input.account, amount, balance: after, reused: false, grantId: null }
     },
 
@@ -503,6 +523,10 @@ function buildWallet(executor: AppExecutor) {
 
       const existing = await freezes.findByBizNo(input.bizNo)
       if (existing) {
+        log.info('wallet frozen', {
+          wallet: { action: 'freeze', userId: input.userId, amount, freezeId: existing.id }
+        })
+
         return toFreezeResult(existing, true)
       }
 
@@ -555,6 +579,10 @@ function buildWallet(executor: AppExecutor) {
 
       const stored = await freezes.findByBizNo(input.bizNo)
 
+      log.info('wallet frozen', {
+        wallet: { action: 'freeze', userId: input.userId, amount, freezeId }
+      })
+
       return stored
         ? toFreezeResult(stored, false)
         : {
@@ -594,6 +622,10 @@ function buildWallet(executor: AppExecutor) {
       }
 
       if (row.status === 'CONFIRMED') {
+        log.info('wallet confirmed', {
+          wallet: { action: 'confirm', userId: row.userId, freezeId: row.id, reused: true }
+        })
+
         return { freezeId: row.id, bizNo: row.bizNo, status: 'CONFIRMED', giftAmount: row.giftAmount, rechargeAmount: row.rechargeAmount, reused: true }
       }
 
@@ -608,6 +640,10 @@ function buildWallet(executor: AppExecutor) {
         // 并发下已被其他请求处理：重新读取后按已有状态返回
         const latest = await freezes.findById(row.id)
         if (latest?.status === 'CONFIRMED') {
+          log.info('wallet confirmed', {
+            wallet: { action: 'confirm', userId: row.userId, freezeId: row.id, reused: true }
+          })
+
           return { freezeId: row.id, bizNo: row.bizNo, status: 'CONFIRMED', giftAmount: row.giftAmount, rechargeAmount: row.rechargeAmount, reused: true }
         }
         throw new AppError('module.system.member.freezeNotFrozen')
@@ -651,6 +687,10 @@ function buildWallet(executor: AppExecutor) {
         })
       }
 
+      log.info('wallet confirmed', {
+        wallet: { action: 'confirm', userId: row.userId, freezeId: row.id, reused: false }
+      })
+
       return {
         freezeId: row.id,
         bizNo: row.bizNo,
@@ -678,6 +718,10 @@ function buildWallet(executor: AppExecutor) {
       }
 
       if (row.status === 'RELEASED' || row.status === 'EXPIRED') {
+        log.info('wallet released', {
+          wallet: { action: 'release', userId: row.userId, freezeId: row.id }
+        })
+
         return { freezeId: row.id, bizNo: row.bizNo, status: row.status as FreezeSettleResult['status'], giftAmount: row.giftAmount, rechargeAmount: row.rechargeAmount, reused: true }
       }
 
@@ -697,6 +741,10 @@ function buildWallet(executor: AppExecutor) {
       if (affected === 0) {
         const latest = await freezes.findById(row.id)
         if (latest && (latest.status === 'RELEASED' || latest.status === 'EXPIRED')) {
+          log.info('wallet released', {
+            wallet: { action: 'release', userId: row.userId, freezeId: row.id }
+          })
+
           return { freezeId: row.id, bizNo: row.bizNo, status: latest.status as FreezeSettleResult['status'], giftAmount: row.giftAmount, rechargeAmount: row.rechargeAmount, reused: true }
         }
         throw new AppError('module.system.member.freezeNotFrozen')
@@ -712,6 +760,10 @@ function buildWallet(executor: AppExecutor) {
       if (released === 0) {
         throw new AppError('module.system.member.walletInconsistent')
       }
+
+      log.info('wallet released', {
+        wallet: { action: 'release', userId: row.userId, freezeId: row.id }
+      })
 
       return {
         freezeId: row.id,
@@ -812,6 +864,10 @@ function buildWallet(executor: AppExecutor) {
         expiredAmount = addMoney(expiredAmount, expireAmount)
       }
 
+      log.info('wallet gift batches expired', {
+        wallet: { action: 'expireGiftBatches', count: expiredCount }
+      })
+
       return { scanned: batches.length, expiredCount, expiredAmount }
     },
 
@@ -851,6 +907,10 @@ function buildWallet(executor: AppExecutor) {
         releasedAmount = addMoney(releasedAmount, row.amount)
       }
 
+      log.info('wallet freezes expired', {
+        wallet: { action: 'expireFreezes', count: releasedCount }
+      })
+
       return { scanned: rows.length, releasedCount, releasedAmount }
     },
 
@@ -889,6 +949,10 @@ function buildWallet(executor: AppExecutor) {
 
         pushAccountMismatch(input.userId, 'recharge', walletRow?.rechargeBalance ?? '0.00', netMap.get('recharge') ?? '0.00')
         pushAccountMismatch(input.userId, 'gift', walletRow?.giftBalance ?? '0.00', netMap.get('gift') ?? '0.00')
+
+        log.info('wallet consistency checked', {
+          wallet: { action: 'assertConsistency', checkedCount: 1, mismatchCount: mismatches.length }
+        })
 
         return { checkedUsers: 1, mismatches }
       }
@@ -930,6 +994,10 @@ function buildWallet(executor: AppExecutor) {
         pushAccountMismatch(userId, 'recharge', '0.00', ledger.recharge)
         pushAccountMismatch(userId, 'gift', '0.00', ledger.gift)
       }
+
+      log.info('wallet consistency checked', {
+        wallet: { action: 'assertConsistency', checkedCount: walletRows.length, mismatchCount: mismatches.length }
+      })
 
       return { checkedUsers: walletRows.length, mismatches }
     },

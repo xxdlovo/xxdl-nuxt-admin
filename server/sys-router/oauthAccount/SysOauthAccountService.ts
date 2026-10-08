@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysOauthAccountRepo } from './SysOauthAccountRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -79,6 +80,8 @@ export type MyOauthBinding = {
 
 export function sysOauthAccountService(ctx: Context) {
     const repo = sysOauthAccountRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/sys-router/oauthAccount')
     const userRepo = sysUserRepo(ctx)
     const roleRepo = sysRoleRepo(ctx)
     const userRoleRepo = sysUserRoleRepo(ctx)
@@ -169,6 +172,7 @@ export function sysOauthAccountService(ctx: Context) {
             const uuid = randomUuid()         // 自动生成主键
             const pojo = { ...data, id: uuid }
             await repo.create(pojo)
+            log.info('oauthAccount created', { oauthAccount: { action: 'create', id: uuid } })
             return true
         },
         /**
@@ -180,31 +184,43 @@ export function sysOauthAccountService(ctx: Context) {
          */
         async remove(id: string): Promise<boolean> {
             await repo.hardDeleteById(id)
+            log.info('oauthAccount removed', { oauthAccount: { action: 'remove', id } })
             return true
         },
         async batchRemove(ids: string[]): Promise<number> {
-            return await repo.hardDeleteByIds(ids)
+            const count = await repo.hardDeleteByIds(ids)
+            log.info('oauthAccount batch removed', { oauthAccount: { action: 'batchRemove', count } })
+            return count
         },
         async updateById(id: string, data: SysOauthAccountUpdateDTO): Promise<boolean> {
             await repo.updateById(id, data)
+            log.info('oauthAccount updated', { oauthAccount: { action: 'update', id } })
             return true
         },
         async getOne(req: SysOauthAccountQueryDTO): Promise<SysOauthAccountDto> {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oauthAccount fetched', { oauthAccount: { action: 'getOne' } })
             return pojo
         },
         async getById(id: string): Promise<SysOauthAccountDto> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
+            log.info('oauthAccount fetched', { oauthAccount: { action: 'getById', id } })
             return pojo
         },
         async page(req: SysOauthAccountPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
-            return await repo.page(page, pageSize, dto)
+            const result = await repo.page(page, pageSize, dto)
+            log.info('oauthAccount page queried', {
+                oauthAccount: { action: 'page', page, pageSize, total: result.total }
+            })
+            return result
         },
         async list(dto: any): Promise<SysOauthAccountDto[]> {
-            return await repo.list(dto)
+            const list = await repo.list(dto)
+            log.info('oauthAccount listed', { oauthAccount: { action: 'list', count: list.length } })
+            return list
         },
 
         /**
@@ -222,13 +238,19 @@ export function sysOauthAccountService(ctx: Context) {
 
             const rows = await repo.listByUserId(userId)
 
-            return rows.map(row => ({
+            const list = rows.map(row => ({
                 id: row.id,
                 provider: String(row.provider ?? '').trim().toLowerCase(),
                 providerLogin: row.providerLogin ?? null,
                 avatar: row.avatar ?? null,
                 createdAt: row.createdAt ?? null
             }))
+
+            log.info('oauthAccount my bindings listed', {
+                oauthAccount: { action: 'listMyBindings', count: list.length }
+            })
+
+            return list
         },
 
         /**
@@ -249,6 +271,9 @@ export function sysOauthAccountService(ctx: Context) {
             }
 
             await repo.hardDeleteById(bindingId)
+            log.info('oauthAccount binding removed', {
+                oauthAccount: { action: 'removeMyBinding', id: bindingId }
+            })
             return true
         },
 
@@ -281,6 +306,10 @@ export function sysOauthAccountService(ctx: Context) {
                     throw new AppError('auth.userIsBlock')
                 }
 
+                log.info('oauthAccount login bound', {
+                    oauthAccount: { action: 'loginByOAuth', id: boundUser.id, provider }
+                })
+
                 return toSessionUser(boundUser)
             }
 
@@ -301,6 +330,10 @@ export function sysOauthAccountService(ctx: Context) {
                         avatar: profile.avatar ?? null,
                         rawProfile: JSON.stringify(profile.raw ?? null).slice(0, 5000),
                         operatorId: emailUser.id
+                    })
+
+                    log.info('oauthAccount login bound', {
+                        oauthAccount: { action: 'loginByOAuth', id: emailUser.id, provider }
                     })
 
                     return toSessionUser(emailUser)
@@ -373,6 +406,10 @@ export function sysOauthAccountService(ctx: Context) {
             if (!created) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('oauthAccount login created', {
+                oauthAccount: { action: 'loginByOAuth', id: newUserId, provider }
+            })
 
             return toSessionUser(created)
         },

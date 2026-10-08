@@ -16,6 +16,7 @@
  */
 import { AppError } from '#server/utils/appError'
 import { isDuplicateKeyError } from '#server/utils/dbError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { addMinutes, buildOutTradeNo, nowForMysql } from '../pay/utils'
@@ -140,6 +141,9 @@ export function buildOrder(executor: AppExecutor) {
   const goods = goodsServiceIn(executor)
   const members = memberServiceIn(executor)
   const wallet = walletServiceIn(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/order')
 
   /** 按 id 或订单号定位订单 */
   async function findOrderByKey(key: OrderKey): Promise<OrderRow | null> {
@@ -285,6 +289,8 @@ export function buildOrder(executor: AppExecutor) {
       })
     }
 
+    log.info('order created', { order: { action: 'create', id: orderId, userId: input.userId } })
+
     return toCreateResult(await reread(orderId))
   }
 
@@ -301,6 +307,8 @@ export function buildOrder(executor: AppExecutor) {
       payChannelCode: values.payChannelCode,
       operatorId: values.operatorId ?? null
     })
+
+    log.info('order pay order attached', { order: { action: 'attachPayOrder', id: values.orderId } })
   }
 
   /**
@@ -324,6 +332,8 @@ export function buildOrder(executor: AppExecutor) {
     if (row.couponId) {
       await members.releaseCoupon({ bizNo: row.orderNo, operatorId: values.operatorId ?? null })
     }
+
+    log.info('order marked failed', { order: { action: 'failOnlinePayment', id: row.id, status: 'FL' } })
   }
 
   /**
@@ -386,6 +396,8 @@ export function buildOrder(executor: AppExecutor) {
     }
     await goods.increaseSales(row.goodsId, row.quantity)
 
+    log.info('order confirmed', { order: { action: 'confirmTx', id: row.id } })
+
     return toSettleResult(await reread(row.id), settled.reused, settled.giftAmount, settled.rechargeAmount)
   }
 
@@ -424,6 +436,8 @@ export function buildOrder(executor: AppExecutor) {
       await members.markCouponUsed({ bizNo: row.orderNo, operatorId: input.operatorId ?? null })
     }
     await goods.increaseSales(row.goodsId, row.quantity)
+
+    log.info('order marked paid', { order: { action: 'markPaidTx', id: row.id } })
 
     return toSettleResult(await reread(row.id), false, '0.00', '0.00')
   }
@@ -484,6 +498,8 @@ export function buildOrder(executor: AppExecutor) {
       throw new OrderAlreadySettledError()
     }
 
+    log.info('order closed', { order: { action: 'cancelTx', id: row.id, status: 'CL' } })
+
     return toSettleResult(await reread(row.id), false)
   }
 
@@ -513,6 +529,8 @@ export function buildOrder(executor: AppExecutor) {
     if (affected === 0) {
       throw new OrderAlreadySettledError()
     }
+
+    log.info('order fulfilled', { order: { action: 'fulfillTx', id: row.id } })
 
     return toSettleResult(await reread(row.id), false)
   }

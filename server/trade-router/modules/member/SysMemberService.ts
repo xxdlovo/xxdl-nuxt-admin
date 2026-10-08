@@ -1,4 +1,5 @@
 //#server/trade-router/modules/member
+import { useLogger } from 'evlog'
 /**
  * 会员模块 Service：后台 CRUD + 运营动作（调账 / 发赠送金 / 改等级 / 绑上级） + 会员自助查询。
  *
@@ -88,6 +89,8 @@ function toLevelOption(level: LevelRow, decision: LevelOpenDecision): SysMemberL
 
 export function sysMemberService(ctx: Context) {
     const repo = sysMemberRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/member')
     const members = memberService(ctx.db)
     const wallet = walletService(ctx.db)
     const logs = balanceLogRepo(ctx.db)
@@ -137,17 +140,20 @@ export function sysMemberService(ctx: Context) {
                 levelId: data.levelId ?? null,
                 expireAt: data.expireAt ?? null
             })
+            log.info('member created', { member: { action: 'create', userId: data.userId } })
 
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
+            log.info('member removed', { member: { action: 'remove', id } })
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
+            log.info('member batch removed', { member: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
 
@@ -203,6 +209,8 @@ export function sysMemberService(ctx: Context) {
                 await repo.updateById(id, patch as Parameters<typeof repo.updateById>[1])
             }
 
+            log.info('member updated', { member: { action: 'update', id } })
+
             return true
         },
 
@@ -212,6 +220,8 @@ export function sysMemberService(ctx: Context) {
             if (!row) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('member fetched', { member: { action: 'getOne' } })
 
             return row
         },
@@ -224,17 +234,25 @@ export function sysMemberService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
+            log.info('member fetched', { member: { action: 'getById', id } })
+
             return profile
         },
 
         async page(req: SysMemberPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
 
-            return await repo.pageWithProfile(page, pageSize, toFilters(dto as SysMemberQueryDTO))
+            const result = await repo.pageWithProfile(page, pageSize, toFilters(dto as SysMemberQueryDTO))
+            log.info('member page queried', { member: { action: 'page', page, pageSize, total: result.total } })
+
+            return result
         },
 
         async list(dto: SysMemberQueryDTO) {
-            return await repo.list(dto as Record<string, unknown>)
+            const list = await repo.list(dto as Record<string, unknown>)
+            log.info('member listed', { member: { action: 'list', count: list.length } })
+
+            return list
         },
 
         /**
@@ -252,6 +270,7 @@ export function sysMemberService(ctx: Context) {
                 remark: input.remark ?? null,
                 operatorId: operatorId()
             })
+            log.info('member balance adjusted', { member: { action: 'adjust', userId: input.userId } })
 
             return result
         },
@@ -270,6 +289,7 @@ export function sysMemberService(ctx: Context) {
                 remark: input.remark ?? null,
                 operatorId: operatorId()
             })
+            log.info('member gift granted', { member: { action: 'grant', userId: input.userId } })
 
             return result
         },
@@ -291,17 +311,23 @@ export function sysMemberService(ctx: Context) {
                 longTerm: input.longTerm,
                 operatorId: operatorId()
             })
+            log.info('member level changed', {
+                member: { action: 'changeLevel', userId: input.userId, levelId: input.levelId }
+            })
 
             return true
         },
 
         /** 补绑上级（单级邀请关系，只能绑一次） */
         async bindInviter(input: { userId: string; inviteCode: string }) {
-            return await members.bindInviter({
+            const result = await members.bindInviter({
                 userId: input.userId,
                 inviteCode: input.inviteCode,
                 operatorId: operatorId()
             })
+            log.info('member inviter bound', { member: { action: 'bindInviter', userId: input.userId } })
+
+            return result
         },
 
         // ── 会员自助（仅需登录，权限码不参与） ──────────────────────────────
@@ -311,6 +337,7 @@ export function sysMemberService(ctx: Context) {
             const user = requireLogin(ctx)
             const snapshot = await wallet.getWallet(user.id)
             const member = await members.getMember(user.id)
+            log.info('member wallet fetched', { member: { action: 'myWallet' } })
 
             return {
                 ...snapshot,
@@ -335,6 +362,7 @@ export function sysMemberService(ctx: Context) {
             ])
             const level = levels.find(item => item.id === member?.levelId) ?? null
             const expireAt = member?.expireAt ?? null
+            log.info('member profile fetched', { member: { action: 'myProfile' } })
 
             return {
                 member,
@@ -366,20 +394,26 @@ export function sysMemberService(ctx: Context) {
             const user = requireLogin(ctx)
             const { page, pageSize, ...filters } = query
 
-            return await logs.pageByFilters({
+            const result = await logs.pageByFilters({
                 userId: user.id,
                 account: filters.account ?? null,
                 bizType: filters.bizType ?? null,
                 createdFrom: filters.createdFrom ?? null,
                 createdTo: filters.createdTo ?? null
             }, page, pageSize)
+            log.info('member logs queried', { member: { action: 'myLogs', page, pageSize, total: result.total } })
+
+            return result
         },
 
         /** 我的充值记录 */
         async myRecharges() {
             const user = requireLogin(ctx)
 
-            return await recharges.listByUser(user.id, SELF_PAGE_LIMIT)
+            const list = await recharges.listByUser(user.id, SELF_PAGE_LIMIT)
+            log.info('member recharges listed', { member: { action: 'myRecharges', count: list.length } })
+
+            return list
         },
 
         /**
@@ -389,7 +423,7 @@ export function sysMemberService(ctx: Context) {
         async myRecharge(input: SysMemberRechargeCreateDTO) {
             const user = requireLogin(ctx)
 
-            return await rechargeOrders.create({
+            const result = await rechargeOrders.create({
                 userId: user.id,
                 amount: input.amount,
                 couponCode: input.couponCode ?? null,
@@ -397,6 +431,9 @@ export function sysMemberService(ctx: Context) {
                 origin: getRequestURL(ctx.event).origin,
                 operatorId: user.id
             })
+            log.info('member recharge created', { member: { action: 'myRecharge' } })
+
+            return result
         },
 
         /** 查询充值单状态（只读本地库，供页面轮询展示） */
@@ -407,6 +444,8 @@ export function sysMemberService(ctx: Context) {
             if (!row || row.userId !== user.id) {
                 throw new AppError('module.system.memberRecharge.notFound')
             }
+
+            log.info('member recharge status fetched', { member: { action: 'myRechargeStatus' } })
 
             return {
                 outTradeNo: row.outTradeNo,
@@ -458,6 +497,7 @@ export function sysMemberService(ctx: Context) {
             }
 
             const order = await payOrders.queryPayment(row.payOrderId, { operatorId: user.id })
+            log.info('member recharge synced', { member: { action: 'myRechargeSync' } })
 
             // 渠道已支付：入账
             if (order.status === 'OD') {
@@ -509,19 +549,28 @@ export function sysMemberService(ctx: Context) {
         async myCoupons() {
             const user = requireLogin(ctx)
 
-            return await members.listMyCoupons(user.id)
+            const list = await members.listMyCoupons(user.id)
+            log.info('member coupons listed', { member: { action: 'myCoupons', count: list.length } })
+
+            return list
         },
 
         /** 我邀请的下级 */
         async myInvitees() {
             const user = requireLogin(ctx)
 
-            return await members.listInvitees(user.id)
+            const list = await members.listInvitees(user.id)
+            log.info('member invitees listed', { member: { action: 'myInvitees', count: list.length } })
+
+            return list
         },
 
         /** 等级下拉（会员编辑器用，避免前端再申请额外权限） */
         async levelOptions() {
-            return await members.listLevels()
+            const list = await members.listLevels()
+            log.info('member level options listed', { member: { action: 'levelOptions', count: list.length } })
+
+            return list
         },
 
         // ── 会员自助：等级价格 / 期限 / 开通续费（仅需登录，权限码不参与） ──────
@@ -545,6 +594,7 @@ export function sysMemberService(ctx: Context) {
             ])
             const now = nowForMysql()
             const freePaidLevelIdSet = new Set(freePaidLevelIds)
+            log.info('member level options fetched', { member: { action: 'myLevelOptions', count: levels.length } })
 
             return levels.map(level => toLevelOption(level, resolveLevelOpenDecision({
                 levelId: level.id,
@@ -562,7 +612,10 @@ export function sysMemberService(ctx: Context) {
         async myLevelOrders() {
             const user = requireLogin(ctx)
 
-            return await levelOrders.listByUser(user.id, SELF_PAGE_LIMIT)
+            const list = await levelOrders.listByUser(user.id, SELF_PAGE_LIMIT)
+            log.info('member level orders listed', { member: { action: 'myLevelOrders', count: list.length } })
+
+            return list
         },
 
         /**
@@ -572,7 +625,7 @@ export function sysMemberService(ctx: Context) {
         async myOpenLevel(input: SysMemberLevelOpenDTO) {
             const user = requireLogin(ctx)
 
-            return await levelOrders.create({
+            const result = await levelOrders.create({
                 userId: user.id,
                 levelId: input.levelId,
                 payMode: input.payMode,
@@ -580,6 +633,11 @@ export function sysMemberService(ctx: Context) {
                 origin: getRequestURL(ctx.event).origin,
                 operatorId: user.id
             })
+            log.info('member level order created', {
+                member: { action: 'myOpenLevel', levelId: input.levelId }
+            })
+
+            return result
         },
 
         /** 查询开通单状态（只读本地库，供页面轮询展示） */
@@ -590,6 +648,8 @@ export function sysMemberService(ctx: Context) {
             if (!row || row.userId !== user.id) {
                 throw new AppError('module.system.memberLevelOrder.notFound')
             }
+
+            log.info('member level order status fetched', { member: { action: 'myLevelOrderStatus' } })
 
             return {
                 outTradeNo: row.outTradeNo,
@@ -613,10 +673,13 @@ export function sysMemberService(ctx: Context) {
                 throw new AppError('module.system.memberLevelOrder.notFound')
             }
 
-            return await levelOrders.sync({
+            const result = await levelOrders.sync({
                 outTradeNo: row.outTradeNo,
                 operatorId: user.id
             })
+            log.info('member level order synced', { member: { action: 'myLevelOrderSync' } })
+
+            return result
         },
 
         /**
@@ -638,6 +701,7 @@ export function sysMemberService(ctx: Context) {
                     // 没填金额时只校验券本身可用，金额相关判定等填了金额再算
                     skipAmountCheck: !amountText
                 })
+                log.info('member coupon checked', { member: { action: 'myCouponCheck' } })
 
                 if (!result) {
                     return {
@@ -704,7 +768,10 @@ export function sysMemberService(ctx: Context) {
          * 其它场景用 scope=member（只列已有会员档案的用户）。
          */
         async userOptions(input: SysMemberUserOptionQueryDTO) {
-            return await members.searchUserOptions(input)
+            const list = await members.searchUserOptions(input)
+            log.info('member user options listed', { member: { action: 'userOptions', count: list.length } })
+
+            return list
         }
     }
 }

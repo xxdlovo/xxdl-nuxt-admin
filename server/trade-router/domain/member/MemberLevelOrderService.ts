@@ -28,6 +28,7 @@
  */
 import { AppError } from '#server/utils/appError'
 import { isDuplicateKeyError } from '#server/utils/dbError'
+import { resolveLogger } from '#server/utils/evlogLogger'
 import { type AppDb, type AppExecutor, type AppTx } from '#server/drizzle/db'
 import { randomUuid } from '#shared/utils/uuid'
 import { PAY_BIZ_TYPE_MEMBER_LEVEL } from '../pay/PaidHandlers'
@@ -154,6 +155,9 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
   const levels = levelRepo(executor)
   const members = memberRepo(executor)
   const wallet = walletServiceIn(executor)
+  // 领域服务没有 ctx：用 resolveLogger 从当前请求上下文取 logger（脱离请求时自动降级为空实现）。
+  // 只记写操作，读方法由上层模块服务的日志覆盖。
+  const log = resolveLogger('server/trade-router/memberLevelOrder')
 
   /** 等级必须存在且启用（下单时判定；已支付单据的生效不受等级后续停用影响） */
   async function getLevelOrThrow(levelId: string): Promise<LevelRow> {
@@ -308,6 +312,10 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       operatorId: input.operatorId
     })
 
+    log.info('memberLevelOrder manual record created', {
+      memberLevelOrder: { action: 'recordManualTx', id: orderId, userId: input.userId, levelId: level.id }
+    })
+
     return { orderId, outTradeNo }
   }
 
@@ -421,6 +429,10 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       throw new AppError('module.system.memberLevelOrder.notFound')
     }
 
+    log.info('memberLevelOrder created', {
+      memberLevelOrder: { action: 'createFreeTx', id: orderId, userId: input.userId, levelId: input.level.id }
+    })
+
     return toCreateResult(row)
   }
 
@@ -521,6 +533,16 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       throw new AppError('module.system.memberLevelOrder.notFound')
     }
 
+    log.info('memberLevelOrder created', {
+      memberLevelOrder: {
+        action: 'createBalanceTx',
+        id: orderId,
+        userId: input.userId,
+        levelId: input.level.id,
+        amount: input.payAmount
+      }
+    })
+
     return toCreateResult(row)
   }
 
@@ -556,6 +578,16 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       isDeleted: 0
     })
 
+    log.info('memberLevelOrder created', {
+      memberLevelOrder: {
+        action: 'insertOnlinePendingTx',
+        id: orderId,
+        userId: input.userId,
+        levelId: input.level.id,
+        amount: input.payAmount
+      }
+    })
+
     return { orderId, outTradeNo, expireAt }
   }
 
@@ -567,13 +599,19 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
     expireAt: string | null
     operatorId: string | null
   }) {
-    return await repo.attachPayOrder({
+    const affected = await repo.attachPayOrder({
       id: input.orderId,
       payOrderId: input.payOrderId,
       payChannelCode: input.payChannelCode,
       expireAt: input.expireAt,
       operatorId: input.operatorId
     })
+
+    log.info('memberLevelOrder pay order attached', {
+      memberLevelOrder: { action: 'attachPayOrderTx', id: input.orderId }
+    })
+
+    return affected
   }
 
   /** 渠道下单失败：单据置 FL（不动余额），失败原因写 fail_reason */
@@ -582,6 +620,10 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
       id: input.orderId,
       reason: truncateText(input.message, 500),
       operatorId: input.operatorId
+    })
+
+    log.info('memberLevelOrder marked failed', {
+      memberLevelOrder: { action: 'failOnlineTx', id: input.orderId, status: 'FL' }
     })
   }
 
@@ -631,6 +673,10 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
     if (affected === 0) {
       return { closed: false, reused: true }
     }
+
+    log.info('memberLevelOrder closed', {
+      memberLevelOrder: { action: 'closeTx', id: row.id, status: 'CL' }
+    })
 
     return { closed: true, reused: false }
   }
@@ -698,6 +744,10 @@ export function buildMemberLevelOrder(executor: AppExecutor) {
     })
 
     const latest = await repo.findById(row.id)
+
+    log.info('memberLevelOrder marked paid', {
+      memberLevelOrder: { action: 'markPaidTx', id: row.id, userId: row.userId, levelId: row.levelId, status: 'OD' }
+    })
 
     return toMarkPaidResult(latest ?? row, false)
   }

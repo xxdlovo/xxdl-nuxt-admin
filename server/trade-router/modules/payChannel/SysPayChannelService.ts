@@ -1,3 +1,4 @@
+import { useLogger } from 'evlog'
 import { sysPayChannelRepo } from './SysPayChannelRepo'
 import type { Context } from '#server/trpc/context'
 import { AppError } from '#server/utils/appError'
@@ -62,6 +63,8 @@ function maskRow(row: ChannelRow): SysPayChannelDto {
 
 export function sysPayChannelService(ctx: Context) {
     const repo = sysPayChannelRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参（渠道密钥等敏感字段一律不进日志）
+    const log = useLogger(ctx.event, 'server/trade-router/payChannel')
     /**
      * 渠道运行时缓存（PayChannelResolver 的下单/查单/回调读点都走它）。
      * 任何写入口成功之后都要整前缀失效：改 status / isDefault / channelCode / config
@@ -157,10 +160,11 @@ export function sysPayChannelService(ctx: Context) {
         async create(data: SysPayChannelAddDTO): Promise<boolean> {
             const provider = providerOf(data.channelCode)
             const config = buildConfigForWrite(provider, data.config, null)
+            const id = randomUuid()
 
             await repo.create({
                 ...data,
-                id: randomUuid(),
+                id,
                 config,
                 verifyStatus: 0,
                 verifyTime: null,
@@ -169,18 +173,22 @@ export function sysPayChannelService(ctx: Context) {
 
             await channelCache.invalidateAll()
 
+            log.info('payChannel created', { payChannel: { action: 'create', id } })
+
             return true
         },
 
         async remove(id: string): Promise<boolean> {
             await repo.remove(id)
             await channelCache.invalidateAll()
+            log.info('payChannel removed', { payChannel: { action: 'remove', id } })
             return true
         },
 
         async batchRemove(ids: string[]): Promise<number> {
             await repo.batchRemove(ids)
             await channelCache.invalidateAll()
+            log.info('payChannel batch removed', { payChannel: { action: 'batchRemove', count: ids.length } })
             return ids.length
         },
 
@@ -217,6 +225,8 @@ export function sysPayChannelService(ctx: Context) {
             // 配置/类型/启停/排序/默认标记都可能变了，缓存整前缀失效
             await channelCache.invalidateAll()
 
+            log.info('payChannel updated', { payChannel: { action: 'update', id } })
+
             return true
         },
 
@@ -226,6 +236,8 @@ export function sysPayChannelService(ctx: Context) {
             if (!row) {
                 throw new AppError('common.notExist')
             }
+
+            log.info('payChannel fetched', { payChannel: { action: 'getOne' } })
 
             return maskRow(row)
         },
@@ -237,12 +249,17 @@ export function sysPayChannelService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
+            log.info('payChannel fetched', { payChannel: { action: 'getById', id } })
+
             return maskRow(row)
         },
 
         async page(req: SysPayChannelPageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
             const result = await repo.page(page, pageSize, dto, repo.channelListOrder())
+            log.info('payChannel page queried', {
+                payChannel: { action: 'page', page, pageSize, total: result.total }
+            })
 
             return {
                 ...result,
@@ -252,8 +269,10 @@ export function sysPayChannelService(ctx: Context) {
 
         async list(dto: SysPayChannelQueryDTO): Promise<SysPayChannelDto[]> {
             const rows = await repo.list(dto, repo.channelListOrder()) as ChannelRow[]
+            const list = rows.map(maskRow)
+            log.info('payChannel listed', { payChannel: { action: 'list', count: list.length } })
 
-            return rows.map(maskRow)
+            return list
         },
 
         /** 「测试配置」：调用适配器探测网关与签名，并把结论写回渠道配置 */
@@ -278,6 +297,8 @@ export function sysPayChannelService(ctx: Context) {
             // verifyStatus 不在 runtime 里，但写入口一律失效，避免以后往 runtime 加字段时漏失效
             await channelCache.invalidateAll()
 
+            log.info('payChannel verified', { payChannel: { action: 'verify', id, success: result.success } })
+
             return result
         },
 
@@ -295,12 +316,16 @@ export function sysPayChannelService(ctx: Context) {
             // 默认渠道影响 findEnabled 的选择结果，必须失效
             await channelCache.invalidateAll()
 
+            log.info('payChannel default set', { payChannel: { action: 'setDefault', id } })
+
             return true
         },
 
         /** 渠道类型元数据：前端据此渲染「渠道类型」下拉与动态表单 */
         providerMetas() {
             const keyState = describePayConfigKey()
+
+            log.info('payChannel provider metas queried', { payChannel: { action: 'providerMetas' } })
 
             return {
                 providers: listPayProviderMetas(),
@@ -312,8 +337,7 @@ export function sysPayChannelService(ctx: Context) {
         /** 测试页渠道下拉：只返回可公开字段 */
         async listSelectable() {
             const rows = await repo.listEnabledByCode() as ChannelRow[]
-
-            return rows.map(row => ({
+            const list = rows.map(row => ({
                 id: row.id,
                 configName: row.configName,
                 channelCode: row.channelCode,
@@ -321,6 +345,9 @@ export function sysPayChannelService(ctx: Context) {
                 isDefault: row.isDefault,
                 notifyUrl: row.notifyUrl ?? null
             }))
+            log.info('payChannel selectable listed', { payChannel: { action: 'listSelectable', count: list.length } })
+
+            return list
         },
 
         /** 供其他模块读取明文密钥（仅服务端使用，绝不返回给前端） */
@@ -331,6 +358,8 @@ export function sysPayChannelService(ctx: Context) {
                 throw new AppError('common.notExist')
             }
 
+            log.info('payChannel runtime fetched', { payChannel: { action: 'getRuntimeById', id } })
+
             return toChannelRuntime(row)
         },
 
@@ -338,6 +367,8 @@ export function sysPayChannelService(ctx: Context) {
         isSecretConfigured(id: string, fieldKey: string): Promise<boolean> {
             return repo.getById(id).then((row) => {
                 const config = asConfigRecord((row as ChannelRow | null)?.config)
+
+                log.info('payChannel secret configured checked', { payChannel: { action: 'isSecretConfigured', id } })
 
                 return isSecretEnvelope(config[fieldKey])
             })

@@ -1,4 +1,5 @@
 //#server/trade-router/modules/memberBalanceLog
+import { useLogger } from 'evlog'
 /**
  * 余额流水模块 Service。
  *
@@ -58,6 +59,8 @@ const BIZ_TYPE_LABEL: Record<string, string> = {
 
 export function sysMemberBalanceLogService(ctx: Context) {
     const repo = sysMemberBalanceLogRepo(ctx)
+    // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
+    const log = useLogger(ctx.event, 'server/trade-router/memberBalanceLog')
     const wallet = walletService(ctx.db)
     const members = memberService(ctx.db)
     const recharges = rechargeService(ctx.db)
@@ -80,6 +83,7 @@ export function sysMemberBalanceLogService(ctx: Context) {
 
             if (!pojo) throw new AppError('common.notExist')
 
+            log.info('memberBalanceLog fetched', { memberBalanceLog: { action: 'getOne' } })
             return pojo
         },
 
@@ -88,6 +92,7 @@ export function sysMemberBalanceLogService(ctx: Context) {
 
             if (!pojo) throw new AppError('common.notExist')
 
+            log.info('memberBalanceLog fetched', { memberBalanceLog: { action: 'getById', id } })
             return pojo
         },
 
@@ -95,13 +100,21 @@ export function sysMemberBalanceLogService(ctx: Context) {
             const { page, pageSize, ...dto } = req
             const { dto: filters, range } = splitRange(dto as SysMemberBalanceLogQueryDTO)
 
-            return await repo.pageWithRange(page, pageSize, filters, range)
+            const result = await repo.pageWithRange(page, pageSize, filters, range)
+            log.info('memberBalanceLog page queried', {
+                memberBalanceLog: { action: 'page', page, pageSize, total: result.total }
+            })
+
+            return result
         },
 
         async list(dto: SysMemberBalanceLogQueryDTO) {
             const { dto: filters, range } = splitRange(dto)
 
-            return await repo.listWithRange(filters, range, 200)
+            const rows = await repo.listWithRange(filters, range, 200)
+            log.info('memberBalanceLog listed', { memberBalanceLog: { action: 'list', count: rows.length } })
+
+            return rows
         },
 
         /**
@@ -139,6 +152,10 @@ export function sysMemberBalanceLogService(ctx: Context) {
                 }
             })
 
+            log.info('memberBalanceLog summary queried', {
+                memberBalanceLog: { action: 'summary', count: items.length }
+            })
+
             return {
                 items,
                 totalIn,
@@ -158,6 +175,14 @@ export function sysMemberBalanceLogService(ctx: Context) {
                 recharges.countPending()
             ])
 
+            log.info('memberBalanceLog reconcile checked', {
+                memberBalanceLog: {
+                    action: 'reconcile',
+                    checkedCount: consistency.checkedUsers,
+                    mismatchCount: consistency.mismatches.length
+                }
+            })
+
             return {
                 checkDate: input.checkDate ?? null,
                 checkedCount: consistency.checkedUsers,
@@ -169,7 +194,12 @@ export function sysMemberBalanceLogService(ctx: Context) {
         /** 未到账充值补偿（幂等） */
         async rechargeRetry(input: SysMemberBalanceLogRechargeRetryDTO) {
             // 单次补偿上限固定，避免一次请求扫过多数据（需要更多时可重复点击）
-            return await recharges.retryPending(50, operatorId())
+            const result = await recharges.retryPending(50, operatorId())
+            log.info('memberBalanceLog recharge retried', {
+                memberBalanceLog: { action: 'rechargeRetry', count: result.scanned }
+            })
+
+            return result
         },
 
         /**
@@ -177,11 +207,16 @@ export function sysMemberBalanceLogService(ctx: Context) {
          * 流水只可能属于有档案的会员，这里固定 scope=member。
          */
         async userOptions(input: SysMemberUserOptionQueryDTO) {
-            return await members.searchUserOptions({
+            const list = await members.searchUserOptions({
                 keyword: input.keyword ?? null,
                 limit: input.limit,
                 scope: 'member'
             })
+            log.info('memberBalanceLog user options listed', {
+                memberBalanceLog: { action: 'userOptions', count: list.length }
+            })
+
+            return list
         },
 
         /** CSV 导出：超过上限直接报错，避免前端拿到截断的数据还以为是全量 */
@@ -213,6 +248,10 @@ export function sysMemberBalanceLogService(ctx: Context) {
                     row.createdAt
                 ])
             )
+
+            log.info('memberBalanceLog exported', {
+                memberBalanceLog: { action: 'exportCsv', count: rows.length }
+            })
 
             return {
                 filename: buildCsvFilename('member-balance-log'),
