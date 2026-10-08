@@ -2,6 +2,7 @@
 import {afterUserLogin} from "~/utils/common";
 import { systemOtherLoginEnum } from '#shared/constants/business'
 import type { SysOauthEnabledPlatformDTO } from '#shared/system/oauthConfig'
+import BaseIcon from '~/components/base/BaseIcon.vue'
 definePageMeta({
   layout: false
 })
@@ -377,6 +378,8 @@ async function handleLogin() {
                OAuth 地址属于服务端接口，点击后必须绕过 Vue Router 进行整页导航。
                platform 已在接口返回时归一化，点击函数仍会再次转小写，兼容历史数据。 -->
           <div v-if="oauthPlatforms.length" class="mt-3 flex flex-col gap-2.5">
+            <!-- 图标可能是 Iconify 图标名，也可能是 http(s) 图片地址：
+                 UButton 的 icon prop 只认图标名，所以统一交给 BaseIcon 渲染 -->
             <UButton
                 v-for="item in oauthPlatforms"
                 :key="item.platform"
@@ -384,10 +387,13 @@ async function handleLogin() {
                 block
                 color="neutral"
                 variant="outline"
-                :icon="item.icon || 'i-lucide-link'"
                 :label="item.platformName"
                 @click="startOAuthLogin(item.platform)"
-            />
+            >
+              <template #leading>
+                <BaseIcon :name="item.icon || 'i-lucide-link'" />
+              </template>
+            </UButton>
           </div>
         </template>
       </div>

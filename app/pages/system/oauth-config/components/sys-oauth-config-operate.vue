@@ -9,6 +9,7 @@ import {
 
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { businessDictCode } from '#shared/constants/business'
+import BaseIcon from '~/components/base/BaseIcon.vue'
 import { useToastSuccess } from '~/utils/toast'
 
 const { $trpc } = useNuxtApp()
@@ -64,18 +65,19 @@ const { schema, validate } = useZodValidation({
 const statusItems = useDictOptions(businessDictCode.enableStatus)
 
 /**
- * 平台快捷选项。第三方登录目前支持 github/gitee/google，
- * 这里只作为「可搜索的候选项」提供，不限制输入 —— 后端后续扩展平台时
- * 仍可直接填入新的 platform 值。
+ * 平台快捷选项。内置 github / gitee / google / linuxdo，
+ * 这里只作为「候选项」提供，不限制输入 —— 后端按字符串存 platform，
+ * 扩展新平台时既可以从这里选，也可以直接手输标识。
  */
 const platformItems = [
-  { label: 'GitHub', value: 'github' },
-  { label: 'Gitee', value: 'gitee' },
-  { label: 'Google', value: 'google' }
+  { label: 'GitHub', value: 'github', icon: 'i-simple-icons-github' },
+  { label: 'Gitee', value: 'gitee', icon: 'i-simple-icons-gitee' },
+  { label: 'Google', value: 'google', icon: 'i-simple-icons-google' },
+  { label: 'Linux.do', value: 'linuxdo', icon: 'i-simple-icons-discourse' }
 ]
 
 /**
- * 选定平台后自动回填「平台名称」，避免只填了标识却漏填展示名。
+ * 选定平台后自动回填「平台名称」与「图标」，避免只填了标识却漏填展示信息。
  * 编辑模式下不覆盖用户既有内容，且仅在新增模式生效。
  */
 watch(() => state.value.platform, (platform) => {
@@ -84,6 +86,7 @@ watch(() => state.value.platform, (platform) => {
   const matched = platformItems.find(item => item.value === platform)
   if (matched) {
     state.value.platformName = matched.label
+    state.value.icon = matched.icon
   }
 })
 
@@ -203,9 +206,8 @@ const title = computed(() => {
         <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2   gap-x-6 gap-y-6">
           <UFormField name="platform" required :label="$ts('module.system.oauthConfig.platform')" orientation="horizontal"
             :ui="formItemUi">
-            <!-- 快捷候选：github / gitee / google。
-                 后端后续支持新平台时，这里补一个候选项即可 -->
-            <USelect
+            <!-- 平台标识：下拉可选内置平台，也可以直接手输（后端按字符串存，不限制取值） -->
+            <UInputMenu
               v-model="state.platform"
               :items="platformItems"
               value-key="value"
@@ -236,7 +238,16 @@ const title = computed(() => {
           </UFormField>
           <UFormField name="icon" :label="$ts('module.system.oauthConfig.icon')" orientation="horizontal"
             :ui="formItemUi">
-            <UBaseInput v-model="state.icon" :placeholder="$ts('module.system.oauthConfig.form.icon')" trailing="clear" />
+            <div class="flex w-full items-center gap-2">
+              <UBaseInput v-model="state.icon" :placeholder="$ts('module.system.oauthConfig.form.icon')" trailing="clear" class="flex-1" />
+              <!-- 即时预览：图标名显示图标，http(s) 地址显示图片 -->
+              <span
+                class="flex size-8 shrink-0 items-center justify-center rounded-md border border-(--ui-border) bg-(--ui-bg-elevated)"
+                :title="state.icon || undefined"
+              >
+                <BaseIcon :name="state.icon" size="size-5" />
+              </span>
+            </div>
           </UFormField>
           <UFormField name="defaultRoleId" :label="$ts('module.system.oauthConfig.defaultRoleId')" orientation="horizontal"
             :ui="formItemUi">

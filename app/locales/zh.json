@@ -25,6 +25,7 @@
     "oauthMisconfigured": "第三方登录配置不完整，请联系管理员",
     "oauthEmailRequired": "第三方账号未提供邮箱，无法完成登录",
     "oauthProfileInvalid": "未获取到第三方账号标识，登录失败",
+    "oauthStateMismatch": "第三方登录状态校验失败，请重新发起登录",
     "oauthFailed": "第三方登录失败，请稍后重试",
     "oldPasswordRequired": "请先输入原密码"
   },

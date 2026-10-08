@@ -25,6 +25,7 @@
     "oauthMisconfigured": "Third-party login is not fully configured, please contact the administrator",
     "oauthEmailRequired": "The third-party account did not provide an email address",
     "oauthProfileInvalid": "Could not obtain the third-party account identifier",
+    "oauthStateMismatch": "The third-party login state check failed, please start over",
     "oauthFailed": "Third-party login failed, please try again later",
     "oldPasswordRequired": "Please enter your current password first"
   },

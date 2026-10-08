@@ -175,10 +175,19 @@ const columns = computed<TableColumn<SysOauthConfigDto>[]>(() => {
         return h('span', { class: 'text-gray-500 dark:text-gray-400' }, index)
       }
     },
-    // 数据列
+    // 数据列（platform 列同时展示配置的图标：图标名或 http(s) 图片地址都支持）
     {
       accessorKey: 'platform',
-      header: () => $ts('module.system.oauthConfig.platform')
+      header: () => $ts('module.system.oauthConfig.platform'),
+      cell: ({ row }) => {
+        // 与项目其它表格列一致：用 resolveComponent 取组件，
+        // 避免 h() 对 <script setup> 组件的 props 做严格重载检查
+        const BaseIcon = resolveComponent('BaseIcon')
+        return h('div', { class: 'flex items-center gap-2' }, [
+          h(BaseIcon, { name: row.original.icon ?? null }),
+          h('span', {}, row.original.platform ?? '')
+        ])
+      }
     },
     {
       accessorKey: 'platformName',

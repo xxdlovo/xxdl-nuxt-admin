@@ -22,5 +22,12 @@ export const OauthExtraSchema = z.object({
     avatarField: z.string().nullish(),
     /** 用户信息中昵称/登录名字段名（默认 login） */
     loginField: z.string().nullish(),
+    /**
+     * 头像相对路径的站点前缀。
+     *
+     * Discourse 系（如 Linux.do）返回的 `avatar_template` 是
+     * `/user_avatar/xxx/{size}.png` 这种相对路径，需要拼上站点域名才能直接展示。
+     */
+    avatarBaseURL: z.string().nullish(),
 })
 export type OauthExtra = z.infer<typeof OauthExtraSchema>
