@@ -1,7 +1,9 @@
+import { useLogger } from 'evlog'
 import { TRPCError } from '@trpc/server'
 import { getCookie, getHeader } from 'h3'
 import type { TRPCFormattedError } from '#shared/types/common'
 import { AppError, resolveAppErrorStatus } from '#server/utils/appError'
+import { compactErrorStack } from '#server/utils/evlogLogger'
 import { resolveRequestId } from '#server/utils/requestId'
 import { createLocaleT } from '#server/utils/serverI18n'
 
@@ -29,10 +31,11 @@ function includeErrorStack() {
 }
 
 /**
- * 是否把内部错误原文返回给客户端。
+ * 是否把**程序异常**原文返回给客户端。
  *
- * 数据库异常的 message 里可能带 SQL、表名与字段名，程序异常（TypeError 等）
- * 也可能泄露实现细节，因此只在非生产环境返回原文，生产环境统一返回分类文案。
+ * 数据库错误已改为「只写日志、不回显」（见下方数据库错误分支），
+ * 这里只影响其它异常：TypeError 之类可能泄露实现细节，
+ * 因此只在非生产环境返回原文，生产环境统一返回分类文案。
  */
 function exposeInternalErrorDetail() {
     return process.env.NODE_ENV !== 'production'
@@ -107,16 +110,22 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
     }
     else if (isDatabaseError(error.cause)) {
         errorType = $t('system.dbError')
-        const dbErr = error.cause as any
 
         // Drizzle 会把驱动错误包成 DrizzleQueryError，真正的驱动错误在 cause 上：
         // mysql2 的字段是 sqlMessage / sql，SQL 语句本身只在 sql 里。
+        const dbErr = error.cause as any
         const detail = dbErr.cause?.sqlMessage ?? dbErr.cause?.message
         const sql = typeof dbErr.cause?.sql === 'string' ? dbErr.cause.sql : undefined
 
-        customMessage = exposeInternalErrorDetail()
-            ? ([detail, sql].filter(Boolean).join(' | ') || 'Database error')
-            : $t('system.dbError')
+        // 驱动原文与 SQL 属于内部信息（含表名、字段名与语句），任何环境都不返回给客户端，
+        // 只写进 evlog 宽事件：排查时用响应里的 requestId 到 .data/evlogs 检索同一次请求。
+        logDatabaseError(ctx, error.cause, {
+            detail: typeof detail === 'string' ? detail : undefined,
+            sql,
+            code: dbErr.cause?.code ?? dbErr.code
+        })
+
+        customMessage = $t('system.dbError')
     }
     else if (error.cause instanceof Error) {
         errorType = $t('system.serverError')
@@ -147,6 +156,48 @@ export const errorFormatter = ({ shape, error, ctx }: ErrorFormatterOpts) => {
             // 前端可据此对齐 .data/evlogs 运行日志与 sys_system_log 的 traceId
             requestId: resolveRequestId(ctx?.event)
         } as TRPCFormattedError,
+    }
+}
+
+/**
+ * 把数据库错误的驱动原文与 SQL 写进 evlog 宽事件。
+ *
+ * 这些内容属于内部信息（含表名、字段名与完整语句），任何环境都不能返回给客户端，
+ * 但排查时必须留痕：写入当前请求的宽事件后，会随响应结束落到 `.data/evlogs`，
+ * 用响应里的 `requestId` 即可检索到同一次请求。
+ */
+function logDatabaseError(
+    ctx: any,
+    error: unknown,
+    database: { detail?: string, sql?: string, code?: unknown }
+) {
+    const event = ctx?.event
+
+    if (!event) {
+        return
+    }
+
+    try {
+        const log = useLogger(event)
+
+        // 不直接把原始错误交给 evlog：drizzle 会包一层 DrizzleQueryError，其 cause 再挂
+        // mysql2 错误，两条堆栈各有几十帧（全在 node_modules 与 tRPC 内部）。
+        // 这里换成一个精简过的错误：栈只保留业务帧，也不再嵌套 cause。
+        const summary = new Error(database.detail ?? 'Database error')
+        summary.name = 'DatabaseError'
+        summary.stack = compactErrorStack(error) ?? summary.stack
+
+        log.error(summary, {
+            database: {
+                detail: database.detail,
+                sql: database.sql,
+                code: typeof database.code === 'string' ? database.code : undefined
+            }
+        })
+    }
+    catch {
+        // 拿不到 logger（evlog 未注册、或测试里的伪 event）时静默跳过，
+        // 绝不能因为记日志失败影响错误响应
     }
 }
 

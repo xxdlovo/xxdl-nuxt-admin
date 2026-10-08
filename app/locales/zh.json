@@ -2443,6 +2443,8 @@
   },
   "form": {
     "required": "不能为空",
+    "countRange": "数量必须在 1-10 之间",
+    "keywordTooShort": "关键词至少 2 个字符",
     "id": {
       "required": "ID不能为空",
       "invalid": "ID格式不正确"

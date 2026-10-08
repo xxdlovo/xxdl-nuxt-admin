@@ -35,6 +35,7 @@ import { sysJobLogRouter } from '#server/sys-router/jobLog'
 import { sysConfigRouter } from '#server/sys-router/config'
 import { sysStorageRouter } from '#server/sys-router/storage'
 import { sysHomeRouter } from '#server/sys-router/home'
+import { showCaseRouter } from '#server/show-case-router'
 
 // 收集相关路由
 export const appRouter = router({
@@ -73,6 +74,7 @@ export const appRouter = router({
     systemLog: sysSystemLogRouter,
     sysUserRole: sysUserRoleRouter,
     sysHome: sysHomeRouter,
+    showCase: showCaseRouter,
 });
 
 // export type definition of API

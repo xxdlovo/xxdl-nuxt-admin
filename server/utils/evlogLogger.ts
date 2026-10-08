@@ -44,3 +44,43 @@ export function resolveLogger(service: string): SafeLogger {
         return noopLogger
     }
 }
+
+/** 依赖包或运行时内部的栈帧：对业务排查没有增量信息。 */
+const INTERNAL_FRAME_RE = /(?:^|[/\\])node_modules(?:[/\\]|$)|node:/
+
+/**
+ * 精简错误堆栈，供写日志时使用。
+ *
+ * 直接把 `Error` 交给 evlog 时，drizzle / mysql2 / tRPC 会带出几十帧内部堆栈
+ *（全是 `node_modules` 与 `node:` 帧），既撑大日志文件又没有排查价值。
+ * evlog 自带的压缩只在堆栈里存在「业务帧」时生效，而 dev 下业务代码被打包进
+ * `.nuxt/dev/index.mjs`、库内部错误又几乎没有业务帧，所以这里显式处理：
+ *
+ * - 优先保留业务帧（非依赖、非运行时内部），最多 `maxFrames` 帧；
+ * - 一个业务帧都没有时退回保留前 `maxFrames` 帧；
+ * - 其余折叠成 `... N frame(s) hidden` 一行。
+ *
+ * @example
+ * log.error(summary, { database: { sql, code } })
+ */
+export function compactErrorStack(error: unknown, maxFrames = 3): string | undefined {
+    const stack = error instanceof Error ? error.stack : undefined
+
+    if (!stack) {
+        return undefined
+    }
+
+    const lines = stack.split('\n')
+    const head = lines[0]?.trim() || 'Error'
+    // 只把 `at ` 开头的行当作帧：V8 的栈首行是 message，后面可能还有 `params:` 之类的续行
+    const frames = lines.slice(1).map(line => line.trim()).filter(line => line.startsWith('at '))
+    const appFrames = frames.filter(frame => !INTERNAL_FRAME_RE.test(frame))
+    const picked = (appFrames.length > 0 ? appFrames : frames).slice(0, maxFrames)
+    const hidden = frames.length - picked.length
+
+    return [
+        head,
+        ...picked.map(frame => `    ${frame}`),
+        hidden > 0 ? `    ... ${hidden} frame(s) hidden` : ''
+    ].filter(Boolean).join('\n')
+}

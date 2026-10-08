@@ -2443,6 +2443,8 @@
   },
   "form": {
     "required": "Cannot be empty",
+    "countRange": "Count must be between 1 and 10",
+    "keywordTooShort": "Keyword must be at least 2 characters",
     "userName": {
       "required": "Please enter user name",
       "invalid": "User name format is incorrect"
