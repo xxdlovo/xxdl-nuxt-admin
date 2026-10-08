@@ -108,7 +108,7 @@ jobs:
               --restart unless-stopped \
               -p ${{ vars.EXT_PORT }}:3000 \
               --env-file /opt/docker/${{ env.CONTAINER_NAME }}/.env \
-              -v /opt/docker/${{ env.CONTAINER_NAME }}/data:/app/data \
+              -v /opt/docker/${{ env.CONTAINER_NAME }}/data:/app/.data \
               ${{ env.IMAGE_NAME }}
 
             sudo rm -f ~/.docker/config.json
