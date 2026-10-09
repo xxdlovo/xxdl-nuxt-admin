@@ -143,6 +143,8 @@ export default defineNuxtConfig({
         },
         db: {
             host: '',
+            // 端口：默认 3306，可用 NUXT_DB_PORT 覆盖（DB_PORT 优先级更高，见 server/drizzle/db.ts）
+            port: 3306,
             user: '',
             password: '',
             database: '',

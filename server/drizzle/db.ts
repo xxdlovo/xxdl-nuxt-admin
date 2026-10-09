@@ -19,6 +19,8 @@ export const useDb = () => {
     // 4. 创建物理连接池
     const dbConfig = {
         host: process.env.DB_HOST || config.db.host,
+        // 端口：DB_PORT 优先，其次 NUXT_DB_PORT（写入 runtimeConfig.db.port），最后回落 MySQL 默认 3306
+        port: Number(process.env.DB_PORT || config.db.port || 3306),
         user: process.env.DB_USER || config.db.user,
         password: process.env.DB_PASSWORD || config.db.password,
         database: process.env.DB_DATABASE || config.db.database,
@@ -30,6 +32,7 @@ export const useDb = () => {
 
     const poolConnection = mysql.createPool({
         host: dbConfig.host,
+        port: dbConfig.port,
         user: dbConfig.user,
         password: dbConfig.password,
         database: dbConfig.database,
@@ -55,6 +58,7 @@ export const useDb = () => {
 export const createTestDb = () => {
     const poolConnection = mysql.createPool({
         host: process.env.DB_HOST || 'localhost',
+        port: Number(process.env.DB_PORT ?? 3306),
         user: process.env.DB_USER || 'root',
         password: process.env.DB_PASSWORD || '',
         database: process.env.DB_DATABASE || 'nuxt_admin',
