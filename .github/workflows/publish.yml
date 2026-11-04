@@ -86,13 +86,12 @@ jobs:
           set -euo pipefail
 
           # 判断 dist-tag：
-          #   - 0.x 版本默认发到 next，避免最新不稳定版本自动成为 latest
-          #   - tag 形如 v1.2.3 且主版本 >= 1 时发 latest
+          #   - 普通版本（0.1.0）→ latest，`pnpm add` 直接可用
+          #   - 预发布版本（0.2.0-beta.1）→ next，避免被默认安装
           DIST_TAG="latest"
           if [[ "$REF_NAME" == v* ]]; then
             VERSION="${REF_NAME#v}"
-            MAJOR="${VERSION%%.*}"
-            if [[ "$MAJOR" == "0" ]]; then
+            if [[ "$VERSION" == *-* ]]; then
               DIST_TAG="next"
             fi
           fi
