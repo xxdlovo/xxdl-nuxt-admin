@@ -1,0 +1,81 @@
+{
+    "name": "xxdl-admin-core",
+    "version": "0.1.0",
+    "description": "Nuxt admin base layer: auth, RBAC, CRUD scaffolding, tRPC + Drizzle backend",
+    "type": "module",
+    "main": "./nuxt.config.ts",
+    "exports": {
+        ".": "./nuxt.config.ts",
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "app",
+        "server",
+        "shared",
+        "public",
+        "sql",
+        "scripts",
+        "nuxt.config.ts"
+    ],
+    "keywords": [
+        "nuxt",
+        "nuxt-layer",
+        "admin",
+        "rbac",
+        "trpc",
+        "drizzle"
+    ],
+    "license": "MIT",
+    "scripts": {
+        "db:push": "drizzle-kit push --config=./server/drizzle/drizzle.config.ts",
+        "db:pull": "drizzle-kit pull --config=./server/drizzle/drizzle.config.ts",
+        "db:generate": "drizzle-kit generate --config=./server/drizzle/drizzle.config.ts",
+        "seed:admin": "tsx scripts/seed-admin.ts"
+    },
+    "peerDependencies": {
+        "nuxt": "^4.5.0"
+    },
+    "dependencies": {
+        "@adonisjs/hash": "^10.1.1",
+        "@internationalized/date": "3.12.4",
+        "@nuxt/ui": "4.11.1",
+        "@pinia/nuxt": "^1.0.2",
+        "@trpc/client": "11.19.0",
+        "@trpc/server": "11.19.0",
+        "dotenv": "^18.0.2",
+        "drizzle-orm": "^0.45.3",
+        "evlog": "^2.30.0",
+        "klona": "^2.0.6",
+        "lodash-es": "^4.18.1",
+        "motion-v": "2.4.4",
+        "mysql2": "^3.24.4",
+        "nuxt": "4.5.2",
+        "nuxt-auth-utils": "^0.5.30",
+        "nuxt-echarts": "1.1.0",
+        "nuxt-i18n-micro": "^3.29.5",
+        "pathe": "^2.0.3",
+        "pinia": "4.0.3",
+        "pinia-plugin-persistedstate": "^4.7.1",
+        "tailwindcss": "^4.3.3",
+        "trpc-nuxt": "2.1.3",
+        "vue": "3.5.43",
+        "vue-echarts": "^8.3.1",
+        "vue-router": "^5.3.1",
+        "zod": "^4.6.5"
+    },
+    "devDependencies": {
+        "@iconify-json/lucide": "^1.2.135",
+        "@iconify-json/selfhst": "^1.2.20",
+        "@iconify-json/simple-icons": "^1.2.97",
+        "@iconify-json/tabler": "1.2.39",
+        "@nuxt/kit": "4.5.2",
+        "@tanstack/vue-table": "^8.21.3",
+        "@types/lodash-es": "^4.17.12",
+        "@types/node": "26.6.2",
+        "drizzle-kit": "^0.31.11",
+        "swagger-ui-dist": "^5.33.0",
+        "tsx": "4.23.15",
+        "typescript": "5.7.3",
+        "vue-tsc": "3.3.11"
+    }
+}

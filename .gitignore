@@ -1,11 +1,16 @@
 soybean-admin
+
 # 模拟数据库插入文件
-doc/mock_sql/*.sql
-# i18n 翻译文件
-server/assets/_locales
-app/locales/pages
-# Swagger UI 静态资源（由 nuxt.config.ts 的 build:before 钩子从 swagger-ui-dist 复制）
-/public/swagger-ui
+apps/demo/doc/mock_sql/*.sql
+
+# i18n 页面级占位文件（nuxt-i18n-micro 默认会生成，本项目已在基座层
+# 用 disablePageLocales 关闭；这里保留忽略规则防止旧产物被提交）
+apps/demo/app/locales/pages
+
+# Swagger UI 静态资源（由 packages/admin-core/nuxt.config.ts 的 build:before
+# 钩子从 swagger-ui-dist 复制，属于生成物）
+packages/admin-core/public/swagger-ui
+
 # Nuxt dev/build outputs
 .output
 .data
@@ -17,6 +22,7 @@ dist
 # Node dependencies
 node_modules
 .pnpm-store
+.pnpm-home
 # Logs
 logs
 *.log
@@ -32,7 +38,7 @@ logs
 !.env.example
 
 # drizzle orm
-server/drizzle/out
+packages/admin-core/server/drizzle/out
 
 # OpenAPI 导出产物（pnpm openapi:export）
 /openapi/
