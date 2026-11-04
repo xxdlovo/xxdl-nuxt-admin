@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { normalizeMenuIcon } from '#admin/app/utils/navigation'
 import type { RbacMenu } from '#admin/shared/auth'
 
 defineProps<{

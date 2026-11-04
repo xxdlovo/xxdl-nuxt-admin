@@ -2440,6 +2440,20 @@
           "menu": "menu"
         }
       }
+    },
+    "systemHome": {
+      "title": "Dashboard",
+      "description": "System administration overview",
+      "greeting": "Welcome back, ",
+      "adminBadge": "Administrator",
+      "shortcuts": {
+        "user": "Users",
+        "role": "Roles",
+        "menu": "Menus",
+        "dict": "Dictionaries",
+        "notice": "Notices",
+        "sysLog": "System Logs"
+      }
     }
   },
   "form": {

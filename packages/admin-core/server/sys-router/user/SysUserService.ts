@@ -22,7 +22,7 @@ import { randomUuid } from '#admin/shared/utils/uuid'
 import { hashUserPassword, isPlaceholderPassword } from '#admin/server/utils/password'
 import { sysDeptRepo } from '#admin/server/sys-router/dept/SysDeptRepo'
 import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCacheService'
-import { memberService } from '#admin/server/trade-router/domain/member/MemberService'
+import { runUserOnboardHooks } from '#admin/server/hooks/userOnboard'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
   if (!user) {
@@ -83,22 +83,18 @@ export function sysUserService(ctx: Context) {
       log.info('user registered', { user: { action: 'register', id: userId } })
 
       /**
-       * 注册即开会员档案（含注册赠金与邀请绑定）。
+       * 触发业务域建档钩子（如电商层开通会员档案、钱包、邀请绑定）。
        *
-       * 会员域失败**不回滚用户注册**：用户已经建好，档案可以由
-       * `member:backfill-profile` 任务补齐，避免因为赠金配置等问题挡注册。
-       * 失败原因写入日志，便于排查。
+       * 基座不认识任何具体业务：钩子由可选业务层在启动时注册，
+       * 且失败**不回滚用户注册**（账号已经建好，档案可由 `member:backfill-profile`
+       * 之类的补偿任务补齐），错误只记日志。
        */
-      try {
-        await memberService(ctx.db).onboard({
-          userId,
-          inviteCode: data.inviteCode ?? null,
-          source: 'register',
-          operatorId: userId
-        })
-      } catch (error) {
-        console.error(`[member] 注册后开通会员档案失败 userId=${userId}`, error)
-      }
+      await runUserOnboardHooks(ctx, {
+        userId,
+        inviteCode: data.inviteCode ?? null,
+        source: 'register',
+        operatorId: userId
+      })
 
       return true
     },

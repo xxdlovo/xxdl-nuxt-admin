@@ -12,7 +12,9 @@
 //   - 开发端口、构建期 TS 兼容补丁
 // ============================================================================
 export default defineNuxtConfig({
-    extends: ['../../packages/admin-core'],
+    // 演示站接入完整能力（基座 + 电商层）。
+    // 只需要系统管理的项目写 extends: ['xxdl-admin-core'] 即可，无需安装电商层。
+    extends: ['../../packages/admin-trade'],
     compatibilityDate: '2025-07-15',
     devtools: { enabled: true },
     // 后台页面统一 SPA（基座已对 /system/** 关闭 SSR），演示站也沿用同一渲染模式

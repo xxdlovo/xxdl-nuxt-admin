@@ -38,7 +38,7 @@
   - 自动轮询连续失败 3 次或超过 pollTimeout 会停止并 emit('error')，避免无限请求。
 -->
 <script setup lang="ts">
-import type { SysPayTestStatusDTO } from '#admin/shared/system/payTest'
+import type { SysPayTestStatusDTO } from '#trade/shared/system/payTest'
 import { payOrderStatusConfig } from '#admin/shared/constants/business'
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
 import { useToastSuccess } from '#admin/app/utils/toast'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { findFirstPath, getRenderableMenus, normalizeMenuIcon } from '#admin/app/utils/navigation'
 import type { RbacMenu } from '#admin/shared/auth'
 import AppHeader from '../../global-header/index.vue'
 import LayoutContent from '../../global-content/index.vue'

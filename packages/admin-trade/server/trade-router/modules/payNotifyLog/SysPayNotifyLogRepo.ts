@@ -1,0 +1,44 @@
+import { desc, gte, lte, type SQL } from 'drizzle-orm'
+import { CommonRepo } from '#admin/server/drizzle/CommonRepo'
+import { sysPayNotifyLog } from '#trade/server/drizzle/schema'
+import { SysPayNotifyLogBaseSchema } from '#trade/shared/system/payNotifyLog/common'
+import type { Context } from '#admin/server/trpc/context'
+
+const commonRepo = CommonRepo(sysPayNotifyLog, SysPayNotifyLogBaseSchema)
+
+export type SysPayNotifyLogRangeQuery = {
+  createdFrom?: string | null
+  createdTo?: string | null
+}
+
+export const sysPayNotifyLogRepo = (ctx: Context) => {
+  const repo = commonRepo(ctx)
+
+  return {
+    ...repo,
+
+    /** 带时间区间的分页查询，默认按创建时间倒序（日志页只看最近发生的事） */
+    async pageWithRange(
+      page: number,
+      pageSize: number,
+      dto: Record<string, unknown>,
+      range: SysPayNotifyLogRangeQuery = {}
+    ) {
+      const extraWhere: SQL[] = []
+
+      if (range.createdFrom) {
+        extraWhere.push(gte(sysPayNotifyLog.createdAt, range.createdFrom))
+      }
+      if (range.createdTo) {
+        extraWhere.push(lte(sysPayNotifyLog.createdAt, range.createdTo))
+      }
+
+      return await repo.page(page, pageSize, dto, [desc(sysPayNotifyLog.createdAt)], extraWhere)
+    },
+
+    /** 列表查询（时间倒序）：排序语义集中在 mapper */
+    async listRecent(dto: Record<string, unknown>) {
+      return await repo.list(dto, [desc(sysPayNotifyLog.createdAt)])
+    }
+  }
+}

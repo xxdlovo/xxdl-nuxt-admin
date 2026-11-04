@@ -2440,6 +2440,20 @@
           }
         }
       }
+    },
+    "systemHome": {
+      "title": "工作台",
+      "description": "系统管理概览",
+      "greeting": "欢迎回来，",
+      "adminBadge": "管理员",
+      "shortcuts": {
+        "user": "用户管理",
+        "role": "角色管理",
+        "menu": "菜单管理",
+        "dict": "字典管理",
+        "notice": "通知公告",
+        "sysLog": "系统日志"
+      }
     }
   },
   "form": {

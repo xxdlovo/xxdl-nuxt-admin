@@ -16,7 +16,7 @@ import { systemRegisterEnum, OAUTH_PLACEHOLDER_PASSWORD } from '#admin/shared/co
 import { sysUserRepo } from '#admin/server/sys-router/user/SysUserRepo'
 import { sysRoleRepo } from '#admin/server/sys-router/role/SysRoleRepo'
 import { sysUserRoleRepo } from '#admin/server/sys-router/userRole/SysUserRoleRepo'
-import { memberService } from '#admin/server/trade-router/domain/member/MemberService'
+import { runUserOnboardHooks } from '#admin/server/hooks/userOnboard'
 
 /** 第三方登录回调传入的、已归一化的用户资料 */
 export type OAuthLoginProfile = {
@@ -387,20 +387,15 @@ export function sysOauthAccountService(ctx: Context) {
             })
 
             /**
-             * 第三方首登即开会员档案（含注册赠金）。
-             * 失败不影响登录：档案可由 `member:backfill-profile` 任务补齐，
-             * 这里只记录一次错误，避免挡在登录主链路上。
+             * 触发业务域建档钩子（如电商层开通会员档案与钱包）。
+             * 失败不影响登录：钩子内部只记录错误，档案可由补偿任务补齐。
              */
-            try {
-                await memberService(ctx.db).onboard({
-                    userId: newUserId,
-                    inviteCode: null,
-                    source: 'oauth',
-                    operatorId: newUserId
-                })
-            } catch (error) {
-                console.error(`[member] 第三方首登开通会员档案失败 userId=${newUserId}`, error)
-            }
+            await runUserOnboardHooks(ctx, {
+                userId: newUserId,
+                inviteCode: null,
+                source: 'oauth',
+                operatorId: newUserId
+            })
 
             const created = await findUserById(newUserId)
             if (!created) {

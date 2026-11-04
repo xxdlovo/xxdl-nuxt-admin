@@ -2,8 +2,9 @@
 const { user, clear } = useUserSession()
 const { clearProfile } = useRbacProfile()
 const dictStore = useDictStore()
-const memberProfileStore = useMemberProfileStore()
 const { $ts } = useI18n()
+// 业务层追加的菜单项（如钱包/商城/我的订单），未安装业务层时为空数组
+const extraItems = useUserMenuExtraItems()
 
 const displayName = computed(() => user.value?.nickname || user.value?.username || $ts('module.system.profile.userFallback'))
 const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
@@ -11,41 +12,43 @@ const avatarText = computed(() => displayName.value.slice(0, 1).toUpperCase())
 async function handleLogout() {
   clearProfile()
   dictStore.clearDict()
-  memberProfileStore.clear()
   await clear()
   await navigateTo('/login')
 }
 
-const items = computed(() => [[
-  {
+/**
+ * 顶栏用户下拉菜单。
+ *
+ * 基座只提供账号自身能力；业务自助入口由业务层通过
+ * `registerUserMenuItems()` 注册后出现在这里。
+ */
+const items = computed(() => {
+  const business = extraItems.value.map(item => ({
+    label: $ts(item.labelKey),
+    icon: item.icon,
+    to: item.to
+  }))
+
+  const account = [{
     label: $ts('common.userCenter'),
     icon: 'i-lucide-id-card',
     to: '/system/user/profile'
-  },
-  {
-    // 会员自助：余额、充值、流水与邀请码
-    label: $ts('module.system.wallet.title'),
-    icon: 'i-lucide-wallet',
-    to: '/system/wallet'
-  },
-  {
-    // 交易自助：商城下单与我的订单
-    label: $ts('module.system.mall.title'),
-    icon: 'i-lucide-store',
-    to: '/system/mall'
-  },
-  {
-    label: $ts('module.system.myOrder.title'),
-    icon: 'i-lucide-receipt',
-    to: '/system/my-orders'
+  }]
+
+  const groups = [account]
+
+  if (business.length > 0) {
+    groups.push(business)
   }
-], [
-  {
+
+  groups.push([{
     label: $ts('common.logout'),
     icon: 'i-lucide-log-out',
     onSelect: handleLogout
-  }
-]])
+  }] as never)
+
+  return groups
+})
 </script>
 
 <template>
