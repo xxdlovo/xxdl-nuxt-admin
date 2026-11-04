@@ -3,9 +3,14 @@ soybean-admin
 # 模拟数据库插入文件
 apps/demo/doc/mock_sql/*.sql
 
-# i18n 页面级占位文件（nuxt-i18n-micro 默认会生成，本项目已在基座层
-# 用 disablePageLocales 关闭；这里保留忽略规则防止旧产物被提交）
-apps/demo/app/locales/pages
+# i18n 生成的占位文件。
+#
+# nuxt-i18n-micro 会在**每个 layer 的 translationDir** 下确保 en.json / zh.json 存在，
+# 宿主的 translationDir 继承自基座（app/locales），所以 apps/demo 下也会被创建一对
+# 内容为 `{}` 的空文件。本项目翻译集中在 packages/admin-core/app/locales，
+# 宿主侧的这两份不承载任何词条，忽略即可。
+# （页面级占位 pages/ 已在基座层用 disablePageLocales 关闭）
+apps/demo/app/locales
 
 # Swagger UI 静态资源（由 packages/admin-core/nuxt.config.ts 的 build:before
 # 钩子从 swagger-ui-dist 复制，属于生成物）
