@@ -11,6 +11,7 @@
         "generate": "pnpm --filter xxdl-nuxt-admin-demo generate",
         "preview": "pnpm --filter xxdl-nuxt-admin-demo preview",
         "typecheck": "pnpm --filter xxdl-nuxt-admin-demo typecheck",
+        "check:layers": "node scripts/check-layers.mjs",
         "db:push": "pnpm --filter xxdl-admin-core db:push",
         "db:pull": "pnpm --filter xxdl-admin-core db:pull",
         "db:generate": "pnpm --filter xxdl-admin-core db:generate",

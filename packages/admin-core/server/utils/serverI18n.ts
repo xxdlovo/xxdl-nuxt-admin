@@ -1,5 +1,7 @@
-import zh from '~~/app/locales/zh.json'
-import en from '~~/app/locales/en.json'
+// 用包内别名而不是 `~~/`：`~~/` 在 Layer 里指向**宿主项目**，
+// 只有本仓库恰好把 locales 放在同名路径下才不会出错。
+import zh from '#admin/app/locales/zh.json'
+import en from '#admin/app/locales/en.json'
 import { H3Event } from 'h3'
 const translations: Record<string, Record<string, any>> = { zh, en }
 
