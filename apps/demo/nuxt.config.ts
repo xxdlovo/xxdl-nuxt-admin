@@ -1,15 +1,16 @@
 // ============================================================================
-// 演示应用（宿主）配置
+// 演示站（官网 + 文档 + 在线演示）
 //
-// 这个应用演示「业务项目如何接入基座」：只有 extends + 少量应用级配置，
-// 不包含任何后台业务代码。
+// 与 apps/playground 的区别：
+//   - playground 是「最小接入示例」，只有 3 个配置文件，证明业务项目需要写多薄；
+//   - 本目录是「可直接访问的站点」，额外带官网落地页、文档站和演示页。
+//
+// 后台的每一行代码都来自 layer（extends 引入），本应用不含任何后台实现。
 //
 // 基座层 packages/admin-core 提供：
 //   - 认证 / RBAC / 系统管理 / tRPC + Drizzle 后端 / 主题 / i18n
-//   - modules、runtimeConfig 默认值、css、icon、nitro
-// 本应用只提供：
-//   - 官网落地页、文档站（@nuxt/content）、组件与动效演示页
-//   - 开发端口、构建期 TS 兼容补丁
+//   - modules、runtimeConfig 默认值、css、icon、nitro、类型补丁
+// 电商层 packages/admin-trade 在其上提供会员/商品/订单/支付/钱包。
 // ============================================================================
 export default defineNuxtConfig({
     // 演示站接入完整能力（基座 + 电商层）。
@@ -19,20 +20,6 @@ export default defineNuxtConfig({
     devtools: { enabled: true },
     // 后台页面统一 SPA（基座已对 /system/** 关闭 SSR），演示站也沿用同一渲染模式
     ssr: false,
-    hooks: {
-        // Nuxt 生成的 .nuxt/tsconfig.*.json 会写入 "libReplacement"，
-        // 而当前 typescript@5.7.3 不识别该选项，pnpm typecheck 会以
-        // TS5023 "Unknown compiler option 'libReplacement'" 失败。
-        // 这里在类型准备阶段把它从生成的配置里摘掉。
-        //
-        // 注意：这是宿主侧 TS 版本兼容补丁，不属于基座能力，因此留在宿主配置。
-        'prepare:types'(options: { tsConfig?: { compilerOptions?: Record<string, unknown> } }) {
-            const compilerOptions = options?.tsConfig?.compilerOptions
-            if (compilerOptions && 'libReplacement' in compilerOptions) {
-                delete compilerOptions.libReplacement
-            }
-        }
-    },
     modules: [
         // 演示站专用：文档页依赖 @nuxt/content + MDC。
         // 先从项目根目录注册 MDC。@nuxt/content 随后会复用该实例，

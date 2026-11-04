@@ -22,9 +22,22 @@
         "ecommerce",
         "member",
         "order",
-        "payment"
+        "payment",
+        "wallet"
     ],
     "license": "MIT",
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/xxdlovo/xxdl-nuxt-admin.git",
+        "directory": "packages/admin-trade"
+    },
+    "homepage": "https://github.com/xxdlovo/xxdl-nuxt-admin#readme",
+    "bugs": {
+        "url": "https://github.com/xxdlovo/xxdl-nuxt-admin/issues"
+    },
     "peerDependencies": {
         "@nuxt/ui": "^4.11.0",
         "@trpc/client": "^11.19.0",
@@ -35,7 +48,7 @@
         "vue": "^3.5.0"
     },
     "dependencies": {
-        "@internationalized/date": "3.12.4",
+        "@internationalized/date": "^3.12.4",
         "@tanstack/vue-table": "^8.21.3",
         "drizzle-orm": "^0.45.3",
         "evlog": "^2.30.0",
@@ -45,7 +58,7 @@
     },
     "devDependencies": {
         "@types/lodash-es": "^4.17.12",
-        "@types/node": "26.6.2",
-        "typescript": "5.7.3"
+        "@types/node": "^26.6.2",
+        "typescript": "^5.7.3"
     }
 }

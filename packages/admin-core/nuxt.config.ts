@@ -1,6 +1,7 @@
-import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+// Swagger UI 静态资源的同步逻辑抽在 scripts/ 下，发布前的 prepack 会复用同一份实现。
+import { syncSwaggerUiAssets } from './scripts/sync-swagger.mjs'
 
 // ============================================================================
 // 基座层（Nuxt Layer）配置
@@ -43,29 +44,11 @@ const sessionCookieSecure = process.env.NUXT_SESSION_COOKIE_SECURE !== undefined
 // .output/public，两种环境行为一致，也不依赖生产镜像里的 node_modules
 // （Dockerfile 只 COPY .output）。
 //
+// 具体实现在 ./scripts/sync-swagger.mjs，发布前的 prepack 钩子会复用同一份逻辑
+// （public/swagger-ui 在 .gitignore 中，CI 全新 clone 时并不存在）。
+//
 // 注意：这些静态资源是匿名可访问的（开源 JS/CSS，不含业务数据）；
 // 接口文档本身（/api/openapi.json 与 /api/docs 页面）依旧要求登录。
-const swaggerUiFiles = ['swagger-ui-bundle.js', 'swagger-ui.css']
-const swaggerUiSourceDir = resolve(currentDir, 'node_modules/swagger-ui-dist')
-const swaggerUiPublicDir = resolve(currentDir, 'public/swagger-ui')
-
-function syncSwaggerUiAssets() {
-    mkdirSync(swaggerUiPublicDir, { recursive: true })
-
-    for (const file of swaggerUiFiles) {
-        // 包被安装到业务项目时，swagger-ui-dist 会被提升到宿主的 node_modules，
-        // 因此两个候选位置都要探测。
-        const candidates = [
-            resolve(swaggerUiSourceDir, file),
-            resolve(currentDir, '../../node_modules/swagger-ui-dist', file)
-        ]
-        const source = candidates.find((candidate) => existsSync(candidate))
-
-        if (source) {
-            copyFileSync(source, resolve(swaggerUiPublicDir, file))
-        }
-    }
-}
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -109,6 +92,18 @@ export default defineNuxtConfig({
                 if (layout.file.replace(/\\/g, '/').includes('/app/layouts/modules/')) {
                     delete app.layouts[name]
                 }
+            }
+        },
+        // Nuxt 4.5 生成的 .nuxt/tsconfig.*.json 会写入 "libReplacement"，
+        // 而项目锁定的 typescript@5.7.3 不识别该选项，`pnpm typecheck` 会以
+        // TS5023 "Unknown compiler option 'libReplacement'" 失败。
+        //
+        // 这属于「框架版本 × TS 版本」的兼容问题，**每个宿主都会遇到**，
+        // 所以放在基座层统一处理，宿主无需重复配置。
+        'prepare:types'(options: { tsConfig?: { compilerOptions?: Record<string, unknown> } }) {
+            const compilerOptions = options?.tsConfig?.compilerOptions
+            if (compilerOptions && 'libReplacement' in compilerOptions) {
+                delete compilerOptions.libReplacement
             }
         }
     },
@@ -174,6 +169,9 @@ export default defineNuxtConfig({
                 secure: sessionCookieSecure
             }
         },
+        // 数据库连接串（推荐）。设置后优先于下面的分字段配置，
+        // 业务项目只需要 `DATABASE_URL=mysql://user:pass@host:3306/db` 一行。
+        databaseUrl: '',
         db: {
             host: '',
             // 端口：默认 3306，可用 NUXT_DB_PORT 覆盖（DB_PORT 优先级更高，见 server/drizzle/db.ts）

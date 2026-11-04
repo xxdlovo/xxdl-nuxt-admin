@@ -1,0 +1,77 @@
+name: CI
+
+# 静态检查工作流：只做「能不能合并」的判断，不做部署。
+# 部署由 run-build-outside-docker.yml（push main + commit 含“部署”）负责。
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-checks:
+    name: 分层契约 + 类型检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 版本取自根 package.json 的 packageManager 字段，避免 CI 与本地 pnpm 不一致
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.5.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # 分层契约检查：拦截「单例依赖分叉、跨层注入冲突、包内使用宿主别名、
+      # 同文件重复声明、跨层同名组件」等问题。这些问题编译期不报、运行时才 500，
+      # 必须放在类型检查之前——它更快，且失败信息更具体。
+      - name: Layer contract check
+        run: pnpm check:layers
+
+      # 类型检查在 demo（完整宿主）上跑，能覆盖 core + trade 两层
+      - name: Type check
+        run: pnpm typecheck
+
+  # 构建验证：构建 playground（最小宿主）而不是 demo。
+  #
+  # 理由：playground 几乎不含业务代码，能构建成功意味着「layer 的接入契约是完整的」
+  # （页面、server 端路由、public 静态资源、i18n、模块装配都能从包里拿全）。
+  # 它比构建 demo 快得多，也不受演示站内容影响；demo 的完整构建由部署工作流负责。
+  build:
+    name: 构建验证（最小宿主）
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25.5.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Build playground
+        env:
+          # 项目在 Nitro 打包阶段峰值超过 Node 默认 4GB 堆上限，必须显式提高
+          NODE_OPTIONS: --max-old-space-size=8192
+        run: pnpm build:playground

@@ -1,10 +1,11 @@
-node_modules
-.nuxt
-.pnpm-store
-.git
-.github
-.idea
-.vscode
-*.log
-.env
-.env.*
+# 运行时镜像的构建上下文。
+#
+# apps/demo/Dockerfile 只 COPY apps/demo/.output（Nuxt 构建产物），
+# 其余源码、依赖、文档都不参与镜像构建。monorepo 结构下如果沿用默认上下文，
+# 会把 packages/ 下两层源码、apps/demo/doc、public 图片等全部传给 Docker daemon。
+#
+# 策略：白名单——先排除一切，再逐级放开 .output 所需路径。
+**
+!apps
+!apps/demo
+!apps/demo/.output

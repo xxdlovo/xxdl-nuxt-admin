@@ -7,6 +7,60 @@ import * as schema from './schema'
 // 1. 在模块作用域内定义私有缓存变量
 let _db: MySql2Database<typeof schema> | null = null;
 
+/** 解析后的数据库连接参数 */
+type DbConnectionConfig = {
+    host: string
+    port: number
+    user: string
+    password: string
+    database: string
+}
+
+/**
+ * 从连接串解析连接参数，例如：
+ * `mysql://root:pass@127.0.0.1:3306/nuxt_admin`
+ *
+ * 也接受不带协议前缀的形式（`root:pass@127.0.0.1:3306/nuxt_admin`）。
+ */
+function parseDatabaseUrl(raw: string): DbConnectionConfig {
+    const normalized = raw.includes('://') ? raw : `mysql://${raw}`
+    const url = new URL(normalized)
+
+    return {
+        host: url.hostname,
+        port: Number(url.port || 3306),
+        user: decodeURIComponent(url.username),
+        password: decodeURIComponent(url.password),
+        // pathname 形如 `/nuxt_admin`
+        database: decodeURIComponent(url.pathname.replace(/^\//, ''))
+    }
+}
+
+/**
+ * 计算最终的连接参数。
+ *
+ * 优先级：`DATABASE_URL`（单串）> 分字段环境变量 > runtimeConfig。
+ *
+ * `DATABASE_URL` 是业务项目最省事的接入方式：一行连接串即可，
+ * 不需要分别设置 host/user/password/database。
+ */
+function resolveDbConfig(config: ReturnType<typeof useRuntimeConfig>): DbConnectionConfig {
+    const directUrl = process.env.DATABASE_URL || (config.databaseUrl as string | undefined)
+
+    if (directUrl) {
+        return parseDatabaseUrl(directUrl)
+    }
+
+    return {
+        host: process.env.DB_HOST || config.db.host,
+        // 端口：DB_PORT 优先，其次 NUXT_DB_PORT（写入 runtimeConfig.db.port），最后回落 MySQL 默认 3306
+        port: Number(process.env.DB_PORT || config.db.port || 3306),
+        user: process.env.DB_USER || config.db.user,
+        password: process.env.DB_PASSWORD || config.db.password,
+        database: process.env.DB_DATABASE || config.db.database,
+    }
+}
+
 export const useDb = () => {
     // 2. 如果已经存在实例，直接返回（命中缓存）
     if (_db){
@@ -17,17 +71,13 @@ export const useDb = () => {
     const config = useRuntimeConfig();
 
     // 4. 创建物理连接池
-    const dbConfig = {
-        host: process.env.DB_HOST || config.db.host,
-        // 端口：DB_PORT 优先，其次 NUXT_DB_PORT（写入 runtimeConfig.db.port），最后回落 MySQL 默认 3306
-        port: Number(process.env.DB_PORT || config.db.port || 3306),
-        user: process.env.DB_USER || config.db.user,
-        password: process.env.DB_PASSWORD || config.db.password,
-        database: process.env.DB_DATABASE || config.db.database,
-    }
+    const dbConfig = resolveDbConfig(config)
 
     if (!dbConfig.host || !dbConfig.user || !dbConfig.database) {
-        throw new Error('Database config is missing. Set DB_HOST/DB_USER/DB_DATABASE or NUXT_DB_HOST/NUXT_DB_USER/NUXT_DB_DATABASE.')
+        throw new Error(
+            'Database config is missing. Set DATABASE_URL, or DB_HOST/DB_USER/DB_DATABASE ' +
+            '(also readable from NUXT_DATABASE_URL / NUXT_DB_HOST / NUXT_DB_USER / NUXT_DB_DATABASE).'
+        )
     }
 
     const poolConnection = mysql.createPool({

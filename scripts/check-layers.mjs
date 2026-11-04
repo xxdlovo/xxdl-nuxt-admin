@@ -54,6 +54,32 @@ const BUILD_FRAMEWORK_DEPS = [
 /** 单例库的唯一提供者 */
 const PROVIDER_PKG = 'packages/admin-core'
 
+/**
+ * 工作区里的所有 layer 目录（自动发现，新增 apps/* 或 packages/* 无需改脚本）。
+ * 顺序即层级：越靠后越"上游"。
+ */
+function discoverLayers() {
+    const layers = []
+
+    for (const group of ['packages', 'apps']) {
+        const dir = resolve(ROOT, group)
+        if (!statSafe(dir)) continue
+
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+            if (!entry.isDirectory() || entry.name.startsWith('.')) continue
+
+            const pkgJson = resolve(dir, entry.name, 'package.json')
+            if (!statSafe(pkgJson)) continue
+
+            layers.push(`${group}/${entry.name}`)
+        }
+    }
+
+    return layers
+}
+
+const LAYERS = discoverLayers()
+
 /** 包内禁止使用的宿主别名（Nuxt Layer 里它们都解析到宿主项目） */
 const BANNED_IMPORT = /['"](?:~\/|@\/|~~\/|#server\/|#shared\/)/
 
@@ -118,13 +144,18 @@ function readJson(p) {
 // ---------------------------------------------------------------------------
 function checkSingletonDeps() {
     // a) 业务层必须用 peerDependencies（只约束运行时单例）
-    const tradePkg = readJson(resolve(ROOT, 'packages/admin-trade/package.json'))
-    if (tradePkg) {
-        for (const name of Object.keys(tradePkg.dependencies ?? {})) {
+    //    "业务层" = packages/ 下除唯一提供者之外的包；apps/* 是宿主，允许用 dependencies。
+    for (const layer of LAYERS) {
+        if (!layer.startsWith('packages/') || layer === PROVIDER_PKG) continue
+
+        const json = readJson(resolve(ROOT, layer, 'package.json'))
+        if (!json) continue
+
+        for (const name of Object.keys(json.dependencies ?? {})) {
             if (RUNTIME_SINGLETONS.includes(name)) {
                 addProblem(
                     '单例依赖',
-                    'packages/admin-trade/package.json',
+                    `${layer}/package.json`,
                     `"${name}" 必须放在 peerDependencies。业务层是插件层，直接依赖会因 peer 组合不同生成第二份物理实例。`
                 )
             }
@@ -135,11 +166,11 @@ function checkSingletonDeps() {
     const collect = (names) => {
         const map = new Map()
 
-        for (const dir of ['packages/admin-core/node_modules', 'packages/admin-trade/node_modules', 'apps/demo/node_modules']) {
-            const layer = dir.startsWith('apps') ? 'apps/demo' : `packages/${dir.split(/[\\/]/)[1]}`
+        for (const layer of LAYERS) {
+            const dir = resolve(ROOT, layer, 'node_modules')
 
             for (const name of names) {
-                const p = resolve(ROOT, dir, name)
+                const p = resolve(dir, name)
                 if (!statSafe(p)) continue
 
                 let target
@@ -232,7 +263,7 @@ function checkPackageSources() {
 // 4. 跨层 plugin 注入冲突
 // ---------------------------------------------------------------------------
 function checkProvideConflicts() {
-    const layers = ['packages/admin-core', 'packages/admin-trade', 'apps/demo']
+    const layers = LAYERS
     const owners = new Map()
 
     for (const layer of layers) {
@@ -310,7 +341,7 @@ function checkDuplicateDeclarations() {
 // 6. 跨层同名组件
 // ---------------------------------------------------------------------------
 function checkDuplicateComponents() {
-    const layers = ['packages/admin-core', 'packages/admin-trade', 'apps/demo']
+    const layers = LAYERS
     const owners = new Map()
 
     for (const layer of layers) {
