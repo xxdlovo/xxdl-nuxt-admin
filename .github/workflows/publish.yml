@@ -1,0 +1,135 @@
+name: Publish to npm
+
+# 发布两个 Nuxt Layer 包：
+#   xxdl-admin-core  —— 基座（系统管理 / 认证 / RBAC / tRPC / Drizzle）
+#   xxdl-admin-trade —— 可选电商层（依赖 core）
+#
+# 触发方式：
+#   1. 打 tag（推荐）：git tag v0.1.0 && git push origin v0.1.0
+#   2. 手动：Actions → Publish to npm → Run workflow（可选择只发某个包）
+#
+# 前置条件：仓库 Secrets 中配置 NPM_TOKEN（npm 的 Automation 类型 token）。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      package:
+        description: '要发布的包'
+        type: choice
+        options:
+          - all
+          - xxdl-admin-core
+          - xxdl-admin-trade
+        default: all
+      dry_run:
+        description: '只做 dry-run（不真正发布）'
+        type: boolean
+        default: false
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      # npm provenance 需要 OIDC token
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---- 发布闸门：任何一项失败都不发布 ----
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Layer contract check
+        run: pnpm check:layers
+
+      # prepack 钩子会自动把 swagger 资源同步进包
+      # （public/swagger-ui 在 .gitignore 中，全新 clone 时并不存在）
+      - name: Build tarballs (verify pack)
+        run: |
+          pnpm --filter xxdl-admin-core pack --pack-destination "$RUNNER_TEMP"
+          pnpm --filter xxdl-admin-trade pack --pack-destination "$RUNNER_TEMP"
+          ls -lh "$RUNNER_TEMP"/*.tgz
+
+      - name: Publish
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TARGET: ${{ inputs.package || 'all' }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # 判断 dist-tag：
+          #   - 0.x 版本默认发到 next，避免最新不稳定版本自动成为 latest
+          #   - tag 形如 v1.2.3 且主版本 >= 1 时发 latest
+          DIST_TAG="latest"
+          if [[ "$REF_NAME" == v* ]]; then
+            VERSION="${REF_NAME#v}"
+            MAJOR="${VERSION%%.*}"
+            if [[ "$MAJOR" == "0" ]]; then
+              DIST_TAG="next"
+            fi
+          fi
+          echo "Publishing with dist-tag: $DIST_TAG"
+
+          publish() {
+            local pkg="$1"
+            echo "::group::publish $pkg"
+            pnpm --filter "$pkg" publish \
+              --access public \
+              --no-git-checks \
+              --tag "$DIST_TAG" \
+              --provenance
+            echo "::endgroup::"
+          }
+
+          case "$TARGET" in
+            xxdl-admin-core)  publish xxdl-admin-core ;;
+            xxdl-admin-trade) publish xxdl-admin-trade ;;
+            *)
+              # trade 依赖 core 的版本，必须按顺序发布
+              publish xxdl-admin-core
+              publish xxdl-admin-trade
+              ;;
+          esac
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run == 'true' }}
+        run: echo "dry_run=true，已完成打包验证，未执行 npm publish。"
+
+      - name: Publish summary
+        if: always()
+        run: |
+          {
+            echo "### 发布结果"
+            echo ""
+            echo "- 触发：\`${{ github.event_name }}\` / \`${{ github.ref_name }}\`"
+            echo "- 目标：\`${{ inputs.package || 'all' }}\`"
+            echo "- dry-run：\`${{ inputs.dry_run || 'false' }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

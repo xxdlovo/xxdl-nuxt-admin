@@ -39,12 +39,15 @@ export default defineNuxtConfig({
 至少需要以下几项（`.env`）：
 
 ```dotenv
-# 数据库
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=nuxt_admin
-DB_USER=root
-DB_PASSWORD=
+# 数据库：推荐用一行连接串
+DATABASE_URL=mysql://root:password@127.0.0.1:3306/nuxt_admin
+
+# 也可以改用分字段配置（DATABASE_URL 未设置时生效）
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=nuxt_admin
+# DB_USER=root
+# DB_PASSWORD=
 
 # Session 密钥，必须是 32 位以上随机字符串
 NUXT_SESSION_PASSWORD=please-change-to-a-random-32-char-secret
@@ -59,7 +62,7 @@ NUXT_OPENAPI_ENABLED=true
 NUXT_PAY_CONFIG_KEY=
 ```
 
-也支持 `DATABASE_URL` 风格的环境变量覆盖，详见 `server/drizzle/db.ts`。
+连接串支持 `mysql://user:pass@host:port/db` 与不带协议前缀的写法，解析逻辑见 `server/drizzle/db.ts`。
 
 ## 初始化数据库
 
