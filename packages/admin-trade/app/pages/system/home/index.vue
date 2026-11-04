@@ -12,8 +12,8 @@ import PieChart from './components/pie-chart.vue'
 import ProjectNews from './components/project-news.vue'
 import NoticeNews  from "./components/notice-news.vue";
 
-const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
+const $trpc = useTradeTrpc()
 
 /**
  * 看板数据源：`sysHome.overview` 已按登录身份（管理员 / 普通会员）返回不同口径的 stats/cards/trend/pie，

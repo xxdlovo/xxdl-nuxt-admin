@@ -2,7 +2,7 @@
 import type { SysMemberFreezeDto } from '#trade/shared/system/memberFreeze'
 import { useToastError, useToastInfo, useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const props = defineProps<{

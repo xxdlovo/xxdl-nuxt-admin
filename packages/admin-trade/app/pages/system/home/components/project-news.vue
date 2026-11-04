@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { $t } = useI18n()
+const { $ts } = useI18n()
 
 interface NewsItem {
   id: number
@@ -8,16 +8,16 @@ interface NewsItem {
 }
 
 const newses = computed<NewsItem[]>(() => [
-  { id: 1, content: $t('page.home.projectNews.desc1') as string, time: '2021-05-28 22:22:22' },
-  { id: 2, content: $t('page.home.projectNews.desc2') as string, time: '2021-10-27 10:24:54' },
-  { id: 3, content: $t('page.home.projectNews.desc3') as string, time: '2021-10-31 22:43:12' },
-  { id: 4, content: $t('page.home.projectNews.desc4') as string, time: '2021-11-03 20:33:31' },
-  { id: 5, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
-  { id: 6, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
-  { id: 7, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
-  { id: 8, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
-  { id: 9, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
-  { id: 10, content: $t('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' }
+  { id: 1, content: $ts('page.home.projectNews.desc1') as string, time: '2021-05-28 22:22:22' },
+  { id: 2, content: $ts('page.home.projectNews.desc2') as string, time: '2021-10-27 10:24:54' },
+  { id: 3, content: $ts('page.home.projectNews.desc3') as string, time: '2021-10-31 22:43:12' },
+  { id: 4, content: $ts('page.home.projectNews.desc4') as string, time: '2021-11-03 20:33:31' },
+  { id: 5, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
+  { id: 6, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
+  { id: 7, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
+  { id: 8, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
+  { id: 9, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' },
+  { id: 10, content: $ts('page.home.projectNews.desc5') as string, time: '2021-11-07 22:45:32' }
 ])
 
 function moreNewsHandle() {
@@ -27,7 +27,7 @@ function moreNewsHandle() {
 
 <template>
   <UCard
-    :title="String($t('page.home.creativity'))"
+    :title="String($ts('page.home.creativity'))"
     borderless
     size="sm"
     class="flex min-h-[500px] w-full flex-col"
@@ -35,9 +35,9 @@ function moreNewsHandle() {
   >
     <template #header>
       <div class="flex items-center justify-between">
-        <span>{{ $t('page.home.projectNews.title') }}</span>
+        <span>{{ $ts('page.home.projectNews.title') }}</span>
         <ULink class="text-primary hover:text-primary" @click="moreNewsHandle">
-          {{ $t('page.home.projectNews.moreNews') }}
+          {{ $ts('page.home.projectNews.moreNews') }}
         </ULink>
       </div>
     </template>

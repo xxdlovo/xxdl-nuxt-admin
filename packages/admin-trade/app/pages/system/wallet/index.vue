@@ -242,7 +242,7 @@ import { memberAccountRecord, memberBizTypeRecord, memberCouponUseStatusConfig, 
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
 import { useToastError, useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 // 会员档案（邀请码 / 下级数量）走会话级 store：与个人中心共用一次请求
 const memberProfileStore = useMemberProfileStore()

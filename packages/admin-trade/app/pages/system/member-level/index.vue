@@ -81,7 +81,7 @@ const memberLevelYesNoConfig: Readonly<Record<string, BadgeConfig>> = {
   '0': { i18nKey: 'common.yesOrNo.no', color: 'neutral' }
 }
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const levelPermissions = useCrudPermissions('system:memberLevel')

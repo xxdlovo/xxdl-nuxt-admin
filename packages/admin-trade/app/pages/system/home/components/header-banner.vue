@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useRbacProfile } from '#admin/app/composables/useRbacProfile'
 
 /**
  * 首页横幅：左侧问候 + 右侧 3 项统计。
@@ -22,7 +21,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{ refresh: [] }>()
 
-const { $t, $ts } = useI18n()
+const { $ts } = useI18n()
 const { username } = useRbacProfile()
 
 /** 统计项文案：键与契约固定 key 清单一致，未命中的 key 直接回退为 key 本身 */
@@ -55,7 +54,7 @@ const updatedAtText = computed(() => {
   if (!raw) return ''
   const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/.exec(raw)
   const time = match ? `${match[1]} ${match[2]}` : raw
-  return $t('page.home.updatedAt', { time }) as string
+  return $ts('page.home.updatedAt', { time }) as string
 })
 </script>
 
@@ -77,7 +76,7 @@ const updatedAtText = computed(() => {
         <!-- 问候信息 -->
         <div class="ml-3">
           <h3 class="text-lg font-semibold">
-            {{ $t('page.home.greeting', { userName: username ?? '' }) }}
+            {{ $ts('page.home.greeting', { userName: username ?? '' }) }}
             <UBadge v-if="scope === 'self' && levelName" color="primary" variant="soft" size="sm" class="ml-1 align-middle">
               {{ levelName }}
             </UBadge>

@@ -48,7 +48,7 @@ type LevelPriceRow = {
   disabled: boolean
 }
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const { hasPermission, isAdmin } = useRbacProfile()
 

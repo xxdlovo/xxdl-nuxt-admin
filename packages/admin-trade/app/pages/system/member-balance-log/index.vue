@@ -164,7 +164,7 @@ import { downloadTextFile } from '#admin/app/utils/download'
 import SysMemberBalanceLogSearch from './components/sys-member-balance-log-search.vue'
 import SysMemberBalanceLogDetail from './components/sys-member-balance-log-detail.vue'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const route = useRoute()
 const tableRef = useTemplateRef('table')

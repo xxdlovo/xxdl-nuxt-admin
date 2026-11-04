@@ -57,7 +57,7 @@ import SysPayNotifyLogSearch from './components/sys-pay-notify-log-search.vue'
 import SysPayNotifyLogDetail from './components/sys-pay-notify-log-detail.vue'
 import { useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const logPermissions = useCrudPermissions('system:payNotifyLog')

@@ -118,7 +118,7 @@ const memberCouponStatusConfig: Readonly<Record<string, BadgeConfig>> = {
   '2': { i18nKey: 'module.system.memberCoupon.status.void', color: 'error' }
 }
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const { isAdmin, hasPermission } = useRbacProfile()
 const tableRef = useTemplateRef('table')

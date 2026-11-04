@@ -123,7 +123,7 @@ import SysOrderDetail from './components/sys-order-detail.vue'
 import SysOrderClose from './components/sys-order-close.vue'
 import SysOrderFulfill from './components/sys-order-fulfill.vue'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const orderPermissions = useCrudPermissions('system:order')

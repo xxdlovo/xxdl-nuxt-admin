@@ -68,7 +68,7 @@ import SysPayChannelSearch from './components/sys-pay-channel-search.vue'
 import SysPayChannelOperate from './components/sys-pay-channel-operate.vue'
 import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const channelPermissions = useCrudPermissions('system:payChannel')

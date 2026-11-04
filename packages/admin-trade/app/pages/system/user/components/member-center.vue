@@ -82,7 +82,7 @@ type LevelOrderStatus = {
   endAt?: string | null
 }
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const memberProfileStore = useMemberProfileStore()
 

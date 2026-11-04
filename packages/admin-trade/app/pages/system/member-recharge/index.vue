@@ -69,7 +69,7 @@ const CREDITED_STATUS = 'OD'
 /** 只有待支付可以关闭（与领域层 markClosed 的守卫一致） */
 const CLOSABLE_STATUS = 'WP'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const rechargePermissions = useCrudPermissions('system:memberRecharge')

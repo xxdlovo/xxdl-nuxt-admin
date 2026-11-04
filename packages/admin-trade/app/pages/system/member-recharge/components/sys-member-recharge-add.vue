@@ -5,7 +5,7 @@ import { memberRechargeStatusConfig } from '#admin/shared/constants/business'
 import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
 import MemberUserSelect from '#admin/app/components/MemberUserSelect.vue'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const props = defineProps<{

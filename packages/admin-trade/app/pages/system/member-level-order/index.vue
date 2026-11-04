@@ -89,7 +89,7 @@ const PENDING_STATUS = 'WP'
 /** 已关闭 / 失败的单据才允许删除（生效中的单据是会员权益凭证） */
 const DELETABLE_STATUSES = ['CL', 'FL']
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const orderPermissions = useCrudPermissions('system:memberLevelOrder')

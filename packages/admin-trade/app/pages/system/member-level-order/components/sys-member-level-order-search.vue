@@ -23,7 +23,7 @@ const emit = defineEmits<{
   search: [data: MemberLevelOrderQuery]
 }>()
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 
 const schema = memberLevelOrderQuerySchema
 const form = useTemplateRef('form')

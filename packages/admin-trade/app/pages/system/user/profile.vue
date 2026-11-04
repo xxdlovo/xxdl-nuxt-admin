@@ -19,7 +19,7 @@ definePageMeta({
   icon: 'i-lucide-id-card'
 })
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const { user, fetch } = useUserSession()
 const { profile, loadProfile } = useRbacProfile()

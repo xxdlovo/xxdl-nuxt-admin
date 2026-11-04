@@ -58,7 +58,7 @@ import { useToastSuccess } from '#admin/app/utils/toast'
 /** 冻结中的单据还占着会员余额，服务端禁止删除，列表里同样不给删除入口 */
 const FROZEN_STATUS = 'FROZEN'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const freezePermissions = useCrudPermissions('system:memberFreeze')

@@ -10,7 +10,7 @@ interface NoticeItem {
   time: string
 }
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 
 const notices = ref<SysNoticeDto[]>([])
 const loading = ref(false)

@@ -23,7 +23,7 @@ const emit = defineEmits<{
   saved: []
 }>()
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const visible = computed({

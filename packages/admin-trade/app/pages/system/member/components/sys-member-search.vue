@@ -2,7 +2,7 @@
 import { type SysMemberQueryDTO, SysMemberQuerySchema } from '#trade/shared/system/member'
 import { memberStatusConfig } from '#admin/shared/constants/business'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const formItemUi = {

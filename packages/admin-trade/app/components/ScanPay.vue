@@ -138,7 +138,7 @@ const emit = defineEmits<{
 /** 订单快照：支持 v-model:order，父组件可以自由读取状态 */
 const order = defineModel<SysPayTestStatusDTO | null>('order', { default: null })
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const channels = ref<ScanPayChannel[]>([])

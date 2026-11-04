@@ -2,7 +2,7 @@
   <UCard>
     <template #header>
       <div class="flex justify-between items-center">
-        <span>{{ $t('page.home.creativity') }}</span>
+        <span>{{ $ts('page.home.creativity') }}</span>
       </div>
     </template>
     <div class="pl-30 flex justify-between">
@@ -12,7 +12,7 @@
 </template>
 
 <script lang="ts" setup>
-const { $t } = useI18n()
+const { $ts } = useI18n()
 </script>
 
 <style></style>

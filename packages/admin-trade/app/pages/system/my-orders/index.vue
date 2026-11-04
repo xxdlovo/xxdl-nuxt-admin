@@ -211,7 +211,7 @@ import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
 
 type OrderRow = SysOrderRespDTO
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const status = ref<string | null>(null)

@@ -88,7 +88,7 @@ definePageMeta({
 import type { SysPayTestStatusDTO } from '#trade/shared/system/payTest'
 import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const { isAdmin, hasPermission } = useRbacProfile()
 

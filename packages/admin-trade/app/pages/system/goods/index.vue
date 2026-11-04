@@ -63,7 +63,7 @@ import TableWithPagination from '#admin/app/components/table/TableWithPagination
 import SysGoodsSearch from './components/sys-goods-search.vue'
 import SysGoodsOperate from './components/sys-goods-operate.vue'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const goodsPermissions = useCrudPermissions('system:goods')

@@ -1,4 +1,10 @@
-import { defineStore } from 'pinia'
+// 注意：`defineStore` 走 Nuxt 自动导入（由 @pinia/nuxt 提供），不要在这里显式
+// `import { defineStore } from 'pinia'`。
+//
+// 原因：pnpm 会为不同包的 peer 依赖哈希生成**不同的 pinia 物理实例**。基座与
+// @pinia/nuxt 使用同一份，而电商包若自行声明 pinia 依赖就会拿到另一份，
+// 两边的 `getActivePinia()` 互不相通，调用 store 时抛
+// "getActivePinia() was called but there was no active Pinia"。
 
 /**
  * 我的会员档案（等级名 / 等级价 / 到期时间 / 邀请码 / 下级数量）：**仅供展示**。
@@ -55,7 +61,7 @@ export const useMemberProfileStore = defineStore('memberProfile', () => {
       return await pendingRequest
     }
 
-    const { $trpc } = useNuxtApp()
+    const $trpc = useTradeTrpc()
 
     loading.value = true
     error.value = null

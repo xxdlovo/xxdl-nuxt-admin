@@ -9,7 +9,7 @@ import {
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const props = defineProps<{

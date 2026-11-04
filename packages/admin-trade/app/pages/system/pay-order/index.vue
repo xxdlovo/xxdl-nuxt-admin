@@ -53,7 +53,7 @@ import SysPayOrderSearch from './components/sys-pay-order-search.vue'
 import SysPayOrderDetail from './components/sys-pay-order-detail.vue'
 import { useToastSuccess } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const orderPermissions = useCrudPermissions('system:payOrder')

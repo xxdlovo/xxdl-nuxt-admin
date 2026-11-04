@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { resolveColorHex } from '#admin/app/composables/themeColorUtils'
 
-const { $t } = useI18n()
+const { $ts } = useI18n()
 
 const props = defineProps<{
   label: string
@@ -129,10 +129,10 @@ function selectRecommendation(hex: string) {
 
           <div class="flex items-center justify-between gap-2">
             <span class="text-[11px] font-medium text-muted">
-              {{ $t('theme.recommended') }}
+              {{ $ts('theme.recommended') }}
             </span>
             <span class="text-[11px] text-muted">
-              {{ $t('theme.recommendedDesc') }}
+              {{ $ts('theme.recommendedDesc') }}
             </span>
           </div>
 

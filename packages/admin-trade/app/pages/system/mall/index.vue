@@ -271,7 +271,7 @@ import { goodsTypeRecord, orderStatusConfig } from '#admin/shared/constants/busi
 import { randomUuid } from '#admin/shared/utils/uuid'
 import { useToastError, useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 
 const keyword = ref('')

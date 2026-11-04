@@ -65,7 +65,7 @@ import SysMemberAdjust from './components/sys-member-adjust.vue'
 import SysMemberGrant from './components/sys-member-grant.vue'
 import type { MemberProfileRow } from './components/types'
 
-const { $trpc } = useNuxtApp()
+const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const memberPermissions = useCrudPermissions('system:member')
