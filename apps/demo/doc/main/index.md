@@ -5,7 +5,7 @@ navigation:
   title: 文档首页
 ---
 
-这是一套全栈 Nuxt 4 后台系统的完整文档：从安装启动、前后端写法，到新增业务模块、错误处理、文件与存储、缓存、定时任务、支付模块、交易模块与端到端支付流程。
+这是一套全栈 Nuxt 4 后台系统的完整文档：从安装启动、前后端写法，到新增业务模块、错误处理、文件与存储、缓存、定时任务、支付模块、交易模块、端到端支付流程，以及两个 npm 包的发布流程。
 
 ::div{.my-8.grid.gap-4.sm:grid-cols-2}
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
@@ -86,6 +86,14 @@ navigation:
   充值到账、余额支付（冻结→确认）、在线支付三条端到端链路，以及幂等键全景、对账与补偿。
 
   [查看支付流程 →](/docs/main/payment-flow/overview)
+  :::
+
+  :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
+  ### 发布指南
+
+  两个 npm 包的形态与版本规则、手动发布命令，以及 Trusted Publishing 自动发布配置与排错。
+
+  [查看发布指南 →](/docs/main/publishing/overview)
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
