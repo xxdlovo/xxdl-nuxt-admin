@@ -19,10 +19,21 @@ type LoginForm = {
 }
 
 const loginRememberStorageKey = 'xxdl-login-remembered-account'
-const defaultLoginForm: LoginForm = {
-  username: 'admin',
-  password: 'adminadmin'
-}
+
+const runtimeConfig = useRuntimeConfig()
+
+/**
+ * 演示模式标记。
+ *
+ * 只在 `NUXT_DEMO_MODE=true` 时预填演示账号、展示"演示账号"快捷按钮。
+ * 正式部署（默认）保持空表单 —— 否则任何人装了这个包，登录页都会
+ * 默认填好一组公开的默认凭据，等于把门虚掩上。
+ */
+const demoMode = runtimeConfig.public.demoMode === true
+
+const defaultLoginForm: LoginForm = demoMode
+  ? { username: 'admin', password: 'adminadmin' }
+  : { username: '', password: '' }
 
 const localeCookie = useCookie<string>('i18n_locale', {
   sameSite: 'lax',
@@ -73,11 +84,14 @@ const loginText = computed(() => {
     switchToDark: `${$ts('common.switch')} ${$ts('theme.themeSchema.dark')}`
   }
 })
-const demoAccounts = computed(() => [
-  { label: loginText.value.superAdmin, username: 'admin', password: 'adminadmin' },
-  { label: loginText.value.admin, username: 'admin', password: 'adminadmin' },
-  { label: loginText.value.user, username: 'admin', password: 'adminadmin' }
-])
+// 演示账号快捷入口：非演示模式返回空数组，模板里对应区域不渲染。
+const demoAccounts = computed(() => demoMode
+  ? [
+      { label: loginText.value.superAdmin, username: 'admin', password: 'adminadmin' },
+      { label: loginText.value.admin, username: 'admin', password: 'adminadmin' },
+      { label: loginText.value.user, username: 'admin', password: 'adminadmin' }
+    ]
+  : [])
 const isDarkMode = computed(() => colorMode.value === 'dark')
 const themeToggleIcon = computed(() => isDarkMode.value ? 'i-lucide-sun' : 'i-lucide-moon')
 const themeToggleLabel = computed(() => isDarkMode.value ? loginText.value.switchToLight : loginText.value.switchToDark)
@@ -360,7 +374,7 @@ async function handleLogin() {
             <span>{{ loginText.otherAccount }}</span>
           </div>
 
-          <div class="flex flex-wrap justify-center gap-2.5">
+          <div v-if="demoAccounts.length" class="flex flex-wrap justify-center gap-2.5">
             <UButton
                 v-for="account in demoAccounts"
                 :key="account.label"

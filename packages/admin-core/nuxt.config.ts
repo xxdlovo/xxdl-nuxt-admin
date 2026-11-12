@@ -182,7 +182,10 @@ export default defineNuxtConfig({
         },
         // 客户端可访问的环境变量
         public: {
-            appName: 'Nuxt Admin System'
+            appName: 'Nuxt Admin System',
+            // 演示模式对客户端可见：登录页据此决定是否预填演示账号、
+            // 是否展示"演示账号"快捷入口。正式部署应保持 false。
+            demoMode: process.env.NUXT_DEMO_MODE === 'true'
         }
     },
     nitro: {
