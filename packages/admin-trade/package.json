@@ -1,6 +1,6 @@
 {
     "name": "xxdl-admin-trade",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "Optional trade/e-commerce layer for xxdl-admin-core: members, goods, orders, payments, wallet",
     "type": "module",
     "main": "./nuxt.config.ts",
