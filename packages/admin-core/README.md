@@ -28,11 +28,52 @@ pnpm add -D xxdl-admin-core
 
 ```ts
 export default defineNuxtConfig({
-  extends: ['xxdl-admin-core']
+  extends: ['xxdl-admin-core'],
+  // 必须：后台页面大量使用 window / localStorage，
+  // Layer 无法替宿主设置全局渲染模式
+  ssr: false
 })
 ```
 
 需要电商能力（会员 / 商品 / 订单 / 支付 / 钱包）时改为引入 [`xxdl-admin-trade`](https://www.npmjs.com/package/xxdl-admin-trade)，它会自动带上本层。
+
+### ⚠️ 不要自建 `app/app.vue`
+
+`nuxi init` 生成的模板里有 `app/app.vue`：
+
+```vue
+<!-- 这个文件会覆盖本包的根组件，导致所有页面不渲染 -->
+<template>
+  <div>
+    <NuxtRouteAnnouncer />
+    <NuxtWelcome />
+  </div>
+</template>
+```
+
+Nuxt Layer 的优先级是**宿主 > 层**，这个文件会把本包 `app/app.vue` 整个替换掉。被替换掉的版本包含三样必需元素，缺一不可：
+
+| 元素 | 缺失后果 |
+| --- | --- |
+| `<NuxtPage />` | 所有页面都不渲染 |
+| `<NuxtLayout>` | `system` 等布局失效 |
+| `<UApp>` | toast、主题色、暗黑模式不工作 |
+
+**接入本包后请删除宿主的 `app/app.vue`。** 如果确实要自己接管根组件，必须保留这三层嵌套：
+
+```vue
+<template>
+  <UApp>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </UApp>
+</template>
+```
+
+### 根路径行为
+
+本包提供 `app/pages/index.vue`：未登录访问 `/` 会跳转到 `/login`，已登录则跳转到 `/system/home`。宿主如果自己写了 `app/pages/index.vue`，会覆盖该行为。
 
 ## 环境变量
 
