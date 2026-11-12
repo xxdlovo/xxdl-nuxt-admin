@@ -46,15 +46,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 不指定 version：由 package.json 的 packageManager 字段决定
+      # （同时写版本会触发 "Multiple versions of pnpm specified" 错误）
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 10
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 25.5.0
           registry-url: https://registry.npmjs.org
           cache: pnpm
 
