@@ -181,6 +181,18 @@ importers:
       '@adonisjs/hash':
         specifier: ^10.1.1
         version: 10.1.1
+      '@iconify-json/lucide':
+        specifier: ^1.2.135
+        version: 1.2.137
+      '@iconify-json/selfhst':
+        specifier: ^1.2.20
+        version: 1.2.21
+      '@iconify-json/simple-icons':
+        specifier: ^1.2.97
+        version: 1.2.97
+      '@iconify-json/tabler':
+        specifier: ^1.2.39
+        version: 1.2.39
       '@internationalized/date':
         specifier: ^3.12.4
         version: 3.12.4
@@ -190,6 +202,9 @@ importers:
       '@pinia/nuxt':
         specifier: ^1.0.2
         version: 1.0.2(magic-string@1.4.2)(magicast@0.5.5)(oxc-parser@0.139.0)(pinia@4.0.3(@vue/devtools-api@8.2.1)(typescript@5.7.3)(vue@3.5.43(typescript@5.7.3)))(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.2)(vite@8.3.1(@types/node@26.6.2)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.15)(yaml@2.9.0)))
+      '@tanstack/vue-table':
+        specifier: ^8.21.3
+        version: 8.21.3(vue@3.5.43(typescript@5.7.3))
       '@trpc/client':
         specifier: ^11.19.0
         version: 11.19.0(@trpc/server@11.19.0(typescript@5.7.3))(typescript@5.7.3)
@@ -257,24 +272,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
-      '@iconify-json/lucide':
-        specifier: ^1.2.135
-        version: 1.2.137
-      '@iconify-json/selfhst':
-        specifier: ^1.2.20
-        version: 1.2.21
-      '@iconify-json/simple-icons':
-        specifier: ^1.2.97
-        version: 1.2.97
-      '@iconify-json/tabler':
-        specifier: ^1.2.39
-        version: 1.2.39
       '@nuxt/kit':
         specifier: ^4.5.2
         version: 4.5.2(magic-string@1.4.2)(magicast@0.5.5)(oxc-parser@0.139.0)(rolldown@1.2.11)(unplugin@3.4.0(esbuild@0.28.1)(rolldown@1.2.11)(rollup@4.62.2)(vite@8.3.1(@types/node@26.6.2)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.0)(tsx@4.23.15)(yaml@2.9.0)))
-      '@tanstack/vue-table':
-        specifier: ^8.21.3
-        version: 8.21.3(vue@3.5.43(typescript@5.7.3))
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
