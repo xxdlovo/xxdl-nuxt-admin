@@ -1,22 +1,49 @@
 name: Publish to npm
 
-# 发布两个 Nuxt Layer 包：
+# ============================================================================
+# 发布两个 Nuxt Layer 包
 #   xxdl-admin-core  —— 基座（系统管理 / 认证 / RBAC / tRPC / Drizzle）
 #   xxdl-admin-trade —— 可选电商层（依赖 core）
 #
-# 触发方式：
-#   1. 打 tag（推荐）：git tag v0.1.0 && git push origin v0.1.0
-#   2. 手动：Actions → Publish to npm → Run workflow（可选择只发某个包）
+# 认证方式：npm Trusted Publishing（OIDC），**不需要 NPM_TOKEN**。
+# 前置条件（每个包各配一次）：
+#   npm 包页面 → Settings → Trusted Publishing → 添加 GitHub Actions
+#     Organization or user : xxdlovo
+#     Repository           : xxdl-nuxt-admin
+#     Workflow filename    : publish.yml
+#     Environment          : （留空）
 #
-# 前置条件：仓库 Secrets 中配置 NPM_TOKEN（npm 的 Automation 类型 token）。
+# ----------------------------------------------------------------------------
+# 版本号从哪来
+# ----------------------------------------------------------------------------
+# **唯一来源是各自 package.json 的 version**。tag 只是触发信号，
+# workflow 会校验「tag 解析出的版本 == package.json 的版本」，不一致直接失败，
+# 避免「tag 写了 0.2.0 但包还是 0.1.0」这类事故。
+#
+# 三种 tag 形式：
+#   core-v0.1.1   只发 xxdl-admin-core（要求它的 version 是 0.1.1）
+#   trade-v0.2.0  只发 xxdl-admin-trade（要求它的 version 是 0.2.0）
+#   v0.2.0        两个包一起发（要求两个包的 version 都是 0.2.0）
+#
+# 完整发布步骤：
+#   1. 改 packages/<包>/package.json 的 version
+#   2. git add -A && git commit -m "release: core 0.1.1"
+#   3. git tag core-v0.1.1
+#   4. git push origin main --tags
+#
+# dist-tag 规则：版本号含 `-`（如 0.2.0-beta.1）发 next，其余发 latest。
+# ============================================================================
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'        # 两个包一起发
+      - 'core-v*'   # 只发 core
+      - 'trade-v*'  # 只发 trade
   workflow_dispatch:
     inputs:
       package:
-        description: '要发布的包'
+        description: '要发布的包（版本号取自对应 package.json）'
         type: choice
         options:
           - all
@@ -39,7 +66,7 @@ jobs:
 
     permissions:
       contents: read
-      # npm provenance 需要 OIDC token
+      # Trusted Publishing 与 provenance 都依赖 OIDC
       id-token: write
 
     steps:
@@ -68,41 +95,141 @@ jobs:
       - name: Layer contract check
         run: pnpm check:layers
 
-      # prepack 钩子会自动把 swagger 资源同步进包
-      # （public/swagger-ui 在 .gitignore 中，全新 clone 时并不存在）
+      # 解析目标与版本：tag 触发时校验一致性；手动触发时取 package.json
+      - name: Resolve target and version
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_PACKAGE: ${{ inputs.package }}
+        run: |
+          set -euo pipefail
+
+          CORE_VERSION=$(node -p "require('./packages/admin-core/package.json').version")
+          TRADE_VERSION=$(node -p "require('./packages/admin-trade/package.json').version")
+          echo "core=$CORE_VERSION trade=$TRADE_VERSION"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            TARGET="${INPUT_PACKAGE:-all}"
+            echo "手动触发，目标=$TARGET，版本取自 package.json"
+          else
+            case "$REF_NAME" in
+              core-v*)
+                TARGET="xxdl-admin-core"
+                EXPECTED="${REF_NAME#core-v}"
+                ;;
+              trade-v*)
+                TARGET="xxdl-admin-trade"
+                EXPECTED="${REF_NAME#trade-v}"
+                ;;
+              v*)
+                TARGET="all"
+                EXPECTED="${REF_NAME#v}"
+                ;;
+              *)
+                echo "::error::无法识别的 tag: $REF_NAME"
+                exit 1
+                ;;
+            esac
+
+            echo "tag 触发，目标=$TARGET，期望版本=$EXPECTED"
+
+            fail() {
+              echo "::error::版本不一致：tag 指向 $EXPECTED，但 $1 的 package.json 是 $2。"
+              echo "::error::请先把 package.json 的 version 改成 $EXPECTED 并提交，再重新打 tag。"
+              exit 1
+            }
+
+            if [[ "$TARGET" == "all" || "$TARGET" == "xxdl-admin-core" ]]; then
+              [[ "$CORE_VERSION" == "$EXPECTED" ]] || fail "xxdl-admin-core" "$CORE_VERSION"
+            fi
+            if [[ "$TARGET" == "all" || "$TARGET" == "xxdl-admin-trade" ]]; then
+              [[ "$TRADE_VERSION" == "$EXPECTED" ]] || fail "xxdl-admin-trade" "$TRADE_VERSION"
+            fi
+          fi
+
+          # dist-tag：预发布版本（含 -）走 next，其余走 latest
+          case "$TARGET" in
+            xxdl-admin-trade) VERSION_FOR_TAG="$TRADE_VERSION" ;;
+            *)                VERSION_FOR_TAG="$CORE_VERSION" ;;
+          esac
+
+          if [[ "$VERSION_FOR_TAG" == *-* ]]; then
+            DIST_TAG="next"
+          else
+            DIST_TAG="latest"
+          fi
+
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "core_version=$CORE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "trade_version=$TRADE_VERSION" >> "$GITHUB_OUTPUT"
+          echo "『$TARGET』将发布到 dist-tag=$DIST_TAG"
+
+      # 提前检查版本是否已存在：npm 不允许覆盖已发布版本，
+      # 与其让 publish 在最后一步报错，不如在打包前就给出明确提示。
+      - name: Check version availability
+        if: ${{ inputs.dry_run != 'true' }}
+        env:
+          TARGET: ${{ steps.resolve.outputs.target }}
+          CORE_VERSION: ${{ steps.resolve.outputs.core_version }}
+          TRADE_VERSION: ${{ steps.resolve.outputs.trade_version }}
+        run: |
+          set -euo pipefail
+
+          check() {
+            local pkg="$1" ver="$2"
+            if npm view "$pkg@$ver" version >/dev/null 2>&1; then
+              echo "::error::$pkg@$ver 已存在于 npm，无法重复发布。"
+              echo "::error::请把 packages/admin-${pkg#xxdl-admin-}/package.json 的 version 升级后，重新提交并打 tag。"
+              return 1
+            fi
+            echo "  ✓ $pkg@$ver 可发布"
+          }
+
+          case "$TARGET" in
+            xxdl-admin-core)  check xxdl-admin-core  "$CORE_VERSION" ;;
+            xxdl-admin-trade) check xxdl-admin-trade "$TRADE_VERSION" ;;
+            *)
+              check xxdl-admin-core  "$CORE_VERSION"
+              check xxdl-admin-trade "$TRADE_VERSION"
+              ;;
+          esac
+
+      # 用 pnpm pack 生成 tarball：它会正确替换 `workspace:^` 这类 pnpm 专有协议
+      # （npm publish 直接跑在 workspace 里不会替换，会发出一个装不上的包）。
+      # prepack 钩子会顺带把 swagger 资源同步进包
+      # （public/swagger-ui 在 .gitignore 中，全新 clone 时并不存在）。
       - name: Build tarballs (verify pack)
         run: |
-          pnpm --filter xxdl-admin-core pack --pack-destination "$RUNNER_TEMP"
-          pnpm --filter xxdl-admin-trade pack --pack-destination "$RUNNER_TEMP"
-          ls -lh "$RUNNER_TEMP"/*.tgz
+          mkdir -p "$RUNNER_TEMP/tgz"
+          pnpm --filter xxdl-admin-core pack --pack-destination "$RUNNER_TEMP/tgz"
+          pnpm --filter xxdl-admin-trade pack --pack-destination "$RUNNER_TEMP/tgz"
+          ls -lh "$RUNNER_TEMP/tgz"
 
       - name: Publish
         if: ${{ inputs.dry_run != 'true' }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          TARGET: ${{ inputs.package || 'all' }}
-          REF_NAME: ${{ github.ref_name }}
+          TARGET: ${{ steps.resolve.outputs.target }}
+          DIST_TAG: ${{ steps.resolve.outputs.dist_tag }}
         run: |
           set -euo pipefail
 
-          # 判断 dist-tag：
-          #   - 普通版本（0.1.0）→ latest，`pnpm add` 直接可用
-          #   - 预发布版本（0.2.0-beta.1）→ next，避免被默认安装
-          DIST_TAG="latest"
-          if [[ "$REF_NAME" == v* ]]; then
-            VERSION="${REF_NAME#v}"
-            if [[ "$VERSION" == *-* ]]; then
-              DIST_TAG="next"
-            fi
-          fi
-          echo "Publishing with dist-tag: $DIST_TAG"
+          # 不设置 NODE_AUTH_TOKEN：走 Trusted Publishing（OIDC）。
+          #
+          # 为什么是 `npm publish <tgz>` 而不是 `pnpm publish`：
+          #   - workspace 协议的替换由 pnpm pack 完成（见上一步）；
+          #   - OIDC / provenance 由 npm CLI 处理，pnpm 的 publish 不保证走同一路径。
+          # 两者结合才能既发得出去、又装得上。
 
           publish() {
             local pkg="$1"
-            echo "::group::publish $pkg"
-            pnpm --filter "$pkg" publish \
+            local tarball
+            tarball=$(ls "$RUNNER_TEMP/tgz/$pkg"-*.tgz | head -n1)
+            echo "::group::publish $pkg (dist-tag=$DIST_TAG)"
+            echo "tarball: $tarball"
+            npm publish "$tarball" \
               --access public \
-              --no-git-checks \
               --tag "$DIST_TAG" \
               --provenance
             echo "::endgroup::"
@@ -120,15 +247,25 @@ jobs:
 
       - name: Dry run summary
         if: ${{ inputs.dry_run == 'true' }}
-        run: echo "dry_run=true，已完成打包验证，未执行 npm publish。"
+        run: echo "dry_run=true，已完成打包与版本校验，未执行 npm publish。"
 
       - name: Publish summary
         if: always()
+        env:
+          TARGET: ${{ steps.resolve.outputs.target }}
+          DIST_TAG: ${{ steps.resolve.outputs.dist_tag }}
+          CORE_VERSION: ${{ steps.resolve.outputs.core_version }}
+          TRADE_VERSION: ${{ steps.resolve.outputs.trade_version }}
         run: |
           {
             echo "### 发布结果"
             echo ""
-            echo "- 触发：\`${{ github.event_name }}\` / \`${{ github.ref_name }}\`"
-            echo "- 目标：\`${{ inputs.package || 'all' }}\`"
-            echo "- dry-run：\`${{ inputs.dry_run || 'false' }}\`"
+            echo "| 项 | 值 |"
+            echo "| --- | --- |"
+            echo "| 触发 | \`${{ github.event_name }}\` / \`${{ github.ref_name }}\` |"
+            echo "| 目标 | \`$TARGET\` |"
+            echo "| core 版本 | \`$CORE_VERSION\` |"
+            echo "| trade 版本 | \`$TRADE_VERSION\` |"
+            echo "| dist-tag | \`$DIST_TAG\` |"
+            echo "| dry-run | \`${{ inputs.dry_run || 'false' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
