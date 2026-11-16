@@ -47,8 +47,11 @@ const state = ref({
 })
 
 const selectedRoleIds = ref<string[]>([])
+const selectedPostIds = ref<string[]>([])
 const roleItems = ref<Array<{ label: string, value: string }>>([])
+const postItems = ref<Array<{ label: string, value: string }>>([])
 const loadingRoles = ref(false)
+const loadingPosts = ref(false)
 const deptItems = ref<Array<{ label: string, value: string }>>([])
 const loadingDepts = ref(false)
 
@@ -124,6 +127,7 @@ function resetFormState() {
     remark: ''
   })
   selectedRoleIds.value = []
+  selectedPostIds.value = []
 }
 
 function fillFormData() {
@@ -141,6 +145,7 @@ function fillFormData() {
       status: props.data.status ?? 1,
       remark: props.data.remark || ''
     })
+    selectedPostIds.value = (props.data.postIds ?? []).filter((id): id is string => Boolean(id))
   }
 }
 
@@ -162,6 +167,26 @@ async function loadRoleOptions() {
       }))
   } finally {
     loadingRoles.value = false
+  }
+}
+
+async function loadPostOptions() {
+  if (!hasPermission('system:post:list')) {
+    postItems.value = []
+    return
+  }
+
+  loadingPosts.value = true
+  try {
+    const posts = await $trpc.sysPost.listEnabled.query() as Array<{ id?: string | null, name?: string | null, code?: string | null }>
+    postItems.value = posts
+      .filter(post => Boolean(post.id))
+      .map(post => ({
+        label: post.name || post.code || post.id || '',
+        value: post.id as string
+      }))
+  } finally {
+    loadingPosts.value = false
   }
 }
 
@@ -238,12 +263,14 @@ async function initFormData() {
   if (props.operateType === 'edit' && props.data?.id) {
     await Promise.all([
       loadRoleOptions(),
+      loadPostOptions(),
       loadDeptOptions(),
       loadAssignedRoles()
     ])
   } else {
     roleItems.value = []
     deptItems.value = []
+    await loadPostOptions()
   }
 }
 
@@ -261,7 +288,8 @@ async function handleSubmit(_event: FormSubmitEvent<SysUserAddDTO>) {
 async function handleEdit() {
   const payload = {
     ...state.value,
-    deptId: normalizeDeptId(state.value.deptId)
+    deptId: normalizeDeptId(state.value.deptId),
+    postIds: selectedPostIds.value
   } as SysUserUpdateDTO
 
   await $trpc.sysUser.update.mutate(payload)
@@ -276,7 +304,10 @@ async function handleEdit() {
 }
 
 async function handleSave() {
-  await $trpc.sysUser.create.mutate(state.value as SysUserAddDTO)
+  await $trpc.sysUser.create.mutate({
+    ...state.value,
+    postIds: selectedPostIds.value
+  } as SysUserAddDTO)
   useToastSuccess($ts('common.addSuccess'))
 }
 
@@ -431,6 +462,25 @@ watch(visible, (newVal) => {
               :loading="loadingRoles"
               :disabled="loadingRoles"
               :placeholder="$ts('module.system.user.form.userRole')"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="hasPermission('system:post:list')"
+            :label="$ts('module.system.user.userPost')"
+            orientation="horizontal"
+            :ui="formItemUi"
+            class="md:col-span-2"
+          >
+            <USelectMenu
+              v-model="selectedPostIds"
+              multiple
+              value-key="value"
+              :items="postItems"
+              :loading="loadingPosts"
+              :disabled="loadingPosts"
+              :placeholder="$ts('module.system.user.form.userPost')"
               class="w-full"
             />
           </UFormField>

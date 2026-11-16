@@ -1,8 +1,8 @@
 import { CommonRepo } from '#admin/server/drizzle/CommonRepo'
 import { SysRoleBaseSchema } from "#admin/shared/system/role/common";
-import { sysRole, sysUserRole } from "#admin/server/drizzle/schema";
+import { sysRole, sysUser, sysUserRole } from "#admin/server/drizzle/schema";
 import type { Context } from '#admin/server/trpc/context'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, like, or } from 'drizzle-orm'
 
 const commonRepo = CommonRepo(sysRole, SysRoleBaseSchema)
 
@@ -64,6 +64,51 @@ export const sysRoleRepo = (ctx: Context) => {
           eq(sysRole.status, 1),
           eq(sysRole.isDeleted, 0)
         ))
+    },
+
+    /** 角色下已分配的用户（分配弹窗回显） */
+    async listAssignedUsers(roleId: string) {
+      return await ctx.db
+        .select({
+          id: sysUser.id,
+          username: sysUser.username,
+          nickname: sysUser.nickname,
+        })
+        .from(sysUserRole)
+        .innerJoin(sysUser, eq(sysUserRole.userId, sysUser.id))
+        .where(and(
+          eq(sysUserRole.roleId, roleId),
+          eq(sysUserRole.status, 1),
+          eq(sysUserRole.isDeleted, 0),
+          eq(sysUser.isDeleted, 0)
+        ))
+        .orderBy(sysUser.username)
+    },
+
+    /** 分配弹窗的可选用户（按用户名/昵称搜索，最多 limit 条） */
+    async listAssignableUsers(keyword: string | undefined, limit: number) {
+      const conditions = [
+        eq(sysUser.isDeleted, 0),
+        eq(sysUser.status, 1),
+      ]
+
+      if (keyword) {
+        conditions.push(or(
+          like(sysUser.username, `%${keyword}%`),
+          like(sysUser.nickname, `%${keyword}%`)
+        )!)
+      }
+
+      return await ctx.db
+        .select({
+          id: sysUser.id,
+          username: sysUser.username,
+          nickname: sysUser.nickname,
+        })
+        .from(sysUser)
+        .where(and(...conditions))
+        .orderBy(sysUser.username)
+        .limit(limit)
     }
   }
 }

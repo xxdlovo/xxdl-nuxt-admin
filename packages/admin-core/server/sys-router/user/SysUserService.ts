@@ -21,6 +21,8 @@ import type {
 import { randomUuid } from '#admin/shared/utils/uuid'
 import { hashUserPassword, isPlaceholderPassword } from '#admin/server/utils/password'
 import { sysDeptRepo } from '#admin/server/sys-router/dept/SysDeptRepo'
+import { sysUserPostRepo } from '#admin/server/sys-router/userPost/SysUserPostRepo'
+import { sysPostRepo } from '#admin/server/sys-router/post/SysPostRepo'
 import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCacheService'
 import { sysOnlineService } from '#admin/server/sys-router/online/SysOnlineService'
 import { runUserOnboardHooks } from '#admin/server/hooks/userOnboard'
@@ -43,18 +45,70 @@ export function sysUserService(ctx: Context) {
   const deptRepo = sysDeptRepo(ctx)
   const userRoleRepo = sysUserRoleRepo(ctx)
   const roleRepo = sysRoleRepo(ctx)
+  const userPostRepo = sysUserPostRepo(ctx)
+  const postRepo = sysPostRepo(ctx)
   const rbacCache = rbacCacheService()
   // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
   const log = useLogger(ctx.event, 'server/sys-router/user')
 
+  /** 批量补齐用户的岗位 id / 岗位名，避免列表 N+1 查询。 */
+  async function attachPosts<T extends { id?: string | null }>(users: T[]) {
+    const userIds = users
+      .map(user => user.id)
+      .filter((id): id is string => Boolean(id))
+
+    if (userIds.length === 0) {
+      return users.map(user => ({ ...user, postIds: [], postNames: '' }))
+    }
+
+    let links: Array<{ userId: string, postId: string }> = []
+    let posts: Array<{ id: string, name: string | null }> = []
+
+    try {
+      links = await userPostRepo.listByUserIds(userIds)
+      const postIds = Array.from(new Set(links.map(link => link.postId)))
+      posts = await postRepo.listByIds(postIds)
+    }
+    catch (error) {
+      // P2 迁移尚未执行时，用户列表/详情不能被岗位表拖垮
+      console.error('[User] post info load failed', error)
+      return users.map(user => ({ ...user, postIds: [], postNames: '' }))
+    }
+
+    const nameMap = new Map(posts.map(post => [post.id, post.name]))
+    const byUser = new Map<string, string[]>()
+
+    for (const link of links) {
+      const list = byUser.get(link.userId) ?? []
+      list.push(link.postId)
+      byUser.set(link.userId, list)
+    }
+
+    return users.map((user) => {
+      const ids = byUser.get(user.id ?? '') ?? []
+      return {
+        ...user,
+        postIds: ids,
+        postNames: ids
+          .map(id => nameMap.get(id))
+          .filter((name): name is string => Boolean(name))
+          .join(','),
+      }
+    })
+  }
+
   return {
     async create(data: SysUserAddDTO): Promise<boolean> {
+      const { postIds, ...values } = data
       const pojo = {
-        ...data,
+        ...values,
         id: randomUuid(),
         password: await hashUserPassword(data.password)
       }
       await repo.create(pojo)
+      if (postIds !== undefined) {
+        await userPostRepo.replaceUserPosts(pojo.id, postIds, ctx.user?.id ?? null)
+      }
       log.info('user created', { user: { action: 'create', id: pojo.id } })
       return true
     },
@@ -102,6 +156,7 @@ export function sysUserService(ctx: Context) {
 
     async remove(id: string): Promise<boolean> {
       await repo.remove(id)
+      await userPostRepo.removeByUserId(id, ctx.user?.id ?? null)
       await sysOnlineService(ctx).revokeUserSessions(id)
       await rbacCache.invalidateUser(id)
       log.info('user removed', { user: { action: 'remove', id } })
@@ -111,6 +166,7 @@ export function sysUserService(ctx: Context) {
     async batchRemove(ids: string[]): Promise<number> {
       await repo.batchRemove(ids)
       await Promise.all(ids.map(async (id) => {
+        await userPostRepo.removeByUserId(id, ctx.user?.id ?? null)
         await sysOnlineService(ctx).revokeUserSessions(id)
         await rbacCache.invalidateUser(id)
       }))
@@ -119,7 +175,7 @@ export function sysUserService(ctx: Context) {
     },
 
     async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
-      const { id: _inputId, ...values } = data
+      const { id: _inputId, postIds, ...values } = data
       const deptId = normalizeDeptId(data.deptId)
       const current = await repo.getById(id)
 
@@ -137,6 +193,9 @@ export function sysUserService(ctx: Context) {
         ...values,
         deptId
       })
+      if (postIds !== undefined) {
+        await userPostRepo.replaceUserPosts(id, postIds, ctx.user?.id ?? null)
+      }
       if (data.status !== undefined) {
         await rbacCache.invalidateUser(id)
         // 禁用账号时撤销全部在线会话，避免已登录的浏览器继续操作
@@ -210,14 +269,19 @@ export function sysUserService(ctx: Context) {
       if (!pojo) {
         throw new AppError('common.notExist')
       }
+      const [withPosts] = await attachPosts([pojo])
       log.info('user fetched', { user: { action: 'getOne' } })
-      return omitPassword(pojo) as SysUserDto
+      return omitPassword(withPosts!) as SysUserDto
     },
 
     async getById(id: string): Promise<SysUserDto | null> {
       const pojo = await repo.getByIdWithDept(id)
       log.info('user fetched', { user: { action: 'getById', id } })
-      return omitPassword(pojo) as SysUserDto | null
+      if (!pojo) {
+        return null
+      }
+      const [withPosts] = await attachPosts([pojo])
+      return omitPassword(withPosts!) as SysUserDto
     },
 
     /**
@@ -238,17 +302,19 @@ export function sysUserService(ctx: Context) {
     async page(req: SysUserPageQueryDTO): Promise<OrmPageResp> {
       const { page, pageSize, ...dto } = req
       const result = await repo.pageWithDept(page, pageSize, dto)
+      const listWithPosts = await attachPosts(result.list)
       log.info('user page queried', { user: { action: 'page', page, pageSize, total: result.total } })
       return {
         ...result,
-        list: result.list.map(omitPassword)
+        list: listWithPosts.map(omitPassword)
       }
     },
 
     async list(dto: any): Promise<SysUserDto[]> {
       const result = await repo.listWithDept(dto)
+      const listWithPosts = await attachPosts(result)
       log.info('user listed', { user: { action: 'list', count: result.length } })
-      return result.map(omitPassword) as SysUserDto[]
+      return listWithPosts.map(omitPassword) as SysUserDto[]
     },
 
     /**
@@ -274,14 +340,13 @@ export function sysUserService(ctx: Context) {
       const selectedRoleIds = Array.from(new Set(data.roleIds.filter(id => assignableRoleIds.has(id))))
       const existingRows = await userRoleRepo.listByUserId(data.userId)
       const selectedSet = new Set(selectedRoleIds)
-      const existingRoleIds = new Set(existingRows.map(row => row.roleId))
       const enableIds = existingRows
         .filter(row => selectedSet.has(row.roleId))
         .map(row => row.id)
       const disableIds = existingRows
-        .filter(row => !selectedSet.has(row.roleId))
+        .filter(row => row.isDeleted === 0 && !selectedSet.has(row.roleId))
         .map(row => row.id)
-      const insertRoleIds = selectedRoleIds.filter(id => !existingRoleIds.has(id))
+      const insertRoleIds = selectedRoleIds.filter(id => !existingRows.some(row => row.roleId === id))
       const operatorId = ctx.user?.id ?? null
 
       await userRoleRepo.enableByIds(enableIds, operatorId)

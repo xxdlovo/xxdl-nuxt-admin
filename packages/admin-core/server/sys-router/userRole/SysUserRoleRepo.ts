@@ -37,13 +37,23 @@ export const sysUserRoleRepo = (ctx: Context) => {
       return await ctx.db
         .select({
           id: sysUserRole.id,
-          roleId: sysUserRole.roleId
+          roleId: sysUserRole.roleId,
+          isDeleted: sysUserRole.isDeleted
         })
         .from(sysUserRole)
-        .where(and(
-          eq(sysUserRole.userId, userId),
-          eq(sysUserRole.isDeleted, 0)
-        ))
+        .where(eq(sysUserRole.userId, userId))
+    },
+
+    /** 角色下所有用户关联行（分配用户弹窗用；包含已软删行以便复用） */
+    async listByRoleId(roleId: string) {
+      return await ctx.db
+        .select({
+          id: sysUserRole.id,
+          userId: sysUserRole.userId,
+          isDeleted: sysUserRole.isDeleted
+        })
+        .from(sysUserRole)
+        .where(eq(sysUserRole.roleId, roleId))
     },
 
     async listByUserIdAndRoleIds(userId: string, roleIds: string[]) {
@@ -99,6 +109,23 @@ export const sysUserRoleRepo = (ctx: Context) => {
       }
 
       await ctx.db.insert(sysUserRole).values(roleIds.map(roleId => ({
+        id: randomUuid(),
+        userId,
+        roleId,
+        status: 1,
+        isDeleted: 0,
+        createdBy: operatorId,
+        updatedBy: operatorId
+      })))
+    },
+
+    /** 角色分配用户：批量建立 user-role 关联 */
+    async createActiveAssignmentsForRole(roleId: string, userIds: string[], operatorId: string | null) {
+      if (userIds.length === 0) {
+        return
+      }
+
+      await ctx.db.insert(sysUserRole).values(userIds.map(userId => ({
         id: randomUuid(),
         userId,
         roleId,

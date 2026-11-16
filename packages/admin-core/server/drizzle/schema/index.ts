@@ -13,10 +13,13 @@ import { sysOauthAccount } from "./system/oauthAccount"
 import { sysOauthConfig } from "./system/oauthConfig"
 import { sysOss } from "./system/oss"
 import { sysOssConfig } from "./system/ossConfig"
+import { sysPost } from "./system/post"
 import { sysRole } from "./system/role"
+import { sysRoleDept } from "./system/roleDept"
 import { sysRoleMenu } from "./system/roleMenu"
 import { sysSystemLog } from "./system/systemLog"
 import { sysUser } from "./system/user"
+import { sysUserPost } from "./system/userPost"
 import { sysUserRole } from "./system/userRole"
 import { sysUserSession } from "./system/userSession"
 import { demo } from "./demo/index"
@@ -41,10 +44,13 @@ export {
   sysOauthConfig,
   sysOss,
   sysOssConfig,
+  sysPost,
   sysRole,
+  sysRoleDept,
   sysRoleMenu,
   sysSystemLog,
   sysUser,
+  sysUserPost,
   sysUserRole,
   sysUserSession,
 };

@@ -3,7 +3,8 @@ import { sysLoginLogRepo } from './SysLoginLogRepo'
 import type { Context } from '#admin/server/trpc/context';
 import { AppError } from '#admin/server/utils/appError'
 import type { OrmPageResp } from '#admin/server/utils/ApiResp'
-import type { SysLoginLogAddDTO, SysLoginLogDto, SysLoginLogPageQueryDTO, SysLoginLogQueryDTO, SysLoginLogUpdateDTO } from "#admin/shared/system/loginLog";
+import type { SysLoginLogAddDTO, SysLoginLogDto, SysLoginLogPageQueryDTO, SysLoginLogQueryDTO, SysLoginLogUnlockDTO, SysLoginLogUpdateDTO } from "#admin/shared/system/loginLog";
+import { sysUserService } from '#admin/server/sys-router/user/SysUserService'
 import { randomUuid } from "#admin/shared/utils/uuid";
 
 export function sysLoginLogService(ctx: Context) {
@@ -56,6 +57,28 @@ export function sysLoginLogService(ctx: Context) {
             const list = await repo.listRecent(dto)
             log.info('loginLog listed', { loginLog: { action: 'list', count: list.length } })
             return list
+        },
+        async clearAll(): Promise<boolean> {
+            await repo.clearAll()
+            log.warn('loginLog cleared', { loginLog: { action: 'clearAll' } })
+            return true
+        },
+        /** 按 userId 或 username 解锁账号（登录日志的“解锁”按钮） */
+        async unlock(data: SysLoginLogUnlockDTO): Promise<boolean> {
+            let userId = data.userId
+
+            if (!userId && data.username) {
+                const user = await sysUserService(ctx).getLoginUserByUsername(data.username)
+                userId = user?.id
+            }
+
+            if (!userId) {
+                throw new AppError('common.notExist')
+            }
+
+            await sysUserService(ctx).unlock(userId)
+            log.info('loginLog account unlocked', { loginLog: { action: 'unlock', userId } })
+            return true
         },
     }
 }

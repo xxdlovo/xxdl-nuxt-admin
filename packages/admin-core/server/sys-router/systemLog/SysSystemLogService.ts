@@ -59,5 +59,10 @@ export function sysSystemLogService(ctx: Context) {
             log.info('systemLog listed', { systemLog: { action: 'list', count: list.length } })
             return list
         },
+        async clearAll(): Promise<boolean> {
+            await repo.clearAll()
+            log.warn('systemLog cleared', { systemLog: { action: 'clearAll' } })
+            return true
+        },
     }
 }

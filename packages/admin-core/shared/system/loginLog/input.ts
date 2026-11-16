@@ -50,3 +50,10 @@ export type SysLoginLogQueryDTO = z.infer<typeof SysLoginLogQuerySchema>;
 export const SysLoginLogPageQuerySchema =
     SysLoginLogQuerySchema.extend(ApiRequestSchema.shape)
 export type SysLoginLogPageQueryDTO = z.infer<typeof SysLoginLogPageQuerySchema>;
+
+// 解锁登录失败账号
+export const SysLoginLogUnlockSchema = z.object({
+    userId: z.string().optional(),
+    username: z.string().min(1, 'form.userName.required').optional(),
+})
+export type SysLoginLogUnlockDTO = z.infer<typeof SysLoginLogUnlockSchema>;

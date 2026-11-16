@@ -20,6 +20,11 @@ export const sysLoginLogRepo = (ctx: Context) => {
     /** 列表查询（登录时间倒序） */
     async listRecent(dto: Record<string, unknown>) {
       return await repo.list(dto, [desc(sysLoginLog.createdAt)])
+    },
+
+    /** 清空登录日志（硬删除，仅管理员通过 del 权限触发） */
+    async clearAll() {
+      await ctx.db.delete(sysLoginLog)
     }
   }
 }

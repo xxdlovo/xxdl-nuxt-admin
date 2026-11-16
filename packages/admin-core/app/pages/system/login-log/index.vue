@@ -26,7 +26,29 @@
             <template #prefix>
               <span>{{ $ts('module.system.loginLog.title') }}</span>
             </template>
-            <template #default />
+            <template #default>
+              <UButton
+                  v-if="permissions.canList.value"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-download"
+                  @click="handleExport"
+              >
+                {{ $ts('module.system.excel.export') }}
+              </UButton>
+              <Popconfirm
+                  v-if="permissions.canDel.value"
+                  :content="$ts('module.system.loginLog.clearConfirm')"
+                  :positive-text="$ts('common.confirm')"
+                  @confirm="handleClear"
+              >
+                <template #trigger>
+                  <UButton color="error" variant="outline" icon="i-lucide-trash-2">
+                    {{ $ts('module.system.loginLog.clear') }}
+                  </UButton>
+                </template>
+              </Popconfirm>
+            </template>
           </TableHeaderOperation>
 
           <SysLoginLogDetail v-model:visible="detailVisible" :data="detailData" />
@@ -50,10 +72,13 @@ import SysLoginLogSearch from './components/sys-login-log-search.vue'
 import SysLoginLogDetail from './components/sys-login-log-detail.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, usePaginatedTable } from '#admin/app/composables/useTable'
+import { downloadExcel } from '#admin/app/utils/excel'
+import { useToastSuccess } from '#admin/app/utils/toast'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
+const { hasPermission } = useRbacProfile()
 const tableRef = useTemplateRef('table')
 const permissions = useCrudPermissions('system:loginLog')
 const searchParams = ref<SysLoginLogQueryDTO>({})
@@ -79,20 +104,52 @@ const handleDetail = (row: SysLoginLogDto) => {
   detailVisible.value = true
 }
 
+const handleExport = async () => {
+  await downloadExcel('loginLog', { ...searchParams.value })
+}
+
+const handleClear = async () => {
+  await $trpc.sysLoginLog.clear.mutate()
+  useToastSuccess($ts('module.system.loginLog.clearSuccess'))
+  await refresh()
+}
+
+const handleUnlock = async (row: SysLoginLogDto) => {
+  await $trpc.sysLoginLog.unlock.mutate({
+    userId: row.userId ?? undefined,
+    username: row.userId ? undefined : row.username ?? undefined,
+  })
+  useToastSuccess($ts('module.system.loginLog.unlockSuccess'))
+  await refresh()
+}
+
 const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
   const actionColumn: TableColumn<SysLoginLogDto> = {
     id: 'actions',
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
+      const actions = [
+        h(UButton, {
+          variant: 'outline',
+          color: 'primary',
+          size: 'xs',
+          icon: 'i-lucide-eye',
+          onClick: () => handleDetail(row.original)
+        }, { default: () => $ts('common.detail') })
+      ]
 
-      return h(UButton, {
-        variant: 'outline',
-        color: 'primary',
-        size: 'xs',
-        icon: 'i-lucide-eye',
-        onClick: () => handleDetail(row.original)
-      }, { default: () => $ts('common.detail') })
+      if (row.original.status === 2 && hasPermission('system:user:unlock')) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'warning',
+          size: 'xs',
+          icon: 'i-lucide-lock-open',
+          onClick: () => handleUnlock(row.original)
+        }, { default: () => $ts('module.system.loginLog.unlock') }))
+      }
+
+      return h('div', { class: 'flex gap-2' }, actions)
     }
   }
 

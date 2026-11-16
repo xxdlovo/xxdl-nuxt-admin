@@ -26,7 +26,29 @@
             <template #prefix>
               <span>{{ $ts('module.system.sysLog.title') }}</span>
             </template>
-            <template #default />
+            <template #default>
+              <UButton
+                  v-if="permissions.canList.value"
+                  color="neutral"
+                  variant="outline"
+                  icon="i-lucide-download"
+                  @click="handleExport"
+              >
+                {{ $ts('module.system.excel.export') }}
+              </UButton>
+              <Popconfirm
+                  v-if="permissions.canDel.value"
+                  :content="$ts('module.system.sysLog.clearConfirm')"
+                  :positive-text="$ts('common.confirm')"
+                  @confirm="handleClear"
+              >
+                <template #trigger>
+                  <UButton color="error" variant="outline" icon="i-lucide-trash-2">
+                    {{ $ts('module.system.sysLog.clear') }}
+                  </UButton>
+                </template>
+              </Popconfirm>
+            </template>
           </TableHeaderOperation>
 
           <SysLogDetail v-model:visible="detailVisible" :data="detailData" />
@@ -50,6 +72,8 @@ import SysLogSearch from './components/sys-log-search.vue'
 import SysLogDetail from './components/sys-log-detail.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, usePaginatedTable } from '#admin/app/composables/useTable'
+import { downloadExcel } from '#admin/app/utils/excel'
+import { useToastSuccess } from '#admin/app/utils/toast'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -78,6 +102,16 @@ const {
 const handleDetail = (row: SysLogDto) => {
   detailData.value = JSON.parse(JSON.stringify(row))
   detailVisible.value = true
+}
+
+const handleExport = async () => {
+  await downloadExcel('systemLog', { ...searchParams.value })
+}
+
+const handleClear = async () => {
+  await $trpc.systemLog.clear.mutate()
+  useToastSuccess($ts('module.system.systemLog.clearSuccess'))
+  await refresh()
 }
 
 const columns = computed<TableColumn<SysLogDto>[]>(() => {

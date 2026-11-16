@@ -160,6 +160,17 @@ export const sysUserRepo = (ctx: Context) => {
       return Boolean(rows[0])
     },
 
+    /** 邮箱是否已存在（导入查重） */
+    async existsByEmail(email: string) {
+      const rows = await ctx.db
+        .select({ id: sysUser.id })
+        .from(sysUser)
+        .where(and(eq(sysUser.email, email), eq(sysUser.isDeleted, 0)))
+        .limit(1)
+
+      return Boolean(rows[0])
+    },
+
     /** 只取所属部门 id（保存后回读校验用） */
     async getDeptIdById(id: string) {
       const rows = await ctx.db

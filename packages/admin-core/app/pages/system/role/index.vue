@@ -32,6 +32,17 @@
           <template #prefix>
             <span>{{ $ts('module.system.role.title') }}</span>
           </template>
+          <template #suffix>
+            <UButton
+                v-if="rolePermissions.canList.value"
+                color="neutral"
+                variant="outline"
+                icon="i-lucide-download"
+                @click="handleExport"
+            >
+              {{ $ts('module.system.excel.export') }}
+            </UButton>
+          </template>
         </TableHeaderOperation>
 
           <!-- 操作弹窗 -->
@@ -46,6 +57,12 @@
               v-if="dataScopeVisible && dataScopeRole"
               v-model:open="dataScopeVisible"
               :role="dataScopeRole"
+              @saved="refresh"
+          />
+          <RoleUserAssignModal
+              v-if="assignVisible && assignRole"
+              v-model:open="assignVisible"
+              :role="assignRole"
               @saved="refresh"
           />
         </template>
@@ -67,17 +84,22 @@ import type { SysRoleDto, SysRoleQueryDTO } from '#admin/shared/system/role'
 import SysRoleSearch from './components/sys-role-search.vue'
 import SysRoleOperate from "./components/sys-role-operate.vue"
 import RoleDataScopeModal from './components/RoleDataScopeModal.vue'
+import RoleUserAssignModal from './components/RoleUserAssignModal.vue'
 
 import { businessDictCode } from "#admin/shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { downloadExcel } from '#admin/app/utils/excel'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
 const tableRef = useTemplateRef('table')
 const rolePermissions = useCrudPermissions('system:role')
+const { hasPermission } = useRbacProfile()
 const dataScopeVisible = ref(false)
 const dataScopeRole = ref<SysRoleDto | null>(null)
+const assignVisible = ref(false)
+const assignRole = ref<SysRoleDto | null>(null)
 const enableStatusConfig = useDictBadgeConfig(businessDictCode.enableStatus)
 const dataScopeConfig = useDictBadgeConfig(businessDictCode.dataScope)
 
@@ -138,6 +160,16 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
           icon: 'i-lucide-database',
           onClick: () => openDataScope(row.original)
         }, { default: () => $ts('module.system.role.dataScope') }))
+
+        if (hasPermission('system:role:assign')) {
+          actions.push(h(UButton, {
+            variant: 'outline',
+            color: 'neutral',
+            size: 'xs',
+            icon: 'i-lucide-users',
+            onClick: () => openAssignUsers(row.original)
+          }, { default: () => $ts('module.system.role.assignUsers') }))
+        }
       }
 
       if (rolePermissions.canDel.value) {
@@ -200,6 +232,15 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
 const openDataScope = (role: SysRoleDto) => {
   dataScopeRole.value = JSON.parse(JSON.stringify(role))
   dataScopeVisible.value = true
+}
+
+const openAssignUsers = (role: SysRoleDto) => {
+  assignRole.value = JSON.parse(JSON.stringify(role))
+  assignVisible.value = true
+}
+
+const handleExport = async () => {
+  await downloadExcel('role', { ...searchParams.value })
 }
 
 /**

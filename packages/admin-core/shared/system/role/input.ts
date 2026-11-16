@@ -29,7 +29,9 @@ export type SysRoleUpdateDTO = z.infer<typeof SysRoleUpdateSchema>;
 
 export const SysRoleDataScopeUpdateSchema = z.object({
     id: z.string().nonempty('form.id.required'),
-    dataScope: z.enum(['1', '2', '3', '4', '5', '6'])
+    dataScope: z.enum(['1', '2', '3', '4', '5', '6']),
+    /** data_scope=2 时授权部门；其它范围忽略 */
+    deptIds: z.array(z.string()).optional()
 })
 export type SysRoleDataScopeUpdateDTO = z.infer<typeof SysRoleDataScopeUpdateSchema>;
 

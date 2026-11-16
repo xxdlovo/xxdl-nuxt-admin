@@ -1,6 +1,7 @@
 import { and, eq, inArray, like, or, sql, type SQL } from "drizzle-orm"
 import type { Context } from "#admin/server/trpc/context"
 import { sysDepartment, sysRole, sysUser, sysUserRole } from "#admin/server/drizzle/schema"
+import { sysRoleDeptRepo } from "#admin/server/sys-router/roleDept/SysRoleDeptRepo"
 import { mergeWhere } from "./mergeWhere"
 
 // sys_role.data_scope 的取值：
@@ -102,10 +103,13 @@ async function listRoleDataScopes(ctx: Context): Promise<DataScope[]> {
         .filter((scope): scope is DataScope => ["1", "2", "3", "4", "5", "6"].includes(scope))
 }
 
-// data_scope=2 “自定数据权限”需要角色-部门关系表。
-// 当前项目还没有 sys_role_dept 之类的表，所以这里先保留扩展点，后续只需要在这里返回授权部门 id。
-async function listCustomDeptIds(_ctx: Context) {
-    return []
+// data_scope=2 “自定数据权限”通过 sys_role_dept 读取授权部门。
+async function listCustomDeptIds(ctx: Context) {
+    if (!ctx.user?.id) {
+        return []
+    }
+
+    return await sysRoleDeptRepo(ctx).listDeptIdsByUserId(ctx.user.id)
 }
 
 // 解析当前请求的数据权限，并缓存在 ctx.dataPermission 中。

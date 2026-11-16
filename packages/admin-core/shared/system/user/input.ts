@@ -15,7 +15,8 @@ export const SysUserAddSchema = SysUserBaseSchema.pick({
   id: SysUserBaseSchema.shape.id.nonoptional(),
   username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
   password: z.string().min(6, 'form.pwd.required').max(255, 'form.pwd.invalid'),
-  email: z.string().min(6, 'form.email.invalid')
+  email: z.string().min(6, 'form.email.invalid'),
+  postIds: z.array(z.string()).optional()
 })
 export type SysUserAddDTO = z.infer<typeof SysUserAddSchema>
 
@@ -33,7 +34,8 @@ export const SysUserUpdateSchema = SysUserBaseSchema.pick({
 }).extend({
   id: z.string().nonempty('form.id.required'),
   username: z.string().min(3, 'form.userName.required').max(50, 'form.userName.invalid'),
-  email: z.string().min(6, 'form.email.invalid')
+  email: z.string().min(6, 'form.email.invalid'),
+  postIds: z.array(z.string()).optional()
 })
 export type SysUserUpdateDTO = z.infer<typeof SysUserUpdateSchema>
 

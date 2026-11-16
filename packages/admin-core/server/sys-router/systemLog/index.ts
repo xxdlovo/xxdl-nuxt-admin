@@ -37,5 +37,9 @@ export const sysSystemLogRouter = router({
     page: listProc.input(SysLogPageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysSystemLogService(ctx).page(input)
+        }),
+    clear: delProc
+        .mutation(async ({ ctx }) => {
+            return sysSystemLogService(ctx).clearAll()
         })
 })

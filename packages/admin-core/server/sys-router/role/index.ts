@@ -9,13 +9,17 @@ import {
     SysRoleUpdateSchema,
     SysRoleQuerySchema,
     SysRolePageQuerySchema,
-    SysRoleDataScopeUpdateSchema
+    SysRoleDataScopeUpdateSchema,
+    SysRoleAssignUsersSchema,
+    SysRoleAssignedUserIdsQuerySchema,
+    SysRoleAssignableUsersQuerySchema,
 } from '#admin/shared/system/role'
 import { SysRoleMenuAssignedIdsQuerySchema, SysRoleMenuAssignSchema } from '#admin/shared/system/roleMenu'
 
 const addProc = proc({ permission: 'system:role:add' })
 const editProc = proc({ permission: 'system:role:edit' })
 const delProc = proc({ permission: 'system:role:del' })
+const assignProc = proc({ permission: 'system:role:assign', dataScope: false })
 
 // 角色列表类接口需要完整角色数据（用于选择器/授权），不做数据范围限制
 const listProc = proc({ permission: 'system:role:list', dataScope: false })
@@ -40,6 +44,10 @@ export const sysRoleRouter = router({
     updateDataScope: editProc.input(SysRoleDataScopeUpdateSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleService(ctx).updateDataScope(input)
+        }),
+    deptIds: listProc.input(z.string())
+        .query(async ({ ctx, input }) => {
+            return sysRoleService(ctx).listDeptIds(input)
         }),
     getOne: listProc.input(SysRoleQuerySchema)
         .query(async ({ ctx, input }) => {
@@ -70,5 +78,17 @@ export const sysRoleRouter = router({
     assignMenus: editProc.input(SysRoleMenuAssignSchema)
         .mutation(async ({ ctx, input }) => {
             return sysRoleMenuService(ctx).assignByRoleAndTypes(input)
+        }),
+    assignedUsers: assignProc.input(SysRoleAssignedUserIdsQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysRoleService(ctx).listAssignedUsers(input.roleId)
+        }),
+    assignableUsers: assignProc.input(SysRoleAssignableUsersQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysRoleService(ctx).listAssignableUsers(input.keyword, input.limit)
+        }),
+    assignUsers: assignProc.input(SysRoleAssignUsersSchema)
+        .mutation(async ({ ctx, input }) => {
+            return sysRoleService(ctx).assignUsers(input)
         })
 })

@@ -350,16 +350,57 @@
         "selectedCount": "Selected {count} items",
         "selectAll": "Select All",
         "clearSelection": "Clear Selection",
+        "assignUsers": "Assign Users",
+        "assignUsersTip": "Only enabled users are shown; already assigned users remain in the list.",
+        "deptScope": "Authorized Departments",
         "form": {
           "roleName": "Please enter role name",
           "roleCode": "Please enter role code",
           "roleStatus": "Please select role status",
           "roleDesc": "Please enter role description",
           "sortOrder": "Please enter sort order",
-          "remark": "Please enter remark"
+          "remark": "Please enter remark",
+          "userSearch": "Search username/nickname",
+          "assignUsers": "Please select users",
+          "deptScope": "Please select departments"
         },
         "addRole": "Add Role",
         "editRole": "Edit Role"
+      },
+      "post": {
+        "title": "Post List",
+        "code": "Post Code",
+        "name": "Post Name",
+        "sortOrder": "Sort Order",
+        "status": "Status",
+        "remark": "Remark",
+        "form": {
+          "code": "Please enter post code",
+          "name": "Please enter post name",
+          "status": "Please select status",
+          "remark": "Please enter remark"
+        },
+        "addPost": "Add Post",
+        "editPost": "Edit Post",
+        "codeExists": "Post code already exists",
+        "inUse": "This post still has users and cannot be deleted"
+      },
+      "excel": {
+        "export": "Export",
+        "import": "Import",
+        "exportStarted": "Export started, please check your browser downloads",
+        "importUserTitle": "Import Users",
+        "downloadTemplate": "Download Template",
+        "importResult": "Import finished: {success} succeeded, {failed} failed",
+        "importRowError": "Row {row}: {message}",
+        "unsupportedModule": "Unsupported export/import module",
+        "fileRequired": "Please select a file to import",
+        "fileTooLarge": "File cannot exceed 5MB",
+        "emptyFile": "No importable data found in the file",
+        "tooManyRows": "Export exceeds 10000 rows, please narrow the filters",
+        "exportFailed": "Export failed",
+        "importFailed": "Import failed",
+        "templateFailed": "Failed to download template"
       },
       "notice": {
         "title": "Notice List",
@@ -495,6 +536,7 @@
           "userStatus": "Please select user status",
           "userRole": "Please select user role",
           "userDept": "Please select department",
+          "userPost": "Please select posts",
           "remark": "Please enter remark",
           "newPassword": "Please enter new password",
           "confirmPassword": "Please enter new password again"
@@ -512,7 +554,9 @@
         "confirmPassword": "Confirm Password",
         "locked": "Locked",
         "unlock": "Unlock",
-        "unlockSuccess": "Account unlocked"
+        "unlockSuccess": "Account unlocked",
+        "userPost": "Post",
+        "importDone": "Import finished: {success} succeeded, {failed} failed"
       },
       "profile": {
         "tabs": {
@@ -703,7 +747,12 @@
           "loginStatus": "Please select login status"
         },
         "addSysLoginLog": "Add Login Log",
-        "editSysLoginLog": "Edit Login Log"
+        "editSysLoginLog": "Edit Login Log",
+        "clear": "Clear Logs",
+        "clearConfirm": "Clear all login logs? This cannot be undone.",
+        "clearSuccess": "Login logs cleared",
+        "unlock": "Unlock",
+        "unlockSuccess": "Account unlocked"
       },
       "userRole": {
         "title": "User Role List",
@@ -785,7 +834,10 @@
           "remark": "Please enter remark"
         },
         "addSysLog": "Add System Log",
-        "editSysLog": "Edit System Log"
+        "editSysLog": "Edit System Log",
+        "clear": "Clear Logs",
+        "clearConfirm": "Clear all operation logs? This cannot be undone.",
+        "clearSuccess": "Operation logs cleared"
       },
       "oss": {
         "title": "File Management",

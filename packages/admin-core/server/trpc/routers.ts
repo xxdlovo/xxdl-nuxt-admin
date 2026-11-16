@@ -18,6 +18,7 @@ import { sysDictTypeRouter } from '#admin/server/sys-router/dictType'
 import { sysMenuRouter } from '#admin/server/sys-router/menu'
 import { sysRoleRouter } from '#admin/server/sys-router/role'
 import { sysRoleMenuRouter } from '#admin/server/sys-router/roleMenu'
+import { sysPostRouter } from '#admin/server/sys-router/post'
 import { sysLoginLogRouter } from '#admin/server/sys-router/loginLog'
 import { sysNoticeRouter } from '#admin/server/sys-router/notice'
 import { sysOauthAccountRouter } from '#admin/server/sys-router/oauthAccount'
@@ -50,6 +51,7 @@ export const appRouter = router({
     sysMenu: sysMenuRouter,
     sysRole: sysRoleRouter,
     sysRoleMenu: sysRoleMenuRouter,
+    sysPost: sysPostRouter,
     sysLoginLog: sysLoginLogRouter,
     sysNotice: sysNoticeRouter,
     sysOauthAccount: sysOauthAccountRouter,

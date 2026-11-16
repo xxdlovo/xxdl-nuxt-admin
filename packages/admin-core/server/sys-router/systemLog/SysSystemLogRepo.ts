@@ -20,6 +20,11 @@ export const sysSystemLogRepo = (ctx: Context) => {
     /** 列表查询（记录时间倒序） */
     async listRecent(dto: Record<string, unknown>) {
       return await repo.list(dto, [desc(sysSystemLog.createdAt)])
+    },
+
+    /** 清空操作日志（硬删除，仅管理员通过 del 权限触发） */
+    async clearAll() {
+      await ctx.db.delete(sysSystemLog)
     }
   }
 }

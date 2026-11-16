@@ -25,6 +25,8 @@ export const SysUserBaseSchema = z.object({
     phone: z.string().nullish(),
     gender: z.number().nullish(),
     deptId: z.string().nullish(),
+    postIds: z.array(z.string()).nullish(),
+    postNames: z.string().nullish(),
     isAdmin: z.number().nullish(),
     loginFailCount: z.number().nullish(),
     lockedUntil: z.string().nullish(),

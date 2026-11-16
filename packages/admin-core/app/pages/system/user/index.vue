@@ -9,6 +9,12 @@ import DeptSideTree, { type DeptTreeItem } from '../dept/components/DeptSideTree
 import { businessDictCode } from '#admin/shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
 import { useToastSuccess } from '#admin/app/utils/toast'
+import {
+  downloadExcel,
+  downloadExcelTemplate,
+  importExcel,
+  type ExcelImportResult
+} from '#admin/app/utils/excel'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 const { hasPermission } = useRbacProfile()
 type SysUserTableRow = SysUserDto & {
@@ -34,6 +40,10 @@ const deptKeyword = ref('')
 const selectedDeptId = ref<string | null>(null)
 const selectedDeptLabel = ref('全部部门')
 const resetPasswordVisible = ref(false)
+const importVisible = ref(false)
+const importing = ref(false)
+const importFile = ref<File | null>(null)
+const importResult = ref<ExcelImportResult | null>(null)
 const resetPasswordState = ref<SysUserResetPasswordDTO>({
   id: '',
   password: '',
@@ -163,6 +173,11 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
       header: () => $ts('module.system.user.userDept'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, row.original.deptName || row.original.deptCode || '-')
     },
+    {
+      accessorKey: 'postNames',
+      header: () => $ts('module.system.user.userPost'),
+      cell: ({ row }) => h('span', { class: 'text-muted' }, row.original.postNames || '-')
+    },
     useBadgeColumn<SysUserTableRow>(
       'gender',
       'module.system.user.userGender',
@@ -255,6 +270,46 @@ const unlockUser = async (row: SysUserTableRow) => {
   await refresh()
 }
 
+const handleExport = async () => {
+  await downloadExcel('user', {
+    ...searchParams.value,
+    deptId: currentDeptId.value,
+  })
+  useToastSuccess($ts('module.system.excel.exportStarted'))
+}
+
+const openImport = () => {
+  importFile.value = null
+  importResult.value = null
+  importVisible.value = true
+}
+
+const handleFileChange = (event: Event) => {
+  const files = (event.target as HTMLInputElement).files
+  importFile.value = files?.[0] ?? null
+  importResult.value = null
+}
+
+const handleImport = async () => {
+  if (!importFile.value) {
+    return
+  }
+
+  importing.value = true
+  try {
+    importResult.value = await importExcel('user', importFile.value)
+    if (importResult.value.successCount > 0) {
+      await refresh()
+    }
+    useToastSuccess($ts('module.system.user.importDone', {
+      success: importResult.value.successCount,
+      failed: importResult.value.failedCount,
+    }))
+  } finally {
+    importing.value = false
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     dictStore.loadDict(businessDictCode.enableStatus),
@@ -314,6 +369,27 @@ onMounted(async () => {
                       </UBadge>
                     </div>
                   </template>
+
+                  <template #suffix>
+                    <UButton
+                        v-if="userPermissions.canList.value"
+                        color="neutral"
+                        variant="outline"
+                        icon="i-lucide-download"
+                        @click="handleExport"
+                    >
+                      {{ $ts('module.system.excel.export') }}
+                    </UButton>
+                    <UButton
+                        v-if="userPermissions.canAdd.value"
+                        color="neutral"
+                        variant="outline"
+                        icon="i-lucide-upload"
+                        @click="openImport"
+                    >
+                      {{ $ts('module.system.excel.import') }}
+                    </UButton>
+                  </template>
                 </TableHeaderOperation>
               </template>
             </TableWithPagination>
@@ -367,6 +443,51 @@ onMounted(async () => {
             <UButton :label="$ts('common.confirm')" color="primary" type="submit" />
           </div>
         </UForm>
+      </template>
+    </UModal>
+    <UModal
+      v-model:open="importVisible"
+      :title="$ts('module.system.excel.importUserTitle')"
+      :dismissible="!importing"
+      :ui="{ content: 'max-w-lg' }"
+    >
+      <template #body>
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <UButton color="neutral" variant="outline" icon="i-lucide-file-down" @click="downloadExcelTemplate('user')">
+              {{ $ts('module.system.excel.downloadTemplate') }}
+            </UButton>
+            <input
+                type="file"
+                accept=".xlsx"
+                class="block w-full max-w-xs text-sm text-muted file:mr-2 file:rounded-md file:border-0 file:bg-elevated file:px-3 file:py-1.5 file:text-sm file:text-default"
+                @change="handleFileChange"
+            >
+          </div>
+
+          <UAlert
+              v-if="importResult"
+              :color="importResult.failedCount > 0 ? 'warning' : 'success'"
+              variant="subtle"
+              :title="$ts('module.system.excel.importResult', { success: importResult.successCount, failed: importResult.failedCount })"
+          />
+
+          <div v-if="importResult?.errors.length" class="max-h-52 overflow-auto rounded-md border border-gray-200 p-2 text-xs dark:border-gray-800">
+            <div v-for="item in importResult.errors" :key="item.row" class="py-0.5 text-error">
+              {{ $ts('module.system.excel.importRowError', { row: item.row, message: item.message }) }}
+            </div>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <UButton :label="$ts('common.cancel')" color="neutral" variant="subtle" :disabled="importing" @click="importVisible = false" />
+        <UButton
+            :label="$ts('common.confirm')"
+            color="primary"
+            :loading="importing"
+            :disabled="!importFile"
+            @click="handleImport"
+        />
       </template>
     </UModal>
   </div>

@@ -350,16 +350,57 @@
         "selectedCount": "已选择 {count} 项",
         "selectAll": "全选",
         "clearSelection": "清空选择",
+        "assignUsers": "分配用户",
+        "assignUsersTip": "仅显示启用用户；已分配用户会保留在列表中。",
+        "deptScope": "授权部门",
         "form": {
           "roleName": "请输入角色名称",
           "roleCode": "请输入角色编码",
           "roleStatus": "请选择角色状态",
           "roleDesc": "请输入角色描述",
           "sortOrder": "请输入排序",
-          "remark": "请输入备注"
+          "remark": "请输入备注",
+          "userSearch": "搜索用户名/昵称",
+          "assignUsers": "请选择用户",
+          "deptScope": "请选择授权部门"
         },
         "addRole": "新增角色",
         "editRole": "编辑角色"
+      },
+      "post": {
+        "title": "岗位列表",
+        "code": "岗位编码",
+        "name": "岗位名称",
+        "sortOrder": "排序",
+        "status": "状态",
+        "remark": "备注",
+        "form": {
+          "code": "请输入岗位编码",
+          "name": "请输入岗位名称",
+          "status": "请选择状态",
+          "remark": "请输入备注"
+        },
+        "addPost": "新增岗位",
+        "editPost": "编辑岗位",
+        "codeExists": "岗位编码已存在",
+        "inUse": "该岗位下仍有用户，不能删除"
+      },
+      "excel": {
+        "export": "导出",
+        "import": "导入",
+        "exportStarted": "导出已开始，请查看浏览器下载",
+        "importUserTitle": "导入用户",
+        "downloadTemplate": "下载模板",
+        "importResult": "导入完成：成功 {success} 条，失败 {failed} 条",
+        "importRowError": "第 {row} 行：{message}",
+        "unsupportedModule": "不支持的导出/导入模块",
+        "fileRequired": "请选择要导入的文件",
+        "fileTooLarge": "文件不能超过 5MB",
+        "emptyFile": "文件中没有可导入的数据",
+        "tooManyRows": "本次导出超过 10000 行，请收窄筛选条件",
+        "exportFailed": "导出失败",
+        "importFailed": "导入失败",
+        "templateFailed": "模板下载失败"
       },
       "notice": {
         "title": "通知公告列表",
@@ -495,6 +536,7 @@
           "userStatus": "请选择用户状态",
           "userRole": "请选择用户角色",
           "userDept": "请选择所属部门",
+          "userPost": "请选择岗位",
           "remark": "请输入备注",
           "newPassword": "请输入新密码",
           "confirmPassword": "请再次输入新密码"
@@ -512,7 +554,9 @@
         "confirmPassword": "确认密码",
         "locked": "已锁定",
         "unlock": "解锁",
-        "unlockSuccess": "解锁成功"
+        "unlockSuccess": "解锁成功",
+        "userPost": "岗位",
+        "importDone": "导入完成：成功 {success} 条，失败 {failed} 条"
       },
       "profile": {
         "tabs": {
@@ -703,7 +747,12 @@
           "loginStatus": "请选择登录状态"
         },
         "addSysLoginLog": "新增登录日志",
-        "editSysLoginLog": "编辑登录日志"
+        "editSysLoginLog": "编辑登录日志",
+        "clear": "清空日志",
+        "clearConfirm": "确认清空全部登录日志？该操作不可恢复。",
+        "clearSuccess": "登录日志已清空",
+        "unlock": "解锁",
+        "unlockSuccess": "账号已解锁"
       },
       "userRole": {
         "title": "用户角色关联列表",
@@ -785,7 +834,10 @@
           "remark": "请输入备注"
         },
         "addSysLog": "新增日志",
-        "editSysLog": "编辑日志"
+        "editSysLog": "编辑日志",
+        "clear": "清空日志",
+        "clearConfirm": "确认清空全部操作日志？该操作不可恢复。",
+        "clearSuccess": "操作日志已清空"
       },
       "oss": {
         "title": "文件管理",

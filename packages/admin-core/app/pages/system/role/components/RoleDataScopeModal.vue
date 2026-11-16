@@ -22,23 +22,46 @@ const visible = computed({
 })
 
 const saving = ref(false)
+const loadingDepts = ref(false)
+const deptItems = ref<Array<{ label: string, value: string }>>([])
 const state = reactive({
-  dataScope: '5'
+  dataScope: '5',
+  deptIds: [] as string[]
 })
 
 const dataScopeOptions = useDictOptions(businessDictCode.dataScope)
 const dataScopeItems = computed(() =>
-  dataScopeOptions.value.map(item => ({
-    ...item,
-    disabled: item.value === '2'
-  }))
+  dataScopeOptions.value.map(item => ({ ...item }))
 )
+
+async function loadDeptOptions() {
+  loadingDepts.value = true
+  try {
+    const depts = await $trpc.sysDept.list.query({}) as Array<{ id?: string | null, name?: string | null, code?: string | null }>
+    deptItems.value = depts
+      .filter(dept => Boolean(dept.id))
+      .map(dept => ({
+        label: dept.name || dept.code || dept.id || '',
+        value: dept.id as string
+      }))
+  } finally {
+    loadingDepts.value = false
+  }
+}
 
 watch(
   () => [props.open, props.role?.id, props.role?.dataScope] as const,
-  ([open]) => {
-    if (open) {
-      state.dataScope = props.role?.dataScope ?? '5'
+  async ([open]) => {
+    if (!open) {
+      return
+    }
+
+    state.dataScope = props.role?.dataScope ?? '5'
+    state.deptIds = []
+    await loadDeptOptions()
+
+    if (state.dataScope === '2' && props.role?.id) {
+      state.deptIds = await $trpc.sysRole.deptIds.query(props.role.id)
     }
   },
   { immediate: true }
@@ -53,7 +76,8 @@ async function save() {
   try {
     await $trpc.sysRole.updateDataScope.mutate({
       id: props.role.id,
-      dataScope: state.dataScope as '1' | '2' | '3' | '4' | '5' | '6'
+      dataScope: state.dataScope as '1' | '2' | '3' | '4' | '5' | '6',
+      deptIds: state.dataScope === '2' ? state.deptIds : []
     })
     useToastSuccess($ts('common.modifySuccess'))
     emit('saved')
@@ -75,6 +99,23 @@ async function save() {
       <UForm :state="state" class="space-y-4" @submit="save">
         <UFormField name="dataScope" :label="$ts('module.system.role.dataScope')">
           <URadioGroup v-model="state.dataScope" :items="dataScopeItems" variant="table" />
+        </UFormField>
+
+        <UFormField
+          v-if="state.dataScope === '2'"
+          name="deptIds"
+          :label="$ts('module.system.role.deptScope')"
+        >
+          <USelectMenu
+            v-model="state.deptIds"
+            multiple
+            value-key="value"
+            :items="deptItems"
+            :loading="loadingDepts"
+            :disabled="loadingDepts"
+            :placeholder="$ts('module.system.role.form.deptScope')"
+            class="w-full"
+          />
         </UFormField>
       </UForm>
     </template>
