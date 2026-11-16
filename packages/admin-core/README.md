@@ -99,6 +99,9 @@ NUXT_DEMO_MODE=false
 # 可选：OpenAPI 端点开关
 NUXT_OPENAPI_ENABLED=true
 
+# 可选：定时任务自动派发（默认关闭，true 后每分钟一次）
+NUXT_JOB_SCHEDULER_ENABLED=false
+
 # 可选：代码生成 V2 的外部 AI 接入令牌
 # 外部 AI/CLI 调用 /api/system/gen/ai/** 时使用 Authorization: Bearer <token>
 NUXT_CODEGEN_TOKEN=

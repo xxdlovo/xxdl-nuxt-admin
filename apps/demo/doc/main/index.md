@@ -5,7 +5,7 @@ navigation:
   title: 文档首页
 ---
 
-这是一套全栈 Nuxt 4 后台系统的完整文档：从安装启动、前后端写法，到新增业务模块、错误处理、文件与存储、缓存、定时任务、支付模块、交易模块、端到端支付流程，以及两个 npm 包的发布流程。
+这是一套全栈 Nuxt 4 后台系统的完整文档：从安装启动、前后端写法，到认证安全、新增业务模块、代码生成 V2、错误处理、文件与存储、缓存、系统监控、工程加固、定时任务、支付模块、交易模块、端到端支付流程，以及两个 npm 包的发布流程。
 
 ::div{.my-8.grid.gap-4.sm:grid-cols-2}
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
@@ -33,17 +33,25 @@ navigation:
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
-  ### 新建模块
+  ### 代码生成 V1
 
-  一句话提示词生成整套模块代码，含前后端 14 个步骤与文件清单。
+  文档流程：一句话提示词生成整套模块代码，含前后端 14 个步骤与文件清单。
 
-  [开始新建模块 →](/docs/main/new-module)
+  [开始代码生成 V1 →](/docs/main/new-module)
+  :::
+
+  :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
+  ### 代码生成 V2
+
+  AI 接入口：`plan`/`download` 接口与 CLI，由外部 AI 读取生成结果并自行合并。
+
+  [查看代码生成 V2 →](/docs/main/codegen-v2)
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
   ### 功能组件
 
-  错误使用、文件使用、缓存使用三大专题。
+  错误处理、文件与存储、缓存、认证安全、系统监控、工程加固、组织与 Excel。
 
   [查看功能组件 →](/docs/main/features/error-handling/overview)
   :::
