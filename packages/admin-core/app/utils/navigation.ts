@@ -34,7 +34,31 @@ export function isRenderableMenu(menu: RbacMenu) {
 }
 
 export function isClickableMenu(menu: RbacMenu) {
-  return menu.type !== 0 && Boolean(menu.path)
+  return menu.type !== 0 && Boolean(menu.path || menu.externalLink)
+}
+
+function menuTarget(menu: RbacMenu) {
+  const externalLink = menu.externalLink?.trim()
+
+  if (externalLink) {
+    return {
+      to: externalLink,
+      target: '_blank',
+      external: true
+    }
+  }
+
+  if (!menu.path) {
+    return { to: undefined, target: undefined, external: false }
+  }
+
+  const query = menu.routeQuery?.trim().replace(/^\?/, '')
+
+  return {
+    to: query ? `${menu.path}?${query}` : menu.path,
+    target: undefined,
+    external: false
+  }
 }
 
 export function findMenuByPath(menus: RbacMenu[], path: string): RbacMenu | null {
@@ -103,10 +127,13 @@ export function resolveActiveTrail(menus: RbacMenu[], path: string) {
 export function toNavigationItem(menu: RbacMenu, onSelect?: (menu: RbacMenu) => void): NavigationMenuItem {
   const children = getRenderableMenus(menu.children).map(child => toNavigationItem(child, onSelect))
   const clickable = isClickableMenu(menu)
+  const target = menuTarget(menu)
   const item: NavigationMenuItem = {
     label: menu.name,
     icon: normalizeMenuIcon(menu.icon),
-    to: clickable ? menu.path || undefined : undefined,
+    to: clickable ? target.to : undefined,
+    target: target.target,
+    external: target.external,
     exact: clickable,
     children: children.length > 0 ? children : undefined
   }
@@ -125,10 +152,13 @@ export function toNavigationItems(menus: RbacMenu[], onSelect?: (menu: RbacMenu)
 export function toDropdownMenuItem(menu: RbacMenu, onSelect?: (menu: RbacMenu) => void): DropdownMenuItem {
   const children = getRenderableMenus(menu.children).map(child => toDropdownMenuItem(child, onSelect))
   const clickable = isClickableMenu(menu)
+  const target = menuTarget(menu)
   const item: DropdownMenuItem = {
     label: menu.name,
     icon: normalizeMenuIcon(menu.icon),
-    to: clickable ? menu.path || undefined : undefined,
+    to: clickable ? target.to : undefined,
+    target: target.target,
+    external: target.external,
     exact: clickable,
     children: children.length > 0 ? children : undefined
   }

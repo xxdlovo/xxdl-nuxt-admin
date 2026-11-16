@@ -9,7 +9,9 @@
     "zodError": "Validation error",
     "serverError": "server error",
     "businessError": "Business error",
-    "demoReadonly": "Demo environment does not allow this operation"
+    "demoReadonly": "Demo environment does not allow this operation",
+    "repeatSubmit": "Please do not submit repeatedly",
+    "rateLimited": "Too many requests, please try again later"
   },
   "auth": {
     "invalidCredentials": "Invalid username or password",
@@ -509,6 +511,26 @@
         "handlerMissing": "Job handler does not exist",
         "cronInvalid": "Cron expression is invalid",
         "timezoneUnsupported": "Only Asia/Shanghai timezone is supported",
+        "misfirePolicy": "Misfire Policy",
+        "misfire": {
+          "immediate": "Run immediately",
+          "once": "Run once",
+          "skip": "Skip"
+        },
+        "concurrent": {
+          "label": "Concurrent",
+          "allow": "Allow",
+          "forbid": "Forbid"
+        },
+        "cronBuilder": {
+          "title": "Builder",
+          "minute": "Min",
+          "hour": "Hour",
+          "day": "Day",
+          "month": "Month",
+          "week": "Week",
+          "apply": "Apply"
+        },
         "runningStatus": {
           "title": "Running",
           "idle": "Idle",
@@ -523,6 +545,10 @@
       },
       "jobLog": {
         "title": "Job Log",
+        "export": "Export",
+        "clear": "Clear",
+        "clearConfirm": "Clear all job logs? This cannot be undone.",
+        "clearSuccess": "Job logs cleared",
         "detailTitle": "Job Log Detail",
         "jobName": "Job Name",
         "jobCode": "Job Code",
@@ -1143,6 +1169,8 @@
         "pathParam": "Path Param",
         "layout": "Layout Component",
         "page": "Page Component",
+        "externalLink": "External Link",
+        "routeQuery": "Route Query",
         "i18nKey": "I18n Key",
         "icon": "Icon",
         "localIcon": "Local Icon",
@@ -1171,6 +1199,8 @@
           "routePath": "Please enter route path",
           "pathParam": "Please enter path param",
           "page": "Please select page component",
+          "externalLink": "https://example.com",
+          "routeQuery": "e.g. tab=1&from=menu",
           "layout": "Please select layout component",
           "i18nKey": "Please enter i18n key",
           "icon": "Please enter iconify name",

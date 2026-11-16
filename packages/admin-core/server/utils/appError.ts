@@ -267,7 +267,10 @@ export const APP_ERROR_STATUS_MAP: Record<string, { code: string; httpStatus: nu
   // demo 模式下的写操作保护，语义上是「禁止」，用 403 而不是 500
   'system.demoReadonly': { code: 'FORBIDDEN', httpStatus: 403 },
   // 查询目标不存在：例如 getOne/getById 未命中
-  'common.notExist': { code: 'NOT_FOUND', httpStatus: 404 }
+  'common.notExist': { code: 'NOT_FOUND', httpStatus: 404 },
+  // 防重复提交 / 接口限流
+  'system.repeatSubmit': { code: 'TOO_MANY_REQUESTS', httpStatus: 429 },
+  'system.rateLimited': { code: 'TOO_MANY_REQUESTS', httpStatus: 429 }
 }
 
 /** 未在映射表中登记的业务错误一律按「请求有误」处理。 */

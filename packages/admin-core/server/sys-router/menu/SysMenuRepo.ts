@@ -66,6 +66,8 @@ export const sysMenuRepo = (ctx: Context) => {
                     type: sysMenu.type,
                     path: sysMenu.path,
                     component: sysMenu.component,
+                    externalLink: sysMenu.externalLink,
+                    routeQuery: sysMenu.routeQuery,
                     icon: sysMenu.icon,
                     sortOrder: sysMenu.sortOrder,
                     visible: sysMenu.visible,

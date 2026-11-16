@@ -9,6 +9,8 @@ export const SysJobAddSchema =
     handlerCode: true,
     cronExpression: true,
     cronTimezone: true,
+    misfirePolicy: true,
+    concurrent: true,
     status: true,
     sortOrder: true,
     remark: true,
@@ -19,6 +21,8 @@ export const SysJobAddSchema =
     handlerCode: z.string().min(1, 'form.required'),
     cronExpression: z.string().min(1, 'form.required'),
     cronTimezone: z.string().default('Asia/Shanghai'),
+    misfirePolicy: z.number().default(1),
+    concurrent: z.number().default(1),
     status: z.number().default(1),
     sortOrder: z.number().default(0),
   })

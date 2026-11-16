@@ -7,6 +7,8 @@ export const SysJobBaseSchema = z.object({
   handlerCode: z.string().nullish(),
   cronExpression: z.string().nullish(),
   cronTimezone: z.string().nullish(),
+  misfirePolicy: z.number().nullish(),
+  concurrent: z.number().nullish(),
   status: z.number().nullish(),
   runningStatus: z.number().nullish(),
   lastRunAt: z.string().nullish(),

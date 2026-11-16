@@ -11,6 +11,8 @@ export const sysJobLogRouter = router({
         .mutation(({ ctx, input }) => sysJobLogService(ctx).remove(input)),
     batchDelete: delProc.input(z.array(z.string()))
         .mutation(({ ctx, input }) => sysJobLogService(ctx).batchRemove(input)),
+    clear: delProc
+        .mutation(({ ctx }) => sysJobLogService(ctx).clearAll()),
     getById: listProc.input(z.string())
         .query(({ ctx, input }) => sysJobLogService(ctx).getById(input)),
     page: listProc.input(SysJobLogPageQuerySchema)

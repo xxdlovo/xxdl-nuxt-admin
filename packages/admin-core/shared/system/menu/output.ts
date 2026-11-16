@@ -9,6 +9,8 @@ export const SysMenuRespSchema = z.object({
     type: SysMenuBaseSchema.shape.type,
     path: SysMenuBaseSchema.shape.path,
     component: SysMenuBaseSchema.shape.component,
+    externalLink: SysMenuBaseSchema.shape.externalLink,
+    routeQuery: SysMenuBaseSchema.shape.routeQuery,
     icon: SysMenuBaseSchema.shape.icon,
     sortOrder: SysMenuBaseSchema.shape.sortOrder,
     visible: SysMenuBaseSchema.shape.visible,

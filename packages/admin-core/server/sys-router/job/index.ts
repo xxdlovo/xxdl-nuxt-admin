@@ -10,9 +10,14 @@ import {
 import { sysJobService } from './SysJobService'
 
 const listProc = proc({ permission: 'system:job:list' })
-const addProc = proc({ permission: 'system:job:add' })
-const editProc = proc({ permission: 'system:job:edit' })
+const addProc = proc({ permission: 'system:job:add', repeatSubmit: true })
+const editProc = proc({ permission: 'system:job:edit', repeatSubmit: true })
 const delProc = proc({ permission: 'system:job:del' })
+const runProc = proc({
+    permission: 'system:job:run',
+    repeatSubmit: true,
+    rateLimit: { limit: 9, windowMs: 60_000, scope: 'job-run' }
+})
 
 export const sysJobRouter = router({
     create: addProc.input(SysJobAddSchema)
@@ -37,7 +42,7 @@ export const sysJobRouter = router({
         .query(({ ctx, input }) => sysJobService(ctx).page(input)),
     availableHandlers: listProc
         .query(({ ctx }) => sysJobService(ctx).availableHandlers()),
-    runNow: proc({ permission: 'system:job:run' }).input(z.string().nonempty('form.id.required'))
+    runNow: runProc.input(z.string().nonempty('form.id.required'))
         .mutation(async ({ input }) => {
             return runTask('sys-job:run', {
                 payload: { jobId: input, triggerType: 'manual' }

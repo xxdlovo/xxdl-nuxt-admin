@@ -5,6 +5,22 @@ import { AppError } from '#admin/server/utils/appError'
 import type { OrmPageResp } from '#admin/server/utils/ApiResp'
 import type { SysNoticeAddDTO, SysNoticeDto, SysNoticePageQueryDTO, SysNoticePublishStatusDTO, SysNoticeQueryDTO, SysNoticeUpdateDTO } from '#admin/shared/system/notice'
 import { randomUuid } from '#admin/shared/utils/uuid'
+import { sanitizeRichText } from '#admin/server/utils/sanitizeHtml'
+
+function sanitizeNotice<T extends { content?: string | null, contentFormat?: string | null }>(data: T): T {
+    if (data.contentFormat !== 'html') {
+        return data
+    }
+
+    return {
+        ...data,
+        content: sanitizeRichText(data.content),
+    }
+}
+
+function sanitizeNoticeDto<T extends { content?: string | null, contentFormat?: string | null }>(data: T): T {
+    return sanitizeNotice(data)
+}
 
 function withPublishDefaults<T extends SysNoticeAddDTO | SysNoticeUpdateDTO>(data: T) {
     const publishTime = typeof data.publishTime === 'string' && data.publishTime.trim()
@@ -27,7 +43,7 @@ export function sysNoticeService(ctx: Context) {
     return {
         async create(data: SysNoticeAddDTO): Promise<boolean> {
             const uuid = randomUuid()
-            const pojo = { ...withPublishDefaults(data), id: uuid }
+            const pojo = { ...withPublishDefaults(sanitizeNotice(data)), id: uuid }
             await repo.create(pojo)
             log.info('notice created', { notice: { action: 'create', id: uuid } })
             return true
@@ -43,7 +59,7 @@ export function sysNoticeService(ctx: Context) {
             return ids.length
         },
         async updateById(id: string, data: SysNoticeUpdateDTO): Promise<boolean> {
-            await repo.updateById(id, withPublishDefaults(data))
+            await repo.updateById(id, withPublishDefaults(sanitizeNotice(data)))
             log.info('notice updated', { notice: { action: 'update', id } })
             return true
         },
@@ -60,13 +76,13 @@ export function sysNoticeService(ctx: Context) {
             const pojo = await repo.getOne(req)
             if (!pojo) throw new AppError('common.notExist')
             log.info('notice fetched', { notice: { action: 'getOne' } })
-            return pojo
+            return sanitizeNoticeDto(pojo)
         },
         async getById(id: string): Promise<SysNoticeDto> {
             const pojo = await repo.getById(id)
             if (!pojo) throw new AppError('common.notExist')
             log.info('notice fetched', { notice: { action: 'getById', id } })
-            return pojo
+            return sanitizeNoticeDto(pojo)
         },
         async page(req: SysNoticePageQueryDTO): Promise<OrmPageResp> {
             const { page, pageSize, ...dto } = req
@@ -74,17 +90,20 @@ export function sysNoticeService(ctx: Context) {
             log.info('notice page queried', {
                 notice: { action: 'page', page, pageSize, total: result.total }
             })
-            return result
+            return {
+                ...result,
+                list: result.list.map(item => sanitizeNoticeDto(item)),
+            }
         },
         async list(dto: SysNoticeQueryDTO): Promise<SysNoticeDto[]> {
             const list = await repo.list(dto)
             log.info('notice listed', { notice: { action: 'list', count: list.length } })
-            return list
+            return list.map(item => sanitizeNoticeDto(item))
         },
         async latest(limit = 10): Promise<SysNoticeDto[]> {
             const list = await repo.listPublished(Math.min(Math.max(limit, 1), 20))
             log.info('notice latest queried', { notice: { action: 'latest', count: list.length } })
-            return list
+            return list.map(item => sanitizeNoticeDto(item))
         },
     }
 }

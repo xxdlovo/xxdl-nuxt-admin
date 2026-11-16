@@ -10,7 +10,7 @@ import {
 import { sysGenService } from './SysGenService'
 
 const listProc = proc({ permission: 'system:gen:list', dataScope: false })
-const importProc = proc({ permission: 'system:gen:import', dataScope: false })
+const importProc = proc({ permission: 'system:gen:import', dataScope: false, repeatSubmit: true })
 const editProc = proc({ permission: 'system:gen:edit', dataScope: false })
 const previewProc = proc({ permission: 'system:gen:preview', dataScope: false })
 const delProc = proc({ permission: 'system:gen:del', dataScope: false })

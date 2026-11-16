@@ -9,8 +9,8 @@ import {
 import { sysPostService } from './SysPostService'
 
 const listProc = proc({ permission: 'system:post:list', dataScope: false })
-const addProc = proc({ permission: 'system:post:add', dataScope: false })
-const editProc = proc({ permission: 'system:post:edit', dataScope: false })
+const addProc = proc({ permission: 'system:post:add', dataScope: false, repeatSubmit: true })
+const editProc = proc({ permission: 'system:post:edit', dataScope: false, repeatSubmit: true })
 const delProc = proc({ permission: 'system:post:del', dataScope: false })
 
 export const sysPostRouter = router({

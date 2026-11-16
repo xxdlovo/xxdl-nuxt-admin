@@ -10,6 +10,7 @@ import { sysRoleService } from '#admin/server/sys-router/role/SysRoleService'
 import { sysPostService } from '#admin/server/sys-router/post/SysPostService'
 import { sysSystemLogService } from '#admin/server/sys-router/systemLog/SysSystemLogService'
 import { sysLoginLogService } from '#admin/server/sys-router/loginLog/SysLoginLogService'
+import { sysJobLogService } from '#admin/server/sys-router/jobLog/SysJobLogService'
 
 /**
  * 系统列表 Excel 导出。
@@ -26,6 +27,7 @@ const MODULE_PERMISSIONS: Record<string, string> = {
     post: 'system:post:list',
     systemLog: 'system:systemLog:list',
     loginLog: 'system:loginLog:list',
+    jobLog: 'system:jobLog:list',
 }
 
 const MODULE_FILENAMES: Record<string, string> = {
@@ -34,6 +36,7 @@ const MODULE_FILENAMES: Record<string, string> = {
     post: 'posts',
     systemLog: 'system-logs',
     loginLog: 'login-logs',
+    jobLog: 'job-logs',
 }
 
 function statusText(value: unknown) {
@@ -141,6 +144,26 @@ async function loadModule(ctx: any, module: string, filters: Record<string, unkn
                 rows: logs.map(log => ({
                     ...log,
                     statusText: statusText(log.status),
+                })),
+            }
+        }
+        case 'jobLog': {
+            const logs = await sysJobLogService(ctx).list(filters) as any[]
+            return {
+                columns: [
+                    { header: '任务名称', key: 'jobName', width: 24 },
+                    { header: '任务编码', key: 'jobCode', width: 22 },
+                    { header: '处理器', key: 'handlerCode', width: 22 },
+                    { header: '触发方式', key: 'triggerText', width: 12 },
+                    { header: '状态', key: 'statusText', width: 10 },
+                    { header: '开始时间', key: 'startedAt', width: 22 },
+                    { header: '耗时(ms)', key: 'durationMs', width: 12 },
+                    { header: '错误信息', key: 'errorMessage', width: 40 },
+                ],
+                rows: logs.map(log => ({
+                    ...log,
+                    triggerText: log.triggerType === 'manual' ? '手动' : '定时',
+                    statusText: Number(log.status) === 1 ? '成功' : Number(log.status) === 2 ? '失败' : '运行中',
                 })),
             }
         }

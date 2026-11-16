@@ -21,6 +21,14 @@ export function sysJobLogService(ctx: Context) {
       log.info('jobLog batch removed', { jobLog: { action: 'batchRemove', count: ids.length } })
       return ids.length
     },
+    async clearAll(): Promise<number> {
+      const count = await repo.clearAll()
+      log.info('jobLog cleared', { jobLog: { action: 'clearAll', count } })
+      return count
+    },
+    async list(dto: any): Promise<SysJobLogDto[]> {
+      return await repo.list(dto, []) as SysJobLogDto[]
+    },
     async getById(id: string): Promise<SysJobLogDto> {
       const pojo = await repo.getById(id)
       if (!pojo) throw new AppError('common.notExist')

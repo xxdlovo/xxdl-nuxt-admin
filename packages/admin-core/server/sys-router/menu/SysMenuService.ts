@@ -17,6 +17,8 @@ function toRbacFlatMenu(menu: SysMenuRow): RbacFlatMenu {
         type: menu.type,
         path: menu.path ?? null,
         component: menu.component ?? null,
+        externalLink: menu.externalLink ?? null,
+        routeQuery: menu.routeQuery ?? null,
         icon: menu.icon ?? null,
         sortOrder: menu.sortOrder ?? 0,
         visible: menu.visible ?? 0

@@ -5,7 +5,7 @@
  * 导入用 FormData，直接走后端 multipart 路由。
  */
 
-export type ExcelExportModule = 'user' | 'role' | 'post' | 'systemLog' | 'loginLog'
+export type ExcelExportModule = 'user' | 'role' | 'post' | 'systemLog' | 'loginLog' | 'jobLog'
 
 function parseFilename(disposition: string | null, fallback: string) {
     if (!disposition) {

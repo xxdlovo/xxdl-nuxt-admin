@@ -6,6 +6,7 @@ import { authMiddleware } from './middlewares/auth'
 import { permissionMiddleware } from './middlewares/permission'
 import { demoReadonlyMiddleware } from './middlewares/demo'
 import { dataScopeMiddleware } from './middlewares/dataScope'
+import { rateLimitMiddleware, repeatSubmitMiddleware } from './middlewares/rateLimit'
 import { crudPermissionCodes, type CrudPermissionProcedures } from '#admin/shared/auth'
 
 export const t = initTRPC.context<Context>().create({
@@ -68,6 +69,14 @@ export type ProcOptions = {
   dataScope?: boolean
   /** 是否禁止在 demo 模式下调用变更操作，默认 false。通过 NUXT_DEMO_MODE 环境变量获取。 */
   readonly?: boolean
+  /** 是否开启防重复提交（5 秒内相同用户 + 路径 + 入参只允许一次）。 */
+  repeatSubmit?: boolean
+  /** 接口限流；不传表示不限流。 */
+  rateLimit?: {
+    limit: number
+    windowMs: number
+    scope?: string
+  }
 }
 
 /**
@@ -84,6 +93,8 @@ export const proc = (options: ProcOptions = {}) =>
     .use(permissionMiddleware(options.permission))
     .use(demoReadonlyMiddleware(demoMode || options.readonly === true))
     .use(dataScopeMiddleware(options.dataScope !== false))
+    .use(rateLimitMiddleware(options.rateLimit))
+    .use(repeatSubmitMiddleware(options.repeatSubmit === true))
     .meta({
       auth: 'login',
       // 以下字段供 OpenAPI 文档生成器读取（server/openapi/buildDocument.ts），

@@ -7,6 +7,8 @@ export const sysJob = mysqlTable("sys_job", {
   handlerCode: varchar("handler_code", { length: 100 }).notNull(),
   cronExpression: varchar("cron_expression", { length: 100 }).notNull(),
   cronTimezone: varchar("cron_timezone", { length: 50 }).default("Asia/Shanghai").notNull(),
+  misfirePolicy: tinyint("misfire_policy").default(1).notNull(),
+  concurrent: tinyint().default(1).notNull(),
   status: tinyint().default(1).notNull(),
   runningStatus: tinyint("running_status").default(0).notNull(),
   lastRunAt: timestamp("last_run_at", { mode: "string" }),

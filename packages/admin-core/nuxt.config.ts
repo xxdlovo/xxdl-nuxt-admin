@@ -207,11 +207,13 @@ export default defineNuxtConfig({
                 driver: 'memory'
             }
         },
+        // 定时任务调度默认关闭，避免本地/Serverless 环境自动执行；
+        // 显式设置 NUXT_JOB_SCHEDULER_ENABLED=true 后，每分钟派发一次到期任务。
+        scheduledTasks: process.env.NUXT_JOB_SCHEDULER_ENABLED === 'true'
+            ? { '* * * * *': ['sys-job:dispatch'] }
+            : {},
         experimental: {
             tasks: true
-        },
-        scheduledTasks: {
-            // '* * * * *': ['sys-job:dispatch']
         }
     },
     ui: {

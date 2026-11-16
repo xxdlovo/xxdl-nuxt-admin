@@ -5,8 +5,8 @@ import z from 'zod'
 import { SysNoticeAddSchema, SysNoticeUpdateSchema, SysNoticeQuerySchema, SysNoticePageQuerySchema, SysNoticePublishStatusSchema } from '#admin/shared/system/notice'
 
 const listProc = proc({ permission: 'system:notice:list' })
-const addProc = proc({ permission: 'system:notice:add' })
-const editProc = proc({ permission: 'system:notice:edit' })
+const addProc = proc({ permission: 'system:notice:add', repeatSubmit: true })
+const editProc = proc({ permission: 'system:notice:edit', repeatSubmit: true })
 const delProc = proc({ permission: 'system:notice:del' })
 
 export const sysNoticeRouter = router({

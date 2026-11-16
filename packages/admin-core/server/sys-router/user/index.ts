@@ -7,8 +7,8 @@ import { SysUserAddSchema, SysUserPageQuerySchema, SysUserQuerySchema, SysUserRe
 import { SysUserRoleAssignSchema, SysUserRoleAssignedIdsQuerySchema } from '#admin/shared/system/userRole'
 
 const listProc = proc({ permission: 'system:user:list' })
-const addProc = proc({ permission: 'system:user:add' })
-const editProc = proc({ permission: 'system:user:edit' })
+const addProc = proc({ permission: 'system:user:add', repeatSubmit: true })
+const editProc = proc({ permission: 'system:user:edit', repeatSubmit: true })
 const delProc = proc({ permission: 'system:user:del' })
 
 export const sysUserRouter = router({

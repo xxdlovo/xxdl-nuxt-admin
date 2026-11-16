@@ -45,6 +45,11 @@ export async function runSysJob({ jobId, triggerType }: RunJobOptions) {
     return { skipped: true, reason: 'disabled' }
   }
 
+  // 禁止并发：上一次还没结束时，调度/手动触发都直接跳过。
+  if (job.runningStatus === 1 && job.concurrent === 0) {
+    return { skipped: true, reason: 'running' }
+  }
+
   const started = new Date()
   const startedAt = formatMysqlDate(started)
   const logId = randomUuid()

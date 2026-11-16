@@ -30,6 +30,44 @@
               <span>{{ $ts('module.system.jobLog.title') }}</span>
             </template>
             <template #default>
+              <UButton
+                v-permission="'system:jobLog:list'"
+                variant="outline"
+                color="neutral"
+                icon="i-lucide-download"
+                :loading="loading"
+                @click="handleExport"
+              >
+                {{ $ts('module.system.jobLog.export') }}
+              </UButton>
+
+              <UPopover v-model:open="showClearPopover">
+                <UButton
+                  v-permission="logPermissions.codes.del"
+                  variant="outline"
+                  color="warning"
+                  icon="i-lucide-eraser"
+                  :disabled="loading"
+                >
+                  {{ $ts('module.system.jobLog.clear') }}
+                </UButton>
+                <template #content>
+                  <div class="p-3">
+                    <p class="mb-3 text-sm text-gray-600">
+                      {{ $ts('module.system.jobLog.clearConfirm') }}
+                    </p>
+                    <div class="flex justify-end gap-2">
+                      <UButton variant="ghost" color="neutral" @click="showClearPopover = false">
+                        {{ $ts('common.cancel') }}
+                      </UButton>
+                      <UButton color="warning" @click="handleClearAll">
+                        {{ $ts('common.confirm') }}
+                      </UButton>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+
               <UPopover v-model:open="showDeletePopover">
                 <UButton
                   v-permission="logPermissions.codes.del"
@@ -85,6 +123,8 @@ import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate 
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysJobLogSearch from './components/sys-job-log-search.vue'
 import SysJobLogDetail from './components/sys-job-log-detail.vue'
+import { downloadExcel } from '#admin/app/utils/excel'
+import { useToastSuccess } from '#admin/app/utils/toast'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -97,6 +137,7 @@ const searchParams = ref<SysJobLogQueryDTO>({
 const detailVisible = ref(false)
 const detailData = ref<SysJobLogDto | null>(null)
 const showDeletePopover = ref(false)
+const showClearPopover = ref(false)
 const jobLogStatusConfig = useDictBadgeConfig(businessDictCode.jobLogStatus)
 
 const {
@@ -212,6 +253,17 @@ const handleBatchDelete = async () => {
   await $trpc.sysJobLog.batchDelete.mutate(checkedRowKeys.value)
   showDeletePopover.value = false
   await onBatchDeleted()
+}
+
+const handleExport = async () => {
+  await downloadExcel('jobLog', searchParams.value)
+}
+
+const handleClearAll = async () => {
+  await $trpc.sysJobLog.clear.mutate()
+  showClearPopover.value = false
+  useToastSuccess($ts('module.system.jobLog.clearSuccess'))
+  await refresh()
 }
 
 watch(

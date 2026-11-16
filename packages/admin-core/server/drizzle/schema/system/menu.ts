@@ -8,6 +8,8 @@ export const sysMenu = mysqlTable("sys_menu", {
 	type: tinyint().notNull(),
 	path: varchar({ length: 255 }),
 	component: varchar({ length: 255 }),
+	externalLink: varchar("external_link", { length: 500 }),
+	routeQuery: varchar("query", { length: 500 }),
 	icon: varchar({ length: 50 }),
 	sortOrder: int("sort_order").default(0),
 	visible: tinyint().default(0),

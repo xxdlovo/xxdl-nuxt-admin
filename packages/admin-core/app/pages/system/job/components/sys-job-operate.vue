@@ -10,6 +10,7 @@ import {
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useToastSuccess } from '#admin/app/utils/toast'
+import CronBuilder from './CronBuilder.vue'
 
 const { $trpc } = useNuxtApp()
 const { $ts } = useI18n()
@@ -44,6 +45,8 @@ const state = ref<SysJobAddDTO | SysJobUpdateDTO>({
   handlerCode: '',
   cronExpression: '0 2 * * *',
   cronTimezone: 'Asia/Shanghai',
+  misfirePolicy: 1,
+  concurrent: 1,
   status: 1,
   sortOrder: 0,
   remark: ''
@@ -62,6 +65,24 @@ const statusValue = computed({
   get: () => Number(state.value.status ?? 1),
   set: val => state.value.status = Number(val)
 })
+const showCronBuilder = ref(false)
+const misfireValue = computed({
+  get: () => Number(state.value.misfirePolicy ?? 1),
+  set: val => state.value.misfirePolicy = Number(val)
+})
+const concurrentValue = computed({
+  get: () => Number(state.value.concurrent ?? 1),
+  set: val => state.value.concurrent = Number(val)
+})
+const misfireItems = computed(() => [
+  { label: $ts('module.system.job.misfire.immediate'), value: 1 },
+  { label: $ts('module.system.job.misfire.once'), value: 2 },
+  { label: $ts('module.system.job.misfire.skip'), value: 3 }
+])
+const concurrentItems = computed(() => [
+  { label: $ts('module.system.job.concurrent.allow'), value: 1 },
+  { label: $ts('module.system.job.concurrent.forbid'), value: 0 }
+])
 const remarkValue = computed({
   get: () => state.value.remark ?? '',
   set: val => state.value.remark = val || ''
@@ -75,6 +96,8 @@ function resetState() {
     handlerCode: props.handlers[0]?.code || '',
     cronExpression: '0 2 * * *',
     cronTimezone: 'Asia/Shanghai',
+    misfirePolicy: 1,
+    concurrent: 1,
     status: 1,
     sortOrder: 0,
     remark: ''
@@ -91,6 +114,8 @@ function initFormData() {
       handlerCode: props.data.handlerCode || '',
       cronExpression: props.data.cronExpression || '0 2 * * *',
       cronTimezone: props.data.cronTimezone || 'Asia/Shanghai',
+      misfirePolicy: props.data.misfirePolicy ?? 1,
+      concurrent: props.data.concurrent ?? 1,
       status: props.data.status ?? 1,
       sortOrder: props.data.sortOrder ?? 0,
       remark: props.data.remark || ''
@@ -136,7 +161,21 @@ const title = computed(() => props.operateType === 'add'
           <USelect v-model="state.handlerCode" :items="handlerItems" class="w-full" />
         </UFormField>
         <UFormField name="cronExpression" required :label="$ts('module.system.job.cronExpression')" orientation="horizontal" :ui="formItemUi">
-          <UBaseInput v-model="state.cronExpression" placeholder="*/5 * * * *" trailing="clear" class="w-full font-mono" />
+          <div class="flex w-full gap-2">
+            <UBaseInput v-model="state.cronExpression" placeholder="*/5 * * * *" trailing="clear" class="w-full font-mono" />
+            <UButton color="neutral" variant="outline" icon="i-lucide-calendar-clock" @click="showCronBuilder = !showCronBuilder">
+              {{ $ts('module.system.job.cronBuilder.title') }}
+            </UButton>
+          </div>
+        </UFormField>
+        <UFormField v-if="showCronBuilder" name="cronBuilder" label="Cron" orientation="horizontal" :ui="formItemUi">
+          <CronBuilder v-model="state.cronExpression" />
+        </UFormField>
+        <UFormField name="misfirePolicy" :label="$ts('module.system.job.misfirePolicy')" orientation="horizontal" :ui="formItemUi">
+          <USelect v-model="misfireValue" :items="misfireItems" class="w-full" />
+        </UFormField>
+        <UFormField name="concurrent" :label="$ts('module.system.job.concurrent.label')" orientation="horizontal" :ui="formItemUi">
+          <URadioGroup v-model="concurrentValue" orientation="horizontal" :items="concurrentItems" />
         </UFormField>
         <UFormField name="status" :label="$ts('module.system.job.status')" orientation="horizontal" :ui="formItemUi">
           <URadioGroup v-model="statusValue" orientation="horizontal" :items="statusItems" />

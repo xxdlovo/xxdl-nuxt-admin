@@ -46,6 +46,8 @@ const emptyState = (): SysMenuAddDTO | SysMenuUpdateDTO => ({
   type: 1,
   path: '',
   component: '',
+  externalLink: '',
+  routeQuery: '',
   icon: '',
   sortOrder: 0,
   visible: 0,
@@ -205,6 +207,8 @@ const toMenuFormState = (menu?: SysMenuDto | null): SysMenuAddDTO | SysMenuUpdat
   type: Number(menu?.type ?? 1),
   path: menu?.path || '',
   component: menu?.component || '',
+  externalLink: menu?.externalLink || '',
+  routeQuery: menu?.routeQuery || '',
   icon: menu?.icon || '',
   sortOrder: menu?.sortOrder ?? 0,
   visible: menu?.visible ?? 0,
@@ -401,6 +405,14 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMenuAddDTO | SysMenuUpdat
 
             <UFormField name="component" :label="$ts('module.system.menu.page')" orientation="horizontal" :ui="formItemUi">
               <UBaseInput v-model="state.component" :placeholder="$ts('module.system.menu.form.page')" class="w-full" />
+            </UFormField>
+
+            <UFormField name="externalLink" :label="$ts('module.system.menu.externalLink')" orientation="horizontal" :ui="formItemUi">
+              <UBaseInput v-model="state.externalLink" :placeholder="$ts('module.system.menu.form.externalLink')" class="w-full" />
+            </UFormField>
+
+            <UFormField name="routeQuery" :label="$ts('module.system.menu.routeQuery')" orientation="horizontal" :ui="formItemUi">
+              <UBaseInput v-model="state.routeQuery" :placeholder="$ts('module.system.menu.form.routeQuery')" class="w-full" />
             </UFormField>
 
             <UFormField name="iconType" :label="$ts('module.system.menu.iconTypeTitle')" orientation="horizontal" :ui="formItemUi">

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { proc, publicProcedure, protectedProcedure, router } from '#admin/server/trpc/init'
 import { requireLogin } from '#admin/server/utils/routeGuard'
+import { rateLimitMiddleware } from '#admin/server/trpc/middlewares/rateLimit'
 import {
     SysUserChangePasswordSchema,
     SysUserProfileUpdateSchema,
@@ -30,7 +31,9 @@ export const authRouter = router({
             return await authService(ctx).register(input)
         }),
 
-    login: publicProcedure.input(LoginSchema)
+    login: publicProcedure
+        .use(rateLimitMiddleware({ limit: 10, windowMs: 60_000, scope: 'login' }))
+        .input(LoginSchema)
         .mutation(async ({ ctx, input }) => {
             return await authService(ctx).login(input.username, input.password, {
                 captchaCode: input.captchaCode,

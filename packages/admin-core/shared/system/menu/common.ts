@@ -8,6 +8,8 @@ export const SysMenuBaseSchema = z.object({
     type: z.number().nullish(),
     path: z.string().nullish(),
     component: z.string().nullish(),
+    externalLink: z.string().nullish(),
+    routeQuery: z.string().nullish(),
     icon: z.string().nullish(),
     sortOrder: z.number().nullish(),
     visible: z.number().nullish(),

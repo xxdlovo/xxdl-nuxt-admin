@@ -34,6 +34,8 @@ export type RbacMenu = {
   type: number
   path: string | null
   component: string | null
+  externalLink?: string | null
+  routeQuery?: string | null
   icon: string | null
   sortOrder: number
   visible: number
