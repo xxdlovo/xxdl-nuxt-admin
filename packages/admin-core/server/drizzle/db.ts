@@ -6,6 +6,18 @@ import * as schema from './schema'
 
 // 1. 在模块作用域内定义私有缓存变量
 let _db: MySql2Database<typeof schema> | null = null;
+let _pool: ReturnType<typeof mysql.createPool> | null = null;
+
+/** 连接池上限；与 mysql.createPool 的配置保持一致。 */
+const DB_CONNECTION_LIMIT = 10;
+
+/** mysql2 pool 事件计数，用于连接池监控。 */
+const poolMetrics = {
+    created: 0,
+    acquired: 0,
+    released: 0,
+    enqueued: 0,
+};
 
 /** 解析后的数据库连接参数 */
 type DbConnectionConfig = {
@@ -87,8 +99,22 @@ export const useDb = () => {
         password: dbConfig.password,
         database: dbConfig.database,
         waitForConnections: true,
-        connectionLimit: 10, // 根据你的并发需求调整
+        connectionLimit: DB_CONNECTION_LIMIT, // 根据你的并发需求调整
         queueLimit: 0,
+    });
+
+    _pool = poolConnection;
+    poolConnection.on('connection', () => {
+        poolMetrics.created += 1;
+    });
+    poolConnection.on('acquire', () => {
+        poolMetrics.acquired += 1;
+    });
+    poolConnection.on('release', () => {
+        poolMetrics.released += 1;
+    });
+    poolConnection.on('enqueue', () => {
+        poolMetrics.enqueued += 1;
     });
 
     // 5. 初始化 Drizzle 并存入变量
@@ -100,6 +126,39 @@ export const useDb = () => {
     console.log('useDb 初始化数据库连接')
     return _db;
 };
+
+/**
+ * 连接池监控数据。
+ *
+ * 优先读 mysql2 内部连接列表；不同版本字段可能不存在，此时用事件计数回退。
+ * 不修改连接池行为，只做观测。
+ */
+export function getDbPoolStats() {
+    const internal = (_pool as any)?.pool;
+    const active = Math.max(0, poolMetrics.acquired - poolMetrics.released);
+    const total = Array.isArray(internal?._allConnections)
+        ? internal._allConnections.length
+        : poolMetrics.created;
+    const idle = Array.isArray(internal?._freeConnections)
+        ? internal._freeConnections.length
+        : Math.max(0, total - active);
+    const waiting = Array.isArray(internal?._connectionQueue)
+        ? internal._connectionQueue.length
+        : Math.max(0, poolMetrics.enqueued - poolMetrics.acquired);
+
+    return {
+        initialized: Boolean(_pool),
+        connectionLimit: DB_CONNECTION_LIMIT,
+        total,
+        active,
+        idle,
+        waiting,
+        created: poolMetrics.created,
+        acquired: poolMetrics.acquired,
+        released: poolMetrics.released,
+        enqueued: poolMetrics.enqueued,
+    };
+}
 
 /**
  * 测试专用数据库初始化函数

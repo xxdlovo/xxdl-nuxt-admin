@@ -845,6 +845,61 @@
           "ip": "Please enter login IP"
         }
       },
+      "monitor": {
+        "title": "System Monitor",
+        "lastUpdated": "Last updated",
+        "autoRefresh": "Auto refresh",
+        "tabs": {
+          "service": "Service",
+          "cache": "Cache",
+          "pool": "Connection Pool"
+        },
+        "service": {
+          "cpu": "CPU",
+          "cores": "Cores",
+          "load": "Load",
+          "model": "Model",
+          "memory": "System Memory",
+          "free": "Free",
+          "disk": "Disk",
+          "diskUnavailable": "Disk information is unavailable",
+          "runtime": "Runtime",
+          "hostname": "Hostname",
+          "platform": "Platform",
+          "uptime": "Process Uptime",
+          "systemUptime": "System Uptime",
+          "processMemory": "Process Memory"
+        },
+        "cache": {
+          "keys": "Cache Keys",
+          "hitRate": "Hit Rate",
+          "hits": "Hits",
+          "misses": "Misses",
+          "sets": "Sets",
+          "deletes": "Deletes",
+          "errors": "Errors",
+          "avgGet": "Avg Get",
+          "avgSet": "Avg Set",
+          "bytesWritten": "Bytes Written",
+          "metrics": "In-process Metrics",
+          "prefixes": "Prefix Distribution",
+          "prefix": "Prefix",
+          "count": "Count",
+          "note": "This project uses Nitro memory, not Redis. Metrics are per-process and reset on restart."
+        },
+        "pool": {
+          "total": "Total",
+          "active": "Active",
+          "idle": "Idle",
+          "waiting": "Waiting",
+          "counters": "Pool Event Counters",
+          "created": "Created",
+          "acquired": "Acquired",
+          "released": "Released",
+          "enqueued": "Enqueued",
+          "notInitialized": "The pool is not initialized yet. Statistics start after the first database request."
+        }
+      },
       "sysLog": {
         "title": "System Log",
         "logLevel": "Log Level",

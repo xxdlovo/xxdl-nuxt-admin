@@ -1,4 +1,5 @@
 import { TRPCError } from '@trpc/server'
+import { getCacheMetrics, recordCacheDelete, recordCacheError, recordCacheGet, recordCacheSet } from '#admin/server/utils/cacheMetrics'
 
 /** Nitro 对 server/assets 目录提供的只读挂载名称，不能使用默认 storage。 */
 const SERVER_STORAGE = 'assets:server'
@@ -109,15 +110,22 @@ export class SysStorageService {
   async getCache<T>(key: string): Promise<T | null> {
     const storage = this.memory()
     const cacheKey = this.cacheKey(key)
+    const startedAt = performance.now()
     try {
       const envelope = await storage.getItem<CacheEnvelope<T>>(cacheKey)
-      if (!envelope || typeof envelope !== 'object' || typeof envelope.expiresAt !== 'number') return null
+      if (!envelope || typeof envelope !== 'object' || typeof envelope.expiresAt !== 'number') {
+        recordCacheGet(false, performance.now() - startedAt)
+        return null
+      }
       if (envelope.expiresAt <= Date.now()) {
+        recordCacheGet(false, performance.now() - startedAt)
         await this.removeCache(cacheKey)
         return null
       }
+      recordCacheGet(true, performance.now() - startedAt)
       return envelope.value
     } catch {
+      recordCacheError()
       return null
     }
   }
@@ -125,13 +133,17 @@ export class SysStorageService {
   /** 写入带过期时间的 JSON envelope，不依赖底层 driver 的 TTL 实现。 */
   async setCache<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
     if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0) return
+    const startedAt = performance.now()
+    const envelope = {
+      value,
+      expiresAt: Date.now() + ttlSeconds * 1000
+    } satisfies CacheEnvelope<T>
     try {
-      await this.memory().setItem(this.cacheKey(key), {
-        value,
-        expiresAt: Date.now() + ttlSeconds * 1000
-      } satisfies CacheEnvelope<T>)
+      await this.memory().setItem(this.cacheKey(key), envelope)
+      recordCacheSet(sizeOf(envelope), performance.now() - startedAt)
     } catch {
       // 缓存写入失败只影响命中率，不能阻断数据库写入或读取。
+      recordCacheError()
     }
   }
 
@@ -139,8 +151,10 @@ export class SysStorageService {
   async removeCache(key: string): Promise<void> {
     try {
       await this.memory().removeItem(this.cacheKey(key))
+      recordCacheDelete(1)
     } catch {
       // memory driver 删除失败无需向业务抛错，下一次读取会自动回源。
+      recordCacheError()
     }
   }
 
@@ -159,8 +173,34 @@ export class SysStorageService {
         : `cache:${normalizedPrefix.replace(/\//g, ':')}`
       const keys = await storage.getKeys(base)
       await Promise.all(keys.map(key => storage.removeItem(key)))
+      recordCacheDelete(keys.length)
     } catch {
       // 清理失败由 TTL 兜底，避免管理写操作因缓存问题失败。
+      recordCacheError()
+    }
+  }
+
+  /** 缓存监控：数量、前缀分布与进程内命中指标。 */
+  async cacheOverview() {
+    const keys = (await this.memory().getKeys('cache:'))
+      .filter(key => !key.includes(':$') && key !== '.gitkeep')
+
+    const prefixCounts = new Map<string, number>()
+    for (const key of keys) {
+      const logical = key.replace(/^cache:/, '')
+      const parts = logical.split(':').filter(Boolean)
+      const prefix = parts.slice(0, 2).join(':') || 'root'
+      prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1)
+    }
+
+    return {
+      keys: keys.length,
+      prefixes: Array.from(prefixCounts.entries())
+        .map(([prefix, count]) => ({ prefix, count }))
+        .sort((a, b) => b.count - a.count || a.prefix.localeCompare(b.prefix))
+        .slice(0, 12),
+      metrics: getCacheMetrics(),
+      note: 'nitro-memory',
     }
   }
 

@@ -845,6 +845,61 @@
           "ip": "请输入登录 IP"
         }
       },
+      "monitor": {
+        "title": "系统监控",
+        "lastUpdated": "最后更新",
+        "autoRefresh": "自动刷新",
+        "tabs": {
+          "service": "服务监控",
+          "cache": "缓存监控",
+          "pool": "连接池"
+        },
+        "service": {
+          "cpu": "CPU",
+          "cores": "核心数",
+          "load": "负载",
+          "model": "型号",
+          "memory": "系统内存",
+          "free": "可用",
+          "disk": "磁盘",
+          "diskUnavailable": "磁盘信息不可用",
+          "runtime": "运行环境",
+          "hostname": "主机名",
+          "platform": "平台",
+          "uptime": "进程运行时长",
+          "systemUptime": "系统运行时长",
+          "processMemory": "进程内存"
+        },
+        "cache": {
+          "keys": "缓存 Key 数",
+          "hitRate": "命中率",
+          "hits": "命中",
+          "misses": "未命中",
+          "sets": "写入",
+          "deletes": "删除",
+          "errors": "错误",
+          "avgGet": "平均读取耗时",
+          "avgSet": "平均写入耗时",
+          "bytesWritten": "累计写入量",
+          "metrics": "进程内指标",
+          "prefixes": "前缀分布",
+          "prefix": "前缀",
+          "count": "数量",
+          "note": "当前使用 Nitro memory 缓存，不是 Redis；指标为单进程统计，重启后清零。"
+        },
+        "pool": {
+          "total": "总连接",
+          "active": "活跃",
+          "idle": "空闲",
+          "waiting": "等待",
+          "counters": "连接池事件计数",
+          "created": "已创建",
+          "acquired": "已获取",
+          "released": "已释放",
+          "enqueued": "已排队",
+          "notInitialized": "连接池尚未初始化，首次数据库请求后会开始统计。"
+        }
+      },
       "sysLog": {
         "title": "系统日志",
         "logLevel": "日志级别",
