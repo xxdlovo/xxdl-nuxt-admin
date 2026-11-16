@@ -1,0 +1,37 @@
+import { requireCodegenAiAccess } from '#admin/server/utils/codegenAiAccess'
+import { apiOperationLog } from '#admin/server/utils/apiOperationLog'
+import { createApiRouteError } from '#admin/server/utils/apiRouteError'
+import { createServerT } from '#admin/server/utils/serverI18n'
+import { resolveGenConfig, type ResolveGenConfigInput } from '#admin/server/gen/ai/resolveConfig'
+import { buildCodegenAiPlan } from '#admin/server/gen/ai/plan'
+
+export default defineEventHandler(async (event) => {
+    const t = createServerT(event)
+
+    try {
+        const { ctx } = await requireCodegenAiAccess(event, 'system:gen:preview')
+        const operationLog = apiOperationLog(ctx, 'system.gen.ai.plan')
+        const body = await readBody<ResolveGenConfigInput>(event)
+
+        const config = await resolveGenConfig(ctx, body ?? {})
+        const plan = buildCodegenAiPlan(config)
+
+        await operationLog.success({
+            requestParams: {
+                tableName: body?.tableName,
+                tableId: body?.tableId,
+                moduleName: body?.moduleName,
+                businessName: body?.businessName,
+            },
+            requestResult: {
+                tableName: plan.table.tableName,
+                fileCount: plan.files.length,
+            },
+        })
+
+        return plan
+    }
+    catch (error) {
+        throw createApiRouteError(error, t, 'module.system.gen.ai.planFailed')
+    }
+})

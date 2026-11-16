@@ -99,6 +99,13 @@ NUXT_DEMO_MODE=false
 # 可选：OpenAPI 端点开关
 NUXT_OPENAPI_ENABLED=true
 
+# 可选：代码生成 V2 的外部 AI 接入令牌
+# 外部 AI/CLI 调用 /api/system/gen/ai/** 时使用 Authorization: Bearer <token>
+NUXT_CODEGEN_TOKEN=
+
+# 可选：列表行「AI」按钮是否复制长期令牌（默认 false，复制 15 分钟短期令牌）
+NUXT_CODEGEN_COPY_SECRET=false
+
 # 可选：支付渠道密钥的 AES 主密钥（仅使用支付功能时需要）
 NUXT_PAY_CONFIG_KEY=
 ```

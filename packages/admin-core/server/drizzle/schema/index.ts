@@ -4,6 +4,8 @@ import { sysDepartment } from "./system/department"
 import { sysConfig } from "./system/config"
 import { sysDictData } from "./system/dictData"
 import { sysDictType } from "./system/dictType"
+import { sysGenTable } from "./system/genTable"
+import { sysGenTableColumn } from "./system/genTableColumn"
 import { sysJob } from "./system/job"
 import { sysJobLog } from "./system/jobLog"
 import { sysLoginLog } from "./system/loginLog"
@@ -35,6 +37,8 @@ export {
   sysDepartment,
   sysDictData,
   sysDictType,
+  sysGenTable,
+  sysGenTableColumn,
   sysJob,
   sysJobLog,
   sysLoginLog,

@@ -1,0 +1,31 @@
+import { mysqlTable, primaryKey, unique, index, varchar, tinyint, int, timestamp } from "drizzle-orm/mysql-core"
+
+export const sysGenTableColumn = mysqlTable("sys_gen_table_column", {
+	id: varchar({ length: 36 }).notNull(),
+	tableId: varchar("table_id", { length: 36 }).notNull(),
+	columnName: varchar("column_name", { length: 100 }).notNull(),
+	columnComment: varchar("column_comment", { length: 255 }),
+	columnType: varchar("column_type", { length: 100 }),
+	tsType: varchar("ts_type", { length: 50 }),
+	propertyName: varchar("property_name", { length: 100 }),
+	isPk: tinyint("is_pk").default(0),
+	isRequired: tinyint("is_required").default(0),
+	isInsert: tinyint("is_insert").default(1),
+	isEdit: tinyint("is_edit").default(1),
+	isList: tinyint("is_list").default(1),
+	isQuery: tinyint("is_query").default(0),
+	queryType: varchar("query_type", { length: 10 }).default("eq"),
+	dictCode: varchar("dict_code", { length: 100 }),
+	htmlType: varchar("html_type", { length: 20 }).default("input"),
+	sortOrder: int("sort_order").default(0),
+	createdBy: varchar("created_by", { length: 36 }),
+	createdAt: timestamp("created_at", { mode: "string" }).defaultNow().notNull(),
+	updatedBy: varchar("updated_by", { length: 36 }),
+	updatedAt: timestamp("updated_at", { mode: "string" }).defaultNow().onUpdateNow().notNull(),
+	isDeleted: tinyint("is_deleted").default(0),
+},
+(table) => [
+	primaryKey({ columns: [table.id], name: "sys_gen_table_column_id" }),
+	unique("uk_gen_column").on(table.tableId, table.columnName),
+	index("idx_gen_column_table").on(table.tableId),
+])

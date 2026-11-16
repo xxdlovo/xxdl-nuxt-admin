@@ -155,6 +155,11 @@ export default defineNuxtConfig({
         // 这里必须留空字符串占位，真实值由运行时环境变量 NUXT_PAY_CONFIG_KEY 覆盖
         // （dev 从 .env 读取，生产由部署环境注入），不能把密钥写进仓库。
         payConfigKey: '',
+        // 代码生成 V2 的外部 AI 访问令牌。仅用于 /api/system/gen/ai/** 只读接口；
+        // 未配置时这些接口只接受后台登录会话。
+        codegenToken: process.env.NUXT_CODEGEN_TOKEN ?? '',
+        // 列表行「AI」按钮默认复制 15 分钟短期令牌；设为 true 才复制长期 NUXT_CODEGEN_TOKEN。
+        codegenCopySecret: process.env.NUXT_CODEGEN_COPY_SECRET === 'true',
         // nuxt-auth-utils 会把该配置传给 h3 的 useSession，
         // 登录接口 setUserSession 和客户端 /api/_auth/session 会共用这些 Cookie 规则。
         session: {
@@ -185,7 +190,9 @@ export default defineNuxtConfig({
             appName: 'Nuxt Admin System',
             // 演示模式对客户端可见：登录页据此决定是否预填演示账号、
             // 是否展示"演示账号"快捷入口。正式部署应保持 false。
-            demoMode: process.env.NUXT_DEMO_MODE === 'true'
+            demoMode: process.env.NUXT_DEMO_MODE === 'true',
+            // AI 一键接入：浏览器内可签发 15 分钟短期令牌；长期令牌用于外部 CLI
+            codegenAiEnabled: Boolean(process.env.NUXT_SESSION_PASSWORD || process.env.NUXT_CODEGEN_TOKEN)
         }
     },
     nitro: {
