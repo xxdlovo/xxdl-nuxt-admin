@@ -13,6 +13,8 @@ declare module '#auth-utils' {
 
   interface UserSession {
     loggedInAt?: string
+    /** 在线会话 id；旧会话可能没有，鉴权时按“无 id 视为有效”兼容。 */
+    sessionId?: string
   }
 }
 

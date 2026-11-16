@@ -17,7 +17,11 @@ import { authService } from './AuthService'
  */
 const LoginSchema = z.object({
     username: z.string().min(1, 'form.userName.required'),
-    password: z.string().min(1, 'form.pwd.required')
+    password: z.string().min(1, 'form.pwd.required'),
+    /** 图形验证码；system_captcha_enabled=true 时必填，由 AuthService 校验 */
+    captchaCode: z.string().max(10, 'form.required').optional(),
+    /** 记住我：服务端据此设置 7 天会话 Cookie */
+    rememberMe: z.boolean().optional()
 })
 
 export const authRouter = router({
@@ -28,7 +32,10 @@ export const authRouter = router({
 
     login: publicProcedure.input(LoginSchema)
         .mutation(async ({ ctx, input }) => {
-            return await authService(ctx).login(input.username, input.password)
+            return await authService(ctx).login(input.username, input.password, {
+                captchaCode: input.captchaCode,
+                rememberMe: input.rememberMe
+            })
         }),
 
     logout: publicProcedure

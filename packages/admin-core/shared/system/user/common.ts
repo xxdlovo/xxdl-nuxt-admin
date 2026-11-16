@@ -26,6 +26,8 @@ export const SysUserBaseSchema = z.object({
     gender: z.number().nullish(),
     deptId: z.string().nullish(),
     isAdmin: z.number().nullish(),
+    loginFailCount: z.number().nullish(),
+    lockedUntil: z.string().nullish(),
     status: z.number().nullish(),
     remark: z.string().nullish().meta(
         {

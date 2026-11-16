@@ -1,7 +1,7 @@
 import { CommonRepo } from "#admin/server/drizzle/CommonRepo"
 import type { Context } from "#admin/server/trpc/context"
 import { SysUserBaseSchema } from "#admin/shared/system/user/common"
-import { and, count, eq, getTableColumns } from "drizzle-orm"
+import { and, count, eq, getTableColumns, sql } from "drizzle-orm"
 import { sysDepartment, sysUser } from "#admin/server/drizzle/schema"
 import { buildScopedWhere } from "#admin/server/drizzle/queries/buildScope"
 import { buildWhereBySchema } from "#admin/server/drizzle/queries/buildWhereBySchema"
@@ -191,6 +191,53 @@ export const sysUserRepo = (ctx: Context) => {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /** 连续登录失败 +1，返回最新失败次数 */
+    async incrementLoginFail(id: string) {
+      await ctx.db
+        .update(sysUser)
+        .set({ loginFailCount: sql`${sysUser.loginFailCount} + 1` })
+        .where(eq(sysUser.id, id))
+
+      const rows = await ctx.db
+        .select({ loginFailCount: sysUser.loginFailCount })
+        .from(sysUser)
+        .where(eq(sysUser.id, id))
+        .limit(1)
+
+      return rows[0]?.loginFailCount ?? 0
+    },
+
+    /** 锁定账号到 minutes 分钟后 */
+    async lockLogin(id: string, minutes: number) {
+      await ctx.db
+        .update(sysUser)
+        .set({
+          lockedUntil: sql`DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ${minutes} MINUTE)`,
+        })
+        .where(eq(sysUser.id, id))
+    },
+
+    /** 清空失败次数与锁定时间（解锁 / 登录成功 / 密码重置） */
+    async clearLoginFailure(id: string) {
+      await ctx.db
+        .update(sysUser)
+        .set({ loginFailCount: 0, lockedUntil: null })
+        .where(eq(sysUser.id, id))
+    },
+
+    /** 登录成功：更新最后登录信息并清空锁定状态 */
+    async markLoginSuccess(id: string, ip: string) {
+      await ctx.db
+        .update(sysUser)
+        .set({
+          lastLoginTime: sql`CURRENT_TIMESTAMP`,
+          lastLoginIp: ip,
+          loginFailCount: 0,
+          lockedUntil: null,
+        })
+        .where(eq(sysUser.id, id))
     }
   }
 }

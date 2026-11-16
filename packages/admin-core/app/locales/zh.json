@@ -27,7 +27,11 @@
     "oauthProfileInvalid": "未获取到第三方账号标识，登录失败",
     "oauthStateMismatch": "第三方登录状态校验失败，请重新发起登录",
     "oauthFailed": "第三方登录失败，请稍后重试",
-    "oldPasswordRequired": "请先输入原密码"
+    "oldPasswordRequired": "请先输入原密码",
+    "captchaInvalid": "验证码错误或已过期，请刷新后重试",
+    "accountLocked": "账号已锁定，请 {message} 分钟后再试",
+    "sessionKicked": "您已被管理员强制下线，请重新登录",
+    "sessionExpired": "登录已过期，请重新登录"
   },
   "common": {
     "notExist": "查询数据不存在",
@@ -505,7 +509,10 @@
         "resetPassword": "重置密码",
         "resetPasswordSuccess": "重置密码成功",
         "newPassword": "新密码",
-        "confirmPassword": "确认密码"
+        "confirmPassword": "确认密码",
+        "locked": "已锁定",
+        "unlock": "解锁",
+        "unlockSuccess": "解锁成功"
       },
       "profile": {
         "tabs": {
@@ -712,6 +719,29 @@
         },
         "addUserRole": "新增用户角色关联",
         "editUserRole": "编辑用户角色关联"
+      },
+      "online": {
+        "title": "在线用户",
+        "sessionId": "会话 ID",
+        "userName": "用户名",
+        "ip": "登录 IP",
+        "browser": "浏览器",
+        "os": "操作系统",
+        "loginAt": "登录时间",
+        "lastSeenAt": "最后活跃",
+        "forceLogout": "强制下线",
+        "batchForceLogout": "批量踢出",
+        "kick": "踢出",
+        "kickConfirm": "确认将该用户踢下线？踢出后对方需要重新登录。",
+        "kickConfirmUser": "确认将用户 {user} 踢下线？踢出后对方需要重新登录。",
+        "forceLogoutConfirm": "确认将该用户踢下线？踢出后对方需要重新登录。",
+        "batchForceLogoutConfirm": "确认踢出选中的 {count} 个用户？",
+        "forceLogoutSuccess": "已踢出该用户",
+        "empty": "暂无在线用户",
+        "search": {
+          "userName": "请输入用户名",
+          "ip": "请输入登录 IP"
+        }
       },
       "sysLog": {
         "title": "系统日志",
@@ -2162,6 +2192,9 @@
         "phonePlaceholder": "请输入手机号",
         "codePlaceholder": "请输入验证码",
         "passwordPlaceholder": "请输入密码",
+        "captchaPlaceholder": "请输入图形验证码",
+        "captchaRefresh": "点击刷新验证码",
+        "captchaLoadFailed": "验证码加载失败，点击重试",
         "confirmPasswordPlaceholder": "请再次输入密码",
         "codeLogin": "验证码登录",
         "confirm": "确定",

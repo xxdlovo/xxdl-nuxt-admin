@@ -359,6 +359,8 @@ CREATE TABLE `sys_user` (
                             `is_admin` tinyint DEFAULT '0' COMMENT '是否管理员: 0-否, 1-是',
                             `last_login_time` timestamp NULL DEFAULT NULL COMMENT '最后登录时间',
                             `last_login_ip` varchar(50) DEFAULT NULL COMMENT '最后登录IP',
+                            `login_fail_count` int NOT NULL DEFAULT '0' COMMENT '连续登录失败次数',
+                            `locked_until` datetime DEFAULT NULL COMMENT '锁定截止时间',
                             `status` tinyint DEFAULT '1' COMMENT '帐号状态:  1-启用, 0-禁用',
                             `remark` varchar(255) DEFAULT NULL COMMENT '备注',
                             `created_by` varchar(36) DEFAULT NULL COMMENT '创建人ID',
@@ -370,6 +372,30 @@ CREATE TABLE `sys_user` (
                             UNIQUE KEY `uk_user_email` (`email`),
                             KEY `idx_user_phone` (`phone`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户信息表';
+
+
+-- nuxt_copy_admin.sys_user_session definition
+
+CREATE TABLE `sys_user_session` (
+  `id` varchar(36) NOT NULL COMMENT '会话ID（写入 nuxt-auth-utils session）',
+  `user_id` varchar(36) NOT NULL COMMENT '用户ID',
+  `username` varchar(50) NOT NULL COMMENT '登录账号',
+  `ip` varchar(50) DEFAULT NULL COMMENT '登录IP',
+  `user_agent` varchar(500) DEFAULT NULL COMMENT 'User-Agent',
+  `browser` varchar(50) DEFAULT NULL COMMENT '浏览器',
+  `os` varchar(50) DEFAULT NULL COMMENT '操作系统',
+  `login_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+  `last_seen_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '最后活跃时间',
+  `expires_at` timestamp NULL DEFAULT NULL COMMENT '过期时间',
+  `revoked_at` timestamp NULL DEFAULT NULL COMMENT '撤销时间',
+  `revoked_by` varchar(36) DEFAULT NULL COMMENT '撤销人ID',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_session_user` (`user_id`),
+  KEY `idx_user_session_revoked` (`revoked_at`),
+  KEY `idx_user_session_last_seen` (`last_seen_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户在线会话表';
 
 
 -- nuxt_copy_admin.sys_user_role definition

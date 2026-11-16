@@ -1,4 +1,4 @@
-import { mysqlTable, primaryKey, unique, index, varchar, tinyint, timestamp } from "drizzle-orm/mysql-core"
+import { mysqlTable, primaryKey, unique, index, varchar, tinyint, int, timestamp } from "drizzle-orm/mysql-core"
 
 export const sysUser = mysqlTable("sys_user", {
 	id: varchar({ length: 36 }).notNull(),
@@ -13,6 +13,8 @@ export const sysUser = mysqlTable("sys_user", {
 	isAdmin: tinyint("is_admin").default(0),
 	lastLoginTime: timestamp("last_login_time", { mode: 'string' }),
 	lastLoginIp: varchar("last_login_ip", { length: 50 }),
+	loginFailCount: int("login_fail_count").default(0).notNull(),
+	lockedUntil: timestamp("locked_until", { mode: 'string' }),
 	status: tinyint().default(1),
 	remark: varchar({ length: 255 }),
 	createdBy: varchar("created_by", { length: 36 }),

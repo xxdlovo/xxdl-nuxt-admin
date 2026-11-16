@@ -27,7 +27,11 @@
     "oauthProfileInvalid": "Could not obtain the third-party account identifier",
     "oauthStateMismatch": "The third-party login state check failed, please start over",
     "oauthFailed": "Third-party login failed, please try again later",
-    "oldPasswordRequired": "Please enter your current password first"
+    "oldPasswordRequired": "Please enter your current password first",
+    "captchaInvalid": "Captcha is incorrect or expired, please refresh and try again",
+    "accountLocked": "Account locked. Please try again in {message} minute(s)",
+    "sessionKicked": "You have been logged out by an administrator. Please sign in again",
+    "sessionExpired": "Your session has expired. Please sign in again"
   },
   "common": {
     "notExist": "Query data does not exist",
@@ -505,7 +509,10 @@
         "resetPassword": "Reset Password",
         "resetPasswordSuccess": "Reset password success",
         "newPassword": "New Password",
-        "confirmPassword": "Confirm Password"
+        "confirmPassword": "Confirm Password",
+        "locked": "Locked",
+        "unlock": "Unlock",
+        "unlockSuccess": "Account unlocked"
       },
       "profile": {
         "tabs": {
@@ -712,6 +719,29 @@
         },
         "addUserRole": "Add User Role",
         "editUserRole": "Edit User Role"
+      },
+      "online": {
+        "title": "Online Users",
+        "sessionId": "Session ID",
+        "userName": "Username",
+        "ip": "Login IP",
+        "browser": "Browser",
+        "os": "Operating System",
+        "loginAt": "Login At",
+        "lastSeenAt": "Last Seen",
+        "forceLogout": "Force Logout",
+        "batchForceLogout": "Batch Kick",
+        "kick": "Kick",
+        "kickConfirm": "Kick this user offline? They will need to sign in again.",
+        "kickConfirmUser": "Kick user {user} offline? They will need to sign in again.",
+        "forceLogoutConfirm": "Kick this user offline? They will need to sign in again.",
+        "batchForceLogoutConfirm": "Kick the selected {count} user(s) offline?",
+        "forceLogoutSuccess": "The user has been kicked offline",
+        "empty": "No online users",
+        "search": {
+          "userName": "Please enter username",
+          "ip": "Please enter login IP"
+        }
       },
       "sysLog": {
         "title": "System Log",
@@ -2162,6 +2192,9 @@
         "phonePlaceholder": "Please enter phone number",
         "codePlaceholder": "Please enter verification code",
         "passwordPlaceholder": "Please enter password",
+        "captchaPlaceholder": "Please enter the captcha",
+        "captchaRefresh": "Click to refresh the captcha",
+        "captchaLoadFailed": "Failed to load captcha, click to retry",
         "confirmPasswordPlaceholder": "Please enter password again",
         "codeLogin": "Verification code login",
         "confirm": "Confirm",

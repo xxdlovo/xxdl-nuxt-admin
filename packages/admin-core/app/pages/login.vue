@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {afterUserLogin} from "#admin/app/utils/common";
-import { systemOtherLoginEnum } from '#admin/shared/constants/business'
+import { systemCaptchaEnum, systemOtherLoginEnum } from '#admin/shared/constants/business'
 import type { SysOauthEnabledPlatformDTO } from '#admin/shared/system/oauthConfig'
 import BaseIcon from '#admin/app/components/base/BaseIcon.vue'
 definePageMeta({
@@ -44,6 +44,11 @@ const localeCookie = useCookie<string>('i18n_locale', {
 const loading = ref(false)
 const showPassword = ref(false)
 const rememberMe = ref(false)
+// 图形验证码：由 system_captcha_enabled 控制；关闭时不渲染、不校验。
+const captchaEnabled = ref(false)
+const captchaCode = ref('')
+const captchaUrl = ref('')
+const captchaError = ref(false)
 // 其他登录配置缺失时默认展示，确保历史部署尚未新增配置项时登录页功能不受影响。
 const otherLoginEnabled = ref(true)
 // 已启用的第三方登录方式，完全由 sys_oauth_config 表决定（图标/名称都取自配置）
@@ -80,6 +85,10 @@ const loginText = computed(() => {
       : 'Login succeeded, but the session was not established. Check the Cookie or HTTPS configuration.',
     showPassword: isZh ? '显示密码' : 'Show password',
     hidePassword: isZh ? '隐藏密码' : 'Hide password',
+    captchaPlaceholder: $ts('page.login.common.captchaPlaceholder'),
+    captchaRefresh: $ts('page.login.common.captchaRefresh'),
+    captchaLoadFailed: $ts('page.login.common.captchaLoadFailed'),
+    captchaRequired: isZh ? '请输入图形验证码' : 'Please enter the captcha',
     switchToLight: `${$ts('common.switch')} ${$ts('theme.themeSchema.light')}`,
     switchToDark: `${$ts('common.switch')} ${$ts('theme.themeSchema.dark')}`
   }
@@ -98,7 +107,12 @@ const themeToggleLabel = computed(() => isDarkMode.value ? loginText.value.switc
 const topShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.44 : 0.94 }))
 const bottomShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.38 : 0.94 }))
 
-function readRememberedLogin(): LoginForm | null {
+/**
+ * “记住我”只记住用户名，绝不把密码写进 localStorage。
+ *
+ * 是否保持登录由服务端 session Cookie 的 maxAge 决定（见 AuthService.login 的 rememberMe）。
+ */
+function readRememberedLogin(): { username: string } | null {
   if (!import.meta.client) {
     return null
   }
@@ -109,21 +123,16 @@ function readRememberedLogin(): LoginForm | null {
   }
 
   try {
-    const value = JSON.parse(rawValue) as Partial<LoginForm>
-
-    if (
-        typeof value.username === 'string' &&
-        value.username.trim() &&
-        typeof value.password === 'string' &&
-        value.password
-    ) {
-      return {
-        username: value.username,
-        password: value.password
-      }
+    const value = JSON.parse(rawValue) as { username?: unknown }
+    if (typeof value.username === 'string' && value.username.trim()) {
+      // 兼容旧版本：旧数据里可能还带着 password，读到后立即重写为只含用户名。
+      window.localStorage.setItem(loginRememberStorageKey, JSON.stringify({
+        username: value.username
+      }))
+      return { username: value.username }
     }
   } catch {
-    // Ignore malformed persisted state and fall back to the demo account.
+    // Ignore malformed persisted state and fall back to the empty form.
   }
 
   return null
@@ -136,8 +145,7 @@ function persistRememberedLogin() {
 
   if (rememberMe.value) {
     window.localStorage.setItem(loginRememberStorageKey, JSON.stringify({
-      username: form.username,
-      password: form.password
+      username: form.username
     }))
     return
   }
@@ -155,6 +163,13 @@ function toggleColorMode() {
 function fillDemoAccount(account: { username: string, password: string }) {
   form.username = account.username
   form.password = account.password
+}
+
+/** 刷新验证码：换 URL 触发浏览器重新请求 /api/captcha，并清空上一次输入。 */
+function refreshCaptcha() {
+  captchaError.value = false
+  captchaCode.value = ''
+  captchaUrl.value = `/api/captcha?t=${Date.now()}`
 }
 
 /**
@@ -182,11 +197,36 @@ function startOAuthLogin(platform: string) {
 }
 
 onMounted(async () => {
+  // 被管理员强退 / 会话过期时，tRPC 客户端会带 reason 跳回登录页；
+  // 这里给出明确警告，并清掉 query 避免刷新后重复提示。
+  const authNotice = route.query.reason
+  if (authNotice === 'kicked' || authNotice === 'expired') {
+    toast.add({
+      title: $ts(authNotice === 'kicked' ? 'auth.sessionKicked' : 'auth.sessionExpired'),
+      color: 'warning'
+    })
+
+    const nextQuery = { ...route.query }
+    delete nextQuery.reason
+    await navigateTo({ path: route.path, query: nextQuery }, { replace: true })
+  }
+
   const rememberedLogin = readRememberedLogin()
 
   if (rememberedLogin) {
     Object.assign(form, rememberedLogin)
     rememberMe.value = true
+  }
+
+  // 验证码开关：配置缺失时按关闭处理，避免未执行迁移的环境被锁在登录页。
+  try {
+    const value = await getConfigValue(systemCaptchaEnum.key, false)
+    captchaEnabled.value = value === systemCaptchaEnum.enabled
+    if (captchaEnabled.value) {
+      refreshCaptcha()
+    }
+  } catch {
+    captchaEnabled.value = false
   }
 
   // 验证码登录和演示账号属于同一组“其他登录”入口，统一由系统配置控制。
@@ -236,11 +276,21 @@ async function handleLogin() {
     return
   }
 
+  if (captchaEnabled.value && !captchaCode.value.trim()) {
+    toast.add({
+      title: loginText.value.captchaRequired,
+      color: 'warning'
+    })
+    return
+  }
+
   loading.value = true
   try {
     await $trpc.auth.login.mutate({
       username: form.username,
-      password: form.password
+      password: form.password,
+      captchaCode: captchaEnabled.value ? captchaCode.value.trim() : undefined,
+      rememberMe: rememberMe.value
     })
     await fetchUserSession()
 
@@ -263,6 +313,12 @@ async function handleLogin() {
     })
     await afterUserLogin(form.username)
     await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/system/home')
+  } catch (error) {
+    // 服务端校验后验证码 Cookie 已被消费；无论失败原因都需要换一张，避免重复提交旧答案。
+    if (captchaEnabled.value) {
+      refreshCaptcha()
+    }
+    throw error
   } finally {
     loading.value = false
   }
@@ -336,6 +392,37 @@ async function handleLogin() {
               />
             </template>
           </UInput>
+
+          <div v-if="captchaEnabled" class="flex items-center gap-2">
+            <UInput
+                v-model="captchaCode"
+                icon="i-lucide-shield-check"
+                autocomplete="off"
+                :placeholder="loginText.captchaPlaceholder"
+                size="lg"
+                variant="outline"
+                class="min-w-0 flex-1"
+                @keyup.enter="handleLogin"
+            />
+            <button
+                type="button"
+                class="h-10 w-[120px] shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-50 transition hover:border-primary dark:border-gray-700 dark:bg-gray-900"
+                :aria-label="loginText.captchaRefresh"
+                :title="loginText.captchaRefresh"
+                @click="refreshCaptcha"
+            >
+              <img
+                  v-if="!captchaError"
+                  :src="captchaUrl"
+                  alt=""
+                  class="h-full w-full object-cover"
+                  @error="captchaError = true"
+              >
+              <span v-else class="flex h-full w-full items-center justify-center text-muted">
+                <UIcon name="i-lucide-refresh-cw" class="size-4" />
+              </span>
+            </button>
+          </div>
 
           <div class="flex min-h-8 items-center justify-between gap-4 text-[0.8rem]">
             <UCheckbox v-model="rememberMe" :label="loginText.rememberMe" />

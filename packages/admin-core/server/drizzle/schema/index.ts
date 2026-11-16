@@ -18,6 +18,7 @@ import { sysRoleMenu } from "./system/roleMenu"
 import { sysSystemLog } from "./system/systemLog"
 import { sysUser } from "./system/user"
 import { sysUserRole } from "./system/userRole"
+import { sysUserSession } from "./system/userSession"
 import { demo } from "./demo/index"
 
 // 导出所有表定义
@@ -45,4 +46,5 @@ export {
   sysSystemLog,
   sysUser,
   sysUserRole,
+  sysUserSession,
 };

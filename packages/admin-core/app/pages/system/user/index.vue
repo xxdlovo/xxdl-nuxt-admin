@@ -44,6 +44,16 @@ const searchParams = ref<SysUserQueryDTO>({})
 
 const currentDeptId = computed(() => selectedDeptId.value || undefined)
 
+/** 锁定判断以服务端返回的 lockedUntil 为准；过期时间已过则视为未锁定。 */
+const isUserLocked = (row: SysUserTableRow) => {
+  if (!row.lockedUntil) {
+    return false
+  }
+
+  const time = new Date(row.lockedUntil).getTime()
+  return Number.isFinite(time) && time > Date.now()
+}
+
 const {
   data,
   loading,
@@ -94,6 +104,15 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           size: 'xs',
           onClick: () => handleEdit(row.original.id as string)
         }, { default: () => $ts('common.edit') }))
+      }
+      if (isUserLocked(row.original) && hasPermission('system:user:unlock')) {
+        actions.push(h(UButton, {
+          variant: 'outline',
+          color: 'warning',
+          size: 'xs',
+          icon: 'i-lucide-lock-open',
+          onClick: () => unlockUser(row.original)
+        }, { default: () => $ts('module.system.user.unlock') }))
       }
       if (hasPermission('system:user:reset')) {
         actions.push(h(UButton, {
@@ -160,6 +179,17 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
       enableStatusConfig.value,
       1
     ),
+    {
+      id: 'locked',
+      header: () => $ts('module.system.user.locked'),
+      cell: ({ row }) => isUserLocked(row.original)
+        ? h(resolveComponent('UBadge'), {
+            color: 'error',
+            variant: 'subtle',
+            size: 'sm'
+          }, { default: () => $ts('module.system.user.locked') })
+        : h('span', { class: 'text-muted' }, '-')
+    },
     ...(userPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
@@ -212,6 +242,17 @@ const handleResetPassword = async (event: FormSubmitEvent<SysUserResetPasswordDT
   await $trpc.sysUser.resetPassword.mutate(event.data)
   useToastSuccess($ts('module.system.user.resetPasswordSuccess'))
   resetPasswordVisible.value = false
+}
+
+/** 管理员手动解除登录失败锁定 */
+const unlockUser = async (row: SysUserTableRow) => {
+  if (!row.id) {
+    return
+  }
+
+  await $trpc.sysUser.unlock.mutate(row.id)
+  useToastSuccess($ts('module.system.user.unlockSuccess'))
+  await refresh()
 }
 
 onMounted(async () => {

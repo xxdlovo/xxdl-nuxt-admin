@@ -1,21 +1,66 @@
 import { useLogger } from 'evlog'
+import { randomUUID } from 'node:crypto'
 import type { Context, AuthUser } from '#admin/server/trpc/context'
 import { sysMenuService } from '#admin/server/sys-router/menu/SysMenuService'
 import { sysRoleService } from '#admin/server/sys-router/role/SysRoleService'
 import { sysUserService } from '#admin/server/sys-router/user/SysUserService'
 import { sysConfigService } from '#admin/server/sys-router/config/SysConfigService'
+import { sysUserSessionRepo } from '#admin/server/sys-router/online/SysUserSessionRepo'
 import { logRecorder } from '#admin/server/sys-router/systemLog/LogRecorderService'
 import { AppError } from '#admin/server/utils/appError'
 import { isPlaceholderPassword, verifyUserPassword } from '#admin/server/utils/password'
+import { clearCaptcha, verifyCaptcha } from '#admin/server/utils/captcha'
+import { getRequestInfo } from '#admin/server/utils/requestInfo'
+import { cleanupExpiredSessions, invalidateSessionCache } from '#admin/server/utils/sessionGuard'
 import type { RbacFlatMenu, RbacMenu, RbacProfile } from '#admin/shared/auth'
-import { systemRegisterEnum } from '#admin/shared/constants/business'
+import {
+  systemCaptchaEnum,
+  systemLoginSecurityEnum,
+  systemRegisterEnum,
+} from '#admin/shared/constants/business'
 import type {
   SysUserChangePasswordDTO,
   SysUserProfileUpdateDTO,
   SysUserRegisterDTO,
-  SysUserSetPasswordDTO
+  SysUserSetPasswordDTO,
 } from '#admin/shared/system/user'
 import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCacheService'
+
+/** 登录接口的可选参数 */
+export type AuthLoginOptions = {
+  /** 图形验证码；开启验证码时必填 */
+  captchaCode?: string | null
+  /** 记住我：为 true 时会话 Cookie 保留 7 天 */
+  rememberMe?: boolean
+}
+
+/** 会话 / 记住我的最长有效期（秒） */
+const REMEMBER_ME_MAX_AGE = 7 * 24 * 60 * 60
+
+function toPositiveInt(value: string | null | undefined, fallback: number) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback
+}
+
+function getLockedMinutes(lockedUntil?: string | null) {
+  if (!lockedUntil) {
+    return 0
+  }
+
+  const time = new Date(lockedUntil).getTime()
+  if (!Number.isFinite(time)) {
+    return 0
+  }
+
+  return Math.max(0, Math.ceil((time - Date.now()) / 60000))
+}
+
+/** MySQL DATETIME / timestamp(mode: 'string') 需要的本地时间格式 */
+function formatDateTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+    + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
 
 function sortMenus(menus: RbacMenu[]) {
   menus.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
@@ -119,18 +164,62 @@ export function authService(ctx: Context) {
       return result
     },
 
-    /** 登录：账号密码校验 → 写会话 → 记登录日志（失败也记） */
-    async login(username: string, password: string) {
+    /**
+     * 登录：验证码 → 锁定检查 → 账号密码校验 → 写会话 → 记登录日志（失败也记）
+     *
+     * 安全约定：
+     * - 验证码开启时先校验验证码，避免直接对密码做暴力尝试；
+     * - 账号不存在与密码错误返回同一文案，避免枚举账号；
+     * - 锁定中的账号即使密码正确也拒绝，管理员可在用户管理里解锁。
+     */
+    async login(username: string, password: string, options: AuthLoginOptions = {}) {
+      const configService = sysConfigService(ctx)
+      const captchaEnabled = (await configService.getValueByKey(systemCaptchaEnum.key)) === systemCaptchaEnum.enabled
+      const maxRetry = toPositiveInt(
+        await configService.getValueByKey(systemLoginSecurityEnum.maxRetryKey),
+        systemLoginSecurityEnum.defaultMaxRetry
+      )
+      const lockMinutes = toPositiveInt(
+        await configService.getValueByKey(systemLoginSecurityEnum.lockMinutesKey),
+        systemLoginSecurityEnum.defaultLockMinutes
+      )
+
       try {
+        if (captchaEnabled) {
+          if (!verifyCaptcha(ctx.event, options.captchaCode)) {
+            throw new AppError('auth.captchaInvalid')
+          }
+        }
+        else {
+          // 关闭验证码时清掉历史 Cookie，避免下一次开启后误用旧答案
+          clearCaptcha(ctx.event)
+        }
+
         const user = await sysUserService(ctx).getLoginUserByUsername(username)
 
         if (!user || user.status !== 1) {
-          throw new AppError('auth.userIsBlock')
+          throw new AppError('auth.invalidCredentials')
+        }
+
+        // 锁定已过期：清空计数，允许重新尝试；仍在锁定期：直接拒绝
+        if (user.lockedUntil) {
+          const remainingMinutes = getLockedMinutes(user.lockedUntil)
+          if (remainingMinutes > 0) {
+            throw new AppError('auth.accountLocked', { message: String(remainingMinutes) })
+          }
+
+          await sysUserService(ctx).clearLoginFailure(user.id)
         }
 
         const validPassword = await verifyUserPassword(user.password, password)
 
         if (!validPassword) {
+          const result = await sysUserService(ctx).registerLoginFailure(user.id, maxRetry, lockMinutes)
+
+          if (result.locked) {
+            throw new AppError('auth.accountLocked', { message: String(lockMinutes) })
+          }
+
           throw new AppError('auth.invalidCredentials')
         }
 
@@ -146,14 +235,35 @@ export function authService(ctx: Context) {
           isAdmin: user.isAdmin
         }
 
-        await setUserSession(ctx.event, {
-          user: sessionUser,
-          loggedInAt: new Date().toISOString()
+        const requestInfo = getRequestInfo(ctx.event)
+        const sessionId = randomUUID()
+        const expiresAt = formatDateTime(new Date(Date.now() + REMEMBER_ME_MAX_AGE * 1000))
+
+        await sysUserService(ctx).markLoginSuccess(user.id, requestInfo.ip)
+        await sysUserSessionRepo(ctx).create({
+          id: sessionId,
+          userId: user.id,
+          username: user.username,
+          ip: requestInfo.ip,
+          userAgent: requestInfo.userAgent,
+          browser: requestInfo.browser,
+          os: requestInfo.os,
+          expiresAt
         })
 
+        await setUserSession(ctx.event, {
+          user: sessionUser,
+          loggedInAt: new Date().toISOString(),
+          sessionId
+        }, options.rememberMe ? { maxAge: REMEMBER_ME_MAX_AGE } : undefined)
+
         ctx.user = sessionUser
+        clearCaptcha(ctx.event)
         await logRecorder(ctx).loginSuccess()
         log.info('auth logged in', { auth: { action: 'login', id: user.id } })
+
+        // 清理 7 天前的过期会话；失败只打日志，不影响登录
+        void cleanupExpiredSessions()
 
         return sessionUser
       }
@@ -164,6 +274,12 @@ export function authService(ctx: Context) {
     },
 
     async logout() {
+      const sessionId = ctx.session?.sessionId
+      if (sessionId) {
+        await sysUserSessionRepo(ctx).revoke(sessionId, ctx.user?.id ?? null)
+        invalidateSessionCache(sessionId)
+      }
+
       await clearUserSession(ctx.event)
       log.info('auth logged out', { auth: { action: 'logout' } })
 
@@ -171,10 +287,10 @@ export function authService(ctx: Context) {
     },
 
     async me() {
-      const session = await getUserSession(ctx.event)
+      // 不要直接再读 getUserSession：被强退的会话 Cookie 仍然存在，
+      // 以 context 中经过 sessionGuard 校验的 user 为准。
       log.info('auth current user fetched', { auth: { action: 'me' } })
-
-      return session.user ?? null
+      return ctx.user
     },
 
     /** 当前登录用户的资料（附带「是否已设置过密码」状态位） */
@@ -228,7 +344,8 @@ export function authService(ctx: Context) {
 
       await setUserSession(ctx.event, {
         user: nextUser,
-        loggedInAt: ctx.session.loggedInAt
+        loggedInAt: ctx.session.loggedInAt,
+        sessionId: ctx.session.sessionId
       })
 
       ctx.user = nextUser

@@ -31,6 +31,7 @@ import { sysJobRouter } from '#admin/server/sys-router/job'
 import { sysJobLogRouter } from '#admin/server/sys-router/jobLog'
 import { sysConfigRouter } from '#admin/server/sys-router/config'
 import { sysStorageRouter } from '#admin/server/sys-router/storage'
+import { sysOnlineRouter } from '#admin/server/sys-router/online'
 import { showCaseRouter } from '#admin/server/show-case-router'
 
 // 收集相关路由
@@ -40,6 +41,7 @@ export const appRouter = router({
     sysJobLog: sysJobLogRouter,
     sysConfig: sysConfigRouter,
     sysStorage: sysStorageRouter,
+    sysOnline: sysOnlineRouter,
     sysUser: sysUserRouter,
     sysDept: sysDeptRouter,
     demo: demoRouter,

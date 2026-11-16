@@ -258,6 +258,10 @@ function findAppLocation(stack: string | undefined) {
 export const APP_ERROR_STATUS_MAP: Record<string, { code: string; httpStatus: number }> = {
   // 未登录：前端据此跳转登录页
   'auth.unauthorized': { code: 'UNAUTHORIZED', httpStatus: 401 },
+  // 被管理员强制下线：与普通未登录区分，前端提示“已被踢出”
+  'auth.sessionKicked': { code: 'UNAUTHORIZED', httpStatus: 401 },
+  // 会话自然过期
+  'auth.sessionExpired': { code: 'UNAUTHORIZED', httpStatus: 401 },
   // 已登录但缺少权限码
   'auth.forbidden': { code: 'FORBIDDEN', httpStatus: 403 },
   // demo 模式下的写操作保护，语义上是「禁止」，用 403 而不是 500

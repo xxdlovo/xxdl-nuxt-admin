@@ -50,6 +50,28 @@ export function createAdminTrpcClient<TRouter extends AnyRouter>() {
                     error(err: TRPCClientError<TRouter>) {
                         const typedErr = err as TypedTRPCError
 
+                        /**
+                         * 会话被撤销（在线用户强退 / 账号被禁用）：
+                         * Cookie 可能还在，但服务端已经拒绝；这里清掉本地会话并回登录页，
+                         * 避免页面停留在“看起来已登录、所有请求都报错”的状态。
+                         */
+                        if (typedErr.data?.code === 'UNAUTHORIZED' && import.meta.client) {
+                            const path = window.location.pathname
+                            if (!path.startsWith('/login')) {
+                                void $fetch('/api/_auth/session', { method: 'DELETE' }).catch(() => {})
+                                const reason = typedErr.data?.i18nKey === 'auth.sessionKicked'
+                                    ? 'kicked'
+                                    : 'expired'
+                                const params = new URLSearchParams({
+                                    reason,
+                                    redirect: `${path}${window.location.search}`
+                                })
+                                window.location.assign(`/login?${params.toString()}`)
+                            }
+                            observer.error(err)
+                            return
+                        }
+
                         // requestId 由后端 errorFormatter 带出（evlog 宽事件的 id，见 server/utils/requestId.ts）
                         const requestId = typedErr.data?.requestId
 

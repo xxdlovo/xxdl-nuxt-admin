@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { useDb } from '#admin/server/drizzle/db'
+import { getSessionState } from '#admin/server/utils/sessionGuard'
 
 export type AuthUser = {
   id: string
@@ -24,12 +25,23 @@ export type DataPermission = {
 
 export async function createContext(event: H3Event) {
   const session = await getUserSession(event)
+  const sessionUser = session.user ?? null
+
+  // 被强退/过期的会话：Cookie 仍然存在，但不再当作登录态。
+  // 没有 sessionId 的旧会话保持兼容，直接视为有效。
+  const sessionState = sessionUser
+    ? await getSessionState(session.sessionId)
+    : null
+  const user = sessionUser && sessionState?.active
+    ? sessionUser
+    : null
 
   return {
     db: useDb(),
     event,
     session,
-    user: session.user ?? null,
+    sessionState,
+    user,
     currentPermissionCode: null as string | null,
     permissionCodes: null as string[] | null,
     dataPermission: null as DataPermission | null,

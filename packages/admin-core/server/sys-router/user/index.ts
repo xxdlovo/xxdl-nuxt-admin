@@ -37,6 +37,10 @@ export const sysUserRouter = router({
         .mutation(async ({ ctx, input }) => {
             return sysUserService(ctx).resetPassword(input)
         }),
+    unlock: proc({ permission: 'system:user:unlock' }).input(z.string().min(1, 'form.id.required'))
+        .mutation(async ({ ctx, input }) => {
+            return sysUserService(ctx).unlock(input)
+        }),
     getOne: listProc.input(SysUserQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysUserService(ctx).getOne(input)

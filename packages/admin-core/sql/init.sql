@@ -237,7 +237,22 @@ INSERT INTO sys_menu (
        1, 1, '存储查询权限', NULL, NULL, 0),
       ('10000000-0000-0000-0000-000000000233', '10000000-0000-0000-0000-000000000231',
        '内存存储删除', 'system:storage:del', 2, NULL, NULL, NULL, 233,
-       1, 1, '内存存储删除权限', NULL, NULL, 0);
+       1, 1, '内存存储删除权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000106', '10000000-0000-0000-0000-000000000101',
+       '用户解锁', 'system:user:unlock', 2, NULL, NULL, NULL, 106,
+       1, 1, '用户解锁权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000500', NULL,
+       '系统监控', 'system:monitor', 0, NULL, NULL, 'i-lucide-activity', 60,
+       0, 1, '系统监控目录', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000501', '10000000-0000-0000-0000-000000000500',
+       '在线用户', 'system:online', 1, '/system/online', 'system/online/index', 'i-lucide-radio', 601,
+       0, 1, '在线用户菜单', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000502', '10000000-0000-0000-0000-000000000501',
+       '在线用户查询', 'system:online:list', 2, NULL, NULL, NULL, 602,
+       1, 1, '在线用户查询权限', NULL, NULL, 0),
+      ('10000000-0000-0000-0000-000000000503', '10000000-0000-0000-0000-000000000501',
+       '强制下线', 'system:online:forceLogout', 2, NULL, NULL, NULL, 603,
+       1, 1, '在线用户强制下线权限', NULL, NULL, 0);
 /*!40000 ALTER TABLE `sys_menu` ENABLE KEYS */;
 UNLOCK
 TABLES;
@@ -250,6 +265,9 @@ LOCK
 TABLES `sys_user` WRITE;
 /*!40000 ALTER TABLE `sys_user` DISABLE KEYS */;
 INSERT INTO `sys_user`
+    (id, username, password, email, nickname, avatar, phone, gender, dept_id, is_admin,
+     last_login_time, last_login_ip, status, remark, created_by, created_at, updated_by,
+     updated_at, is_deleted)
 VALUES ('30000000-0000-0000-0000-000000000001', 'admin',
         '$scrypt$n=16384,r=8,p=1$HxGLv9pemrhkp5r7EqE2ow$jfnRFSSfX/hASpPFQO0ipZ/sZ4n/KrWuSvrDoM4qOHZSp7bkWrP2NivJG5eCmcXSlZwRIZtW0z58zIx7idip9Q',
         'admin@example.com', '管理员', '', '13800000000', 0, '50000000-0000-0000-0000-000000000001', 1, NULL, NULL, 1,
@@ -789,7 +807,10 @@ INSERT INTO sys_config
 (id, config_name, config_key, config_value, config_type, status, remark, created_by, created_at, updated_by, updated_at, is_deleted)
 VALUES('09171958-f26f-4457-8cae-aeeb2ff45286', '是否开启注册', 'system_register_enable', 'no', 1, 1, '', '30000000-0000-0000-0000-000000000001', '2026-07-30 13:18:01', '30000000-0000-0000-0000-000000000001', '2026-07-30 15:17:09', 0),
       -- 其他登录包含验证码登录和演示账号入口，默认开启以维持现有登录页行为。
-      ('09171959-f26f-4457-8cae-aeeb2ff45286', '是否开启其他登录', 'system_otherlogin_enable', 'true', 1, 1, '', '30000000-0000-0000-0000-000000000001', '2026-07-30 13:18:01', '30000000-0000-0000-0000-000000000001', '2026-07-30 15:17:09', 0);
+      ('09171959-f26f-4457-8cae-aeeb2ff45286', '是否开启其他登录', 'system_otherlogin_enable', 'true', 1, 1, '', '30000000-0000-0000-0000-000000000001', '2026-07-30 13:18:01', '30000000-0000-0000-0000-000000000001', '2026-07-30 15:17:09', 0),
+      ('09171960-f26f-4457-8cae-aeeb2ff45286', '是否开启登录验证码', 'system_captcha_enabled', 'true', 1, 1, '登录页图形验证码开关', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', 0),
+      ('09171961-f26f-4457-8cae-aeeb2ff45286', '登录失败锁定次数', 'system_login_max_retry', '5', 1, 1, '连续密码错误达到该次数后锁定账号', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', 0),
+      ('09171962-f26f-4457-8cae-aeeb2ff45286', '账号锁定时长（分钟）', 'system_login_lock_minutes', '10', 1, 1, '登录失败锁定后的解锁等待分钟数', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', '30000000-0000-0000-0000-000000000001', '2026-11-16 00:00:00', 0);
 
 UNLOCK
 TABLES;

@@ -33,6 +33,21 @@ export const systemOtherLoginEnum = {
     disabled: 'false',
 }
 
+/** 登录图形验证码开关。配置缺失时按关闭处理，避免旧环境被锁在登录页。 */
+export const systemCaptchaEnum = {
+    key: 'system_captcha_enabled',
+    enabled: 'true',
+    disabled: 'false',
+}
+
+/** 登录失败锁定策略。配置缺失时使用这里的默认值。 */
+export const systemLoginSecurityEnum = {
+    maxRetryKey: 'system_login_max_retry',
+    lockMinutesKey: 'system_login_lock_minutes',
+    defaultMaxRetry: 5,
+    defaultLockMinutes: 10,
+}
+
 /**
  * 第三方登录建号时写入的密码占位符。
  *

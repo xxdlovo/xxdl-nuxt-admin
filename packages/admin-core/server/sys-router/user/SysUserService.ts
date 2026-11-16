@@ -22,6 +22,7 @@ import { randomUuid } from '#admin/shared/utils/uuid'
 import { hashUserPassword, isPlaceholderPassword } from '#admin/server/utils/password'
 import { sysDeptRepo } from '#admin/server/sys-router/dept/SysDeptRepo'
 import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCacheService'
+import { sysOnlineService } from '#admin/server/sys-router/online/SysOnlineService'
 import { runUserOnboardHooks } from '#admin/server/hooks/userOnboard'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
@@ -101,6 +102,7 @@ export function sysUserService(ctx: Context) {
 
     async remove(id: string): Promise<boolean> {
       await repo.remove(id)
+      await sysOnlineService(ctx).revokeUserSessions(id)
       await rbacCache.invalidateUser(id)
       log.info('user removed', { user: { action: 'remove', id } })
       return true
@@ -108,7 +110,10 @@ export function sysUserService(ctx: Context) {
 
     async batchRemove(ids: string[]): Promise<number> {
       await repo.batchRemove(ids)
-      await Promise.all(ids.map(id => rbacCache.invalidateUser(id)))
+      await Promise.all(ids.map(async (id) => {
+        await sysOnlineService(ctx).revokeUserSessions(id)
+        await rbacCache.invalidateUser(id)
+      }))
       log.info('user batch removed', { user: { action: 'batchRemove', count: ids.length } })
       return ids.length
     },
@@ -132,7 +137,13 @@ export function sysUserService(ctx: Context) {
         ...values,
         deptId
       })
-      if (data.status !== undefined) await rbacCache.invalidateUser(id)
+      if (data.status !== undefined) {
+        await rbacCache.invalidateUser(id)
+        // 禁用账号时撤销全部在线会话，避免已登录的浏览器继续操作
+        if (data.status !== 1) {
+          await sysOnlineService(ctx).revokeUserSessions(id)
+        }
+      }
 
       // 回读校验：确认部门确实写入成功（数据权限外的异常写入也会在这里暴露）
       if ((await repo.getDeptIdById(id) ?? null) !== deptId) {
@@ -149,7 +160,48 @@ export function sysUserService(ctx: Context) {
     async resetPassword(data: SysUserResetPasswordDTO): Promise<boolean> {
       const password = await hashUserPassword(data.password)
       await repo.updatePasswordById(data.id, password)
+      // 管理员重置密码后同时解锁，避免用户拿到新密码仍被锁在门外
+      await repo.clearLoginFailure(data.id)
       log.info('user password reset', { user: { action: 'resetPassword', id: data.id } })
+      return true
+    },
+
+    /** 管理员手动解锁账号 */
+    async unlock(id: string): Promise<boolean> {
+      const user = await repo.getActiveById(id)
+      if (!user) {
+        throw new AppError('common.notExist')
+      }
+
+      await repo.clearLoginFailure(id)
+      log.info('user unlocked', { user: { action: 'unlock', id } })
+      return true
+    },
+
+    /**
+     * 登录失败：失败次数 +1，达到阈值时锁定账号。
+     * 返回 locked 与剩余次数，由 AuthService 决定抛哪个错误。
+     */
+    async registerLoginFailure(id: string, maxRetry: number, lockMinutes: number) {
+      const failCount = await repo.incrementLoginFail(id)
+      if (failCount >= maxRetry) {
+        await repo.lockLogin(id, lockMinutes)
+        log.info('user locked after login failures', { user: { action: 'lock', id, failCount } })
+        return { locked: true, failCount, remaining: 0 }
+      }
+
+      return { locked: false, failCount, remaining: Math.max(maxRetry - failCount, 0) }
+    },
+
+    /** 清除锁定（例如锁定已过期后再次登录） */
+    async clearLoginFailure(id: string): Promise<boolean> {
+      await repo.clearLoginFailure(id)
+      return true
+    },
+
+    /** 登录成功：更新最后登录时间/IP 并清空失败计数 */
+    async markLoginSuccess(id: string, ip: string): Promise<boolean> {
+      await repo.markLoginSuccess(id, ip)
       return true
     },
 
