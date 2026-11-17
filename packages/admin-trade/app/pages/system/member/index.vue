@@ -55,7 +55,7 @@ import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysMemberQueryDTO } from '#trade/shared/system/member'
 import { memberStatusConfig } from '#admin/shared/constants/business'
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import SysMemberSearch from './components/sys-member-search.vue'
@@ -168,6 +168,7 @@ const handleBatchDelete = async () => {
 const columns = computed<TableColumn<MemberProfileRow>[]>(() => {
   const actionColumn: TableColumn<MemberProfileRow> = {
     id: 'actions',
+    ...stickyRightColumn(420),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -227,24 +228,28 @@ const columns = computed<TableColumn<MemberProfileRow>[]>(() => {
   return [
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
       id: 'member',
+      ...minWidthColumn(150),
       header: () => $ts('module.system.member.nickname'),
-      cell: ({ row }) => h('div', { class: 'flex flex-col' }, [
-        h('span', {}, row.original.nickname || '-'),
-        h('span', { class: 'text-xs text-muted' }, row.original.username || row.original.userId || '')
+      cell: ({ row }) => h('div', { class: 'flex min-w-0 flex-col' }, [
+        h('span', { class: 'block truncate', title: row.original.nickname ?? '' }, row.original.nickname || '-'),
+        h('span', { class: 'block truncate text-xs text-muted', title: row.original.username || row.original.userId || '' }, row.original.username || row.original.userId || '')
       ])
     },
     {
       accessorKey: 'levelName',
+      ...minWidthColumn(110),
       header: () => $ts('module.system.member.level'),
-      cell: ({ row }) => row.original.levelName || '-'
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.levelName ?? '' }, row.original.levelName || '-')
     },
     {
       accessorKey: 'expireAt',
+      ...minWidthColumn(196),
       header: () => $ts('module.system.member.expireAtColumn'),
       // expireAt 为空 = 永不过期（长期等级 / 默认等级）；有值时顺手标注是否已过期
       cell: ({ row }) => {
@@ -257,44 +262,51 @@ const columns = computed<TableColumn<MemberProfileRow>[]>(() => {
         const expired = isExpired(expireAt)
         const UBadge = resolveComponent('UBadge')
 
-        return h('div', { class: 'flex items-center gap-2' }, [
-          h('span', {}, expireAt),
+        return h('div', { class: 'flex min-w-0 items-center gap-2' }, [
+          h('span', { class: 'truncate', title: expireAt }, expireAt),
           expired ? h(UBadge, { color: 'error', variant: 'soft', size: 'sm', label: $ts('module.system.member.expired') }) : null
         ])
       }
     },
     {
       id: 'wallet',
+      ...minWidthColumn(156),
       header: () => $ts('module.system.member.walletSection'),
       cell: ({ row }) => h('div', { class: 'flex flex-col text-xs' }, [
-        h('span', {}, `${$ts('module.system.member.walletRecharge')}: ${row.original.rechargeBalance ?? '0.00'}`),
-        h('span', { class: 'text-muted' }, `${$ts('module.system.member.walletGift')}: ${row.original.giftBalance ?? '0.00'}`)
+        h('span', { class: 'whitespace-nowrap' }, `${$ts('module.system.member.walletRecharge')}: ${row.original.rechargeBalance ?? '0.00'}`),
+        h('span', { class: 'whitespace-nowrap text-muted' }, `${$ts('module.system.member.walletGift')}: ${row.original.giftBalance ?? '0.00'}`)
       ])
     },
     {
       id: 'frozen',
+      ...minWidthColumn(130),
       header: () => $ts('module.system.member.walletFrozenRecharge'),
       cell: ({ row }) => h('div', { class: 'flex flex-col text-xs' }, [
-        h('span', {}, `${row.original.frozenRecharge ?? '0.00'}`),
-        h('span', { class: 'text-muted' }, `${row.original.frozenGift ?? '0.00'}`)
+        h('span', { class: 'whitespace-nowrap' }, `${row.original.frozenRecharge ?? '0.00'}`),
+        h('span', { class: 'whitespace-nowrap text-muted' }, `${row.original.frozenGift ?? '0.00'}`)
       ])
     },
     {
       accessorKey: 'totalConsume',
+      ...stableColumn(100),
       header: () => $ts('module.system.member.totalConsume')
     },
     {
       accessorKey: 'inviteCode',
-      header: () => $ts('module.system.member.inviteCode')
+      ...minWidthColumn(120),
+      header: () => $ts('module.system.member.inviteCode'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.inviteCode ?? '' }, row.original.inviteCode || '-')
     },
     {
       accessorKey: 'inviterId',
+      ...minWidthColumn(120),
       header: () => $ts('module.system.member.inviterId'),
-      cell: ({ row }) => row.original.inviterId || '-'
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.inviterId ?? '' }, row.original.inviterId || '-')
     },
-    useBadgeColumn<MemberProfileRow>('status', 'module.system.member.statusLabel', memberStatusConfig, 0),
+    withColumnWidth(useBadgeColumn<MemberProfileRow>('status', 'module.system.member.statusLabel', memberStatusConfig, 0), stableColumn(tableColumnWidth.status)),
     {
       accessorKey: 'createdAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.member.createdAt')
     },
     ...(memberPermissions.canOperate.value || canAdjust.value || canGrant.value || canChangeLevel.value ? [actionColumn] : []),

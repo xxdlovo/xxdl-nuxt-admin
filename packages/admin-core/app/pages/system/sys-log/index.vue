@@ -71,7 +71,7 @@ import type { SysLogDto, SysLogQueryDTO } from '#admin/shared/system/SysLog'
 import SysLogSearch from './components/sys-log-search.vue'
 import SysLogDetail from './components/sys-log-detail.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
-import { useBadgeColumn, usePaginatedTable } from '#admin/app/composables/useTable'
+import { useBadgeColumn, usePaginatedTable, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
@@ -117,6 +117,7 @@ const handleClear = async () => {
 const columns = computed<TableColumn<SysLogDto>[]>(() => {
   const actionColumn: TableColumn<SysLogDto> = {
     id: 'actions',
+    ...stickyRightColumn(120),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -134,40 +135,48 @@ const columns = computed<TableColumn<SysLogDto>[]>(() => {
   return [
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => {
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
         return h('span', { class: 'text-gray-500 dark:text-gray-400' }, index)
       }
     },
-    useBadgeColumn<SysLogDto>(
+    withColumnWidth(useBadgeColumn<SysLogDto>(
         'level',
         'module.system.sysLog.logLevel',
         logLevelConfig.value,
         0
-    ),
+    ), stableColumn(tableColumnWidth.status)),
     {
       accessorKey: 'module',
-      header: () => $ts('module.system.sysLog.logModule')
+      ...minWidthColumn(190),
+      header: () => $ts('module.system.sysLog.logModule'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.module ?? '' }, row.original.module || '-')
     },
     {
       accessorKey: 'message',
-      header: () => $ts('module.system.sysLog.logMessage')
+      ...minWidthColumn(320),
+      header: () => $ts('module.system.sysLog.logMessage'),
+      cell: ({ row }) => h('span', { class: 'block truncate text-xs', title: row.original.message ?? '' }, row.original.message || '-')
     },
     {
       accessorKey: 'username',
-      header: () => $ts('module.system.sysLog.detail.operator')
+      ...minWidthColumn(100),
+      header: () => $ts('module.system.sysLog.detail.operator'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.username ?? '' }, row.original.username || '-')
     },
     {
       accessorKey: 'createdAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.sysLog.detail.operationTime')
     },
-    useBadgeColumn<SysLogDto>(
+    withColumnWidth(useBadgeColumn<SysLogDto>(
         'status',
         'module.system.sysLog.logStatus',
         logStatusConfig.value,
         1
-    ),
+    ), stableColumn(tableColumnWidth.status)),
     actionColumn
   ]
 })

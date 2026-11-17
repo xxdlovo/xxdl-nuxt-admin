@@ -47,7 +47,7 @@ import type { TableColumn } from '@nuxt/ui'
 import { h } from 'vue'
 import type { SysPayOrderDto, SysPayOrderQueryDTO } from '#trade/shared/system/payOrder'
 import { payChannelCodeRecord, payOrderStatusConfig } from '#admin/shared/constants/business'
-import { usePaginatedTable, useBadgeColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useBadgeColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysPayOrderSearch from './components/sys-pay-order-search.vue'
 import SysPayOrderDetail from './components/sys-pay-order-detail.vue'
@@ -122,6 +122,7 @@ const statusLabel = (status?: string | null) => {
 const columns = computed<TableColumn<SysPayOrderDto>[]>(() => {
   const actionColumn: TableColumn<SysPayOrderDto> = {
     id: 'actions',
+    ...stickyRightColumn(300),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -172,38 +173,49 @@ const columns = computed<TableColumn<SysPayOrderDto>[]>(() => {
   return [
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
       accessorKey: 'outTradeNo',
-      header: () => $ts('module.system.payOrder.outTradeNo')
+      ...minWidthColumn(220),
+      header: () => $ts('module.system.payOrder.outTradeNo'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.outTradeNo ?? '' }, row.original.outTradeNo || '-')
     },
     {
       accessorKey: 'channelCode',
+      ...minWidthColumn(120),
       header: () => $ts('module.system.payOrder.channelCode'),
-      cell: ({ row }) => channelLabel(row.original.channelCode)
+      cell: ({ row }) => h('span', { class: 'block truncate', title: channelLabel(row.original.channelCode) }, channelLabel(row.original.channelCode) || '-')
     },
     {
       id: 'amount',
+      ...stableColumn(tableColumnWidth.amount),
       header: () => $ts('module.system.payOrder.amount'),
       cell: ({ row }) => h('span', {}, `${row.original.amount ?? ''} ${row.original.currency ?? ''}`)
     },
-    useBadgeColumn<SysPayOrderDto>('status', 'module.system.payOrder.statusLabel', payOrderStatusConfig, 0),
+    withColumnWidth(useBadgeColumn<SysPayOrderDto>('status', 'module.system.payOrder.statusLabel', payOrderStatusConfig, 0), stableColumn(tableColumnWidth.status)),
     {
       accessorKey: 'providerOrderId',
-      header: () => $ts('module.system.payOrder.providerOrderId')
+      ...minWidthColumn(190),
+      header: () => $ts('module.system.payOrder.providerOrderId'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.providerOrderId ?? '' }, row.original.providerOrderId || '-')
     },
     {
       accessorKey: 'transactionId',
-      header: () => $ts('module.system.payOrder.transactionId')
+      ...minWidthColumn(240),
+      header: () => $ts('module.system.payOrder.transactionId'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.transactionId ?? '' }, row.original.transactionId || '-')
     },
     {
       accessorKey: 'paidAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.payOrder.paidAt')
     },
     {
       accessorKey: 'createdAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.payOrder.createdAt')
     },
     ...(orderPermissions.canOperate.value || canQuery.value ? [actionColumn] : [])

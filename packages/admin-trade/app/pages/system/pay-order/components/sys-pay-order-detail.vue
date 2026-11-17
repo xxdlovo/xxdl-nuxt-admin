@@ -145,14 +145,7 @@ watch(visible, (opened) => {
               orientation="horizontal"
               :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }"
             >
-              <UInput
-                :model-value="displayValue(item.value)"
-                readonly
-                color="neutral"
-                variant="subtle"
-                class="w-full"
-                :ui="{ base: 'break-all' }"
-              />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(item.value)">{{ displayValue(item.value) }}</div>
             </UFormField>
           </div>
         </UCard>

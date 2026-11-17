@@ -5,8 +5,9 @@
 
     <!-- 表格容器 -->
     <div
-        class="flex-1 overflow-auto px-4 min-h-0 relative"
+        class="flex-1 overflow-auto px-4 min-h-0 relative table-scroll-container"
         :class="{ 'hide-expanded-slot-row': hideExpandedSlotRow }"
+        :style="{ '--table-min-width': `${minTableWidth}px` }"
     >
       <!-- Loading 遮罩 -->
       <div
@@ -22,9 +23,9 @@
       <UTable
           ref="tableRef"
           :data="data"
-          :columns="columns"
+          :columns="normalizedColumns"
           :loading="loading"
-          :ui="ui"
+          :ui="tableUi"
           :get-sub-rows="getSubRows"
           :get-row-id="getRowId"
           :expanded-options="expandedOptions"
@@ -72,6 +73,7 @@
 <script setup lang="ts" generic="T">
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { ExpandedOptions, ExpandedState } from '@tanstack/vue-table'
+import { stableColumn, stickyRightColumn, tableColumnWidth } from '#admin/app/composables/useTable/columns'
 
 interface Pagination {
   page: number
@@ -109,6 +111,88 @@ const tableSlots = computed(() => {
   return rest
 })
 
+/**
+ * 统一表格外观：
+ * - table-fixed：列宽稳定，避免长内容把表格撑宽、把操作列挤出视口
+ * - th whitespace-nowrap：中文表头不折行
+ * - td overflow-hidden：配合列宽做截断，内容完整性由 title/复制入口保证
+ * 页面可通过 ui 覆盖任意键。
+ */
+const tableUi = computed(() => {
+  const custom = props.ui ?? {}
+  return {
+    base: ['table-fixed', custom.base].filter(Boolean).join(' '),
+    th: ['whitespace-nowrap', custom.th].filter(Boolean).join(' '),
+    td: ['overflow-hidden align-middle', custom.td].filter(Boolean).join(' '),
+    ...custom
+  } as Record<string, unknown>
+})
+
+/**
+ * 规范化列宽：
+ * - 选择列 / 序号列：固定窄宽
+ * - 操作列：固定宽度 + 右侧吸附，横向滚动时始终可见
+ * - 其他列：未显式设置宽度时保持均分（table-fixed 下自动铺满容器）
+ */
+const normalizedColumns = computed<TableColumn<T>[]>(() => {
+  return props.columns.map((column, index) => {
+    const id = String(column.id ?? (column as { accessorKey?: string }).accessorKey ?? '')
+    const isSelection = index === 0 && (id === 'select' || id === 'selection')
+    const isIndex = id === 'index'
+    const isAction = id === 'actions'
+
+    if (isSelection) {
+      return mergeColumn(column, stableColumn(tableColumnWidth.selection))
+    }
+
+    if (isIndex) {
+      return mergeColumn(column, stableColumn(tableColumnWidth.index))
+    }
+
+    if (isAction) {
+      return mergeColumn(column, stickyRightColumn(tableColumnWidth.actions))
+    }
+
+    return column
+  })
+})
+
+/**
+ * 表格最小宽度 = 各列宽度之和。
+ * table-fixed 会把列压到比 minSize 更窄，只有给表格一个不小于列宽总和的最小宽度，
+ * 才能保证列宽不被压缩、超出部分由容器横向滚动承接。
+ */
+const minTableWidth = computed(() => {
+  const total = normalizedColumns.value.reduce((sum, column) => {
+    const width = column.size ?? column.minSize
+    return sum + (typeof width === 'number' && width > 0 ? width : 140)
+  }, 0)
+
+  return Math.max(total, 100)
+})
+
+function mergeColumn(
+  column: TableColumn<T>,
+  extra: { size?: number, minSize?: number, meta?: Record<string, unknown> }
+): TableColumn<T> {
+  const currentMeta = (column.meta ?? {}) as Record<string, unknown>
+  const extraMeta = (extra.meta ?? {}) as Record<string, unknown>
+  const currentClass = currentMeta.class as Record<string, string> | undefined
+  const extraClass = extraMeta.class as Record<string, string> | undefined
+
+  return {
+    ...column,
+    size: column.size ?? extra.size,
+    minSize: column.minSize ?? extra.minSize,
+    meta: {
+      ...extraMeta,
+      ...currentMeta,
+      class: currentClass && extraClass ? { ...extraClass, ...currentClass } : (currentClass ?? extraClass),
+      style: (currentMeta.style as Record<string, unknown> | undefined) ?? (extraMeta.style as Record<string, unknown> | undefined)
+    }
+  } as TableColumn<T>
+}
+
 // 暴露 tableRef 给父组件
 defineExpose({
   tableRef
@@ -118,5 +202,16 @@ defineExpose({
 <style scoped>
 .hide-expanded-slot-row :deep(tr[data-slot="tr"]:has(> td[colspan]:empty)) {
   display: none;
+}
+
+/* 预留滚动条槽位，避免纵向滚动条压住最后一列内容 */
+.table-scroll-container {
+  scrollbar-gutter: stable;
+}
+
+/* 列宽总和决定表格最小宽度：容器更宽时表格铺满（列等比变宽），
+   容器更窄时保持列宽不被压缩，由容器横向滚动承接 */
+.table-scroll-container :deep(table) {
+  min-width: max(100%, var(--table-min-width, 0px));
 }
 </style>

@@ -48,7 +48,7 @@ const remarkValue = computed({
 })
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-24 shrink-0 pr-2 text-right',
+  label: 'w-24 whitespace-nowrap shrink-0 pr-2 text-right',
   container: 'flex-1'
 }
 

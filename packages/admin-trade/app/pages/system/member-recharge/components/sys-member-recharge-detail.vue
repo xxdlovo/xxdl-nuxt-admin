@@ -312,15 +312,7 @@ watch(visible, (opened) => {
                 />
               </template>
 
-              <UInput
-                v-else
-                :model-value="displayValue(item.value)"
-                readonly
-                color="neutral"
-                variant="subtle"
-                class="w-full"
-                :ui="{ base: 'break-all' }"
-              />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(item.value)">{{ displayValue(item.value) }}</div>
             </UFormField>
           </div>
         </UCard>
@@ -358,15 +350,7 @@ watch(visible, (opened) => {
                 {{ field.badge.label }}
               </span>
             </template>
-            <UInput
-              v-else
-              :model-value="displayValue(field.value)"
-              readonly
-              color="neutral"
-              variant="subtle"
-              class="w-full"
-              :ui="{ base: 'break-all' }"
-            />
+            <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(field.value)">{{ displayValue(field.value) }}</div>
           </UFormField>
         </div>
       </UCard>
@@ -403,15 +387,7 @@ watch(visible, (opened) => {
                 {{ field.badge.label }}
               </span>
             </template>
-            <UInput
-              v-else
-              :model-value="displayValue(field.value)"
-              readonly
-              color="neutral"
-              variant="subtle"
-              class="w-full"
-              :ui="{ base: 'break-all' }"
-            />
+            <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(field.value)">{{ displayValue(field.value) }}</div>
           </UFormField>
         </div>
       </UCard>

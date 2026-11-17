@@ -5,7 +5,7 @@ import { memberFreezeStatusConfig } from '#admin/shared/constants/business'
 const { $ts } = useI18n()
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-24 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 
@@ -65,7 +65,7 @@ const reset = () => {
       </template>
       <template #content>
         <UForm ref="form" :validate-on="['input']" :schema="schema" :state="state" class="p-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-6">
             <UFormField name="bizNo" :label="$ts('module.system.memberFreeze.bizNo')" orientation="horizontal" :ui="formItemUi">
               <UBaseInput v-model="state.bizNo" :placeholder="$ts('module.system.memberFreeze.form.bizNo')" trailing="clear" class="w-full" />
             </UFormField>
@@ -81,7 +81,7 @@ const reset = () => {
             <UFormField name="createdTo" :label="$ts('module.system.memberFreeze.createdTo')" orientation="horizontal" :ui="formItemUi">
               <UInput v-model="createdTo" type="date" class="w-full" />
             </UFormField>
-            <div class="lg:col-start-4 flex flex-col pr-8">
+            <div class="col-span-full flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
                 <UButton icon="tabler:reload" @click="reset" variant="outline" color="neutral">{{ $ts('common.reset') }}
                 </UButton>

@@ -28,8 +28,38 @@
 
 }
 
-.landing-eyebrow {
-    font-family: var(--font-mono);
+/* 标签栏横向滚动条：默认浏览器滚动条太粗，会挤压标签并贴近上边框。 */
+.tab-scrollbar {
+    /* 仅使用 WebKit 伪元素控制高度；不要设置 scrollbar-width，
+       否则 Chrome 会改用原生滚动条并忽略下面的 4px 高度。 */
+}
+
+/* Firefox 没有 ::-webkit-scrollbar，单独使用标准属性。 */
+@supports (-moz-appearance: none) {
+    .tab-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: var(--ui-border-accented) transparent;
+    }
+}
+
+.tab-scrollbar::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tab-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tab-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background: var(--ui-border-accented);
+}
+
+.tab-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-border);
+}
+
+.landing-eyebrow {    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 500;
     line-height: 1rem;

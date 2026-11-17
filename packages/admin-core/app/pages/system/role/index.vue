@@ -87,7 +87,7 @@ import RoleDataScopeModal from './components/RoleDataScopeModal.vue'
 import RoleUserAssignModal from './components/RoleUserAssignModal.vue'
 
 import { businessDictCode } from "#admin/shared/constants/business"
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
@@ -139,6 +139,7 @@ const { selectionColumn } = useSelectionColumn<SysRoleDto>({
 const columns = computed<TableColumn<SysRoleDto>[]>(() => {
   const actionColumn: TableColumn<SysRoleDto> = {
     id: 'actions',
+    ...stickyRightColumn(360),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -191,6 +192,7 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
     ...(rolePermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => {
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
@@ -199,32 +201,39 @@ const columns = computed<TableColumn<SysRoleDto>[]>(() => {
     },
     {
       accessorKey: 'name',
-      header: () => $ts('module.system.role.roleName')
+      ...minWidthColumn(160),
+      header: () => $ts('module.system.role.roleName'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.name ?? '' }, row.original.name || '-')
     },
     {
       accessorKey: 'code',
-      header: () => $ts('module.system.role.roleCode')
+      ...minWidthColumn(140),
+      header: () => $ts('module.system.role.roleCode'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.code ?? '' }, row.original.code || '-')
     },
     {
       accessorKey: 'description',
-      header: () => $ts('module.system.role.roleDesc')
+      ...minWidthColumn(240),
+      header: () => $ts('module.system.role.roleDesc'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.description ?? '' }, row.original.description || '-')
     },
     {
       accessorKey: 'sortOrder',
+      ...stableColumn(88),
       header: () => $ts('module.system.role.sortOrder')
     },
-    useBadgeColumn<SysRoleDto>(
+    withColumnWidth(useBadgeColumn<SysRoleDto>(
       'status',
       'module.system.role.roleStatus',
       enableStatusConfig.value,
       1
-    ),
-    useBadgeColumn<SysRoleDto>(
+    ), stableColumn(tableColumnWidth.status)),
+    withColumnWidth(useBadgeColumn<SysRoleDto>(
       'dataScope',
       'module.system.role.dataScope',
       dataScopeConfig.value,
       5
-    ),
+    ), minWidthColumn(150)),
     ...(rolePermissions.canOperate.value ? [actionColumn] : [])
   ]
 })

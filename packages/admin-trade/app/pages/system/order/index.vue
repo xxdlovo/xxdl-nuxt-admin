@@ -115,7 +115,7 @@ import {
 } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
-import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastError, useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 import SysOrderSearch from './components/sys-order-search.vue'
@@ -324,6 +324,7 @@ const handleBatchDelete = async () => {
 const columns = computed<TableColumn<SysOrderRespDTO>[]>(() => {
   const actionColumn: TableColumn<SysOrderRespDTO> = {
     id: 'actions',
+    ...stickyRightColumn(360),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -408,42 +409,48 @@ const columns = computed<TableColumn<SysOrderRespDTO>[]>(() => {
     ...(canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
       accessorKey: 'orderNo',
+      ...minWidthColumn(220),
       header: () => $ts('module.system.order.orderNo'),
-      cell: ({ row }) => h('span', { class: 'font-medium break-all' }, row.original.orderNo || '-')
+      cell: ({ row }) => h('span', { class: 'block truncate font-medium', title: row.original.orderNo ?? '' }, row.original.orderNo || '-')
     },
     {
       id: 'member',
+      ...minWidthColumn(140),
       header: () => $ts('module.system.order.member'),
-      cell: ({ row }) => h('div', { class: 'flex flex-col' }, [
-        h('span', { class: 'break-all' }, row.original.nickname || row.original.username || '-'),
-        h('span', { class: 'text-xs text-muted' }, row.original.phone || '-')
+      cell: ({ row }) => h('div', { class: 'flex min-w-0 flex-col' }, [
+        h('span', { class: 'block truncate', title: row.original.nickname || row.original.username || '' }, row.original.nickname || row.original.username || '-'),
+        h('span', { class: 'block truncate text-xs text-muted' }, row.original.phone || '-')
       ])
     },
     {
       id: 'goods',
+      ...minWidthColumn(190),
       header: () => $ts('module.system.order.goods'),
-      cell: ({ row }) => h('div', { class: 'flex flex-wrap items-center gap-2' }, [
-        h('span', { class: 'break-all' }, row.original.goodsName || '-'),
+      cell: ({ row }) => h('div', { class: 'flex min-w-0 items-center gap-2' }, [
+        h('span', { class: 'truncate', title: row.original.goodsName ?? '' }, row.original.goodsName || '-'),
         h('span', {
-          class: `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${badgeColorClasses.neutral}`
+          class: `inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-xs font-medium border ${badgeColorClasses.neutral}`
         }, recordLabel(goodsTypeRecord, row.original.goodsType))
       ])
     },
     {
       id: 'amount',
+      ...minWidthColumn(130),
       header: () => $ts('module.system.order.payAmount'),
       cell: ({ row }) => h('div', { class: 'flex flex-col' }, [
-        h('span', { class: 'font-medium' }, amountText(row.original.payAmount)),
-        h('span', { class: 'text-xs text-muted' }, `${amountText(row.original.unitPrice)} × ${row.original.quantity ?? '-'}`)
+        h('span', { class: 'whitespace-nowrap font-medium' }, amountText(row.original.payAmount)),
+        h('span', { class: 'whitespace-nowrap text-xs text-muted' }, `${amountText(row.original.unitPrice)} × ${row.original.quantity ?? '-'}`)
       ])
     },
     {
       id: 'priceSource',
+      ...stableColumn(112),
       header: () => $ts('module.system.order.priceSourceLabel'),
       cell: ({ row }) => {
         // 等级价是权益兑现的关键信号，用成功色徽标高亮
@@ -457,12 +464,14 @@ const columns = computed<TableColumn<SysOrderRespDTO>[]>(() => {
     },
     {
       accessorKey: 'payMode',
+      ...stableColumn(110),
       header: () => $ts('module.system.order.payModeLabel'),
       cell: ({ row }) => recordLabel(orderPayModeRecord, row.original.payMode)
     },
-    useBadgeColumn<SysOrderRespDTO>('status', 'module.system.order.statusLabel', orderStatusConfig, 0),
+    withColumnWidth(useBadgeColumn<SysOrderRespDTO>('status', 'module.system.order.statusLabel', orderStatusConfig, 0), stableColumn(tableColumnWidth.status)),
     {
       id: 'fulfillStatus',
+      ...stableColumn(112),
       header: () => $ts('module.system.order.fulfillStatusLabel'),
       cell: ({ row }) => {
         // 履约只对服务类订单有意义，其它类型不占位
@@ -485,6 +494,7 @@ const columns = computed<TableColumn<SysOrderRespDTO>[]>(() => {
     },
     {
       accessorKey: 'createdAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.order.createdAt')
     },
     ...(canOperate.value || canConfirm.value || canClose.value || canSync.value || canFulfill.value

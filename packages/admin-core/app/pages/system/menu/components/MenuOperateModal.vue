@@ -32,7 +32,7 @@ const open = defineModel<boolean>('open', { required: true })
 
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-24 text-right pr-2 flex-shrink-0',
+  label: 'w-24 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 

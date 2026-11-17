@@ -71,7 +71,7 @@ import type { SysLoginLogDto, SysLoginLogQueryDTO } from '#admin/shared/system/l
 import SysLoginLogSearch from './components/sys-login-log-search.vue'
 import SysLoginLogDetail from './components/sys-login-log-detail.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
-import { useBadgeColumn, usePaginatedTable } from '#admin/app/composables/useTable'
+import { useBadgeColumn, usePaginatedTable, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
@@ -126,6 +126,7 @@ const handleUnlock = async (row: SysLoginLogDto) => {
 const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
   const actionColumn: TableColumn<SysLoginLogDto> = {
     id: 'actions',
+    ...stickyRightColumn(180),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -156,6 +157,7 @@ const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
   return [
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => {
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
@@ -164,34 +166,44 @@ const columns = computed<TableColumn<SysLoginLogDto>[]>(() => {
     },
     {
       accessorKey: 'username',
-      header: () => $ts('module.system.loginLog.username')
+      ...minWidthColumn(140),
+      header: () => $ts('module.system.loginLog.username'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.username ?? '' }, row.original.username || '-')
     },
     {
       accessorKey: 'ip',
+      ...stableColumn(140),
       header: () => $ts('module.system.loginLog.ip')
     },
     {
       accessorKey: 'location',
-      header: () => $ts('module.system.loginLog.location')
+      ...minWidthColumn(140),
+      header: () => $ts('module.system.loginLog.location'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.location ?? '' }, row.original.location || '-')
     },
     {
       accessorKey: 'browser',
-      header: () => $ts('module.system.loginLog.browser')
+      ...minWidthColumn(120),
+      header: () => $ts('module.system.loginLog.browser'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.browser ?? '' }, row.original.browser || '-')
     },
     {
       accessorKey: 'os',
-      header: () => $ts('module.system.loginLog.os')
+      ...minWidthColumn(120),
+      header: () => $ts('module.system.loginLog.os'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.os ?? '' }, row.original.os || '-')
     },
     {
       accessorKey: 'loginTime',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.loginLog.loginTime')
     },
-    useBadgeColumn<SysLoginLogDto>(
+    withColumnWidth(useBadgeColumn<SysLoginLogDto>(
         'status',
         'module.system.loginLog.loginStatus',
         loginStatusConfig.value,
         1
-    ),
+    ), stableColumn(tableColumnWidth.status)),
     actionColumn
   ]
 })

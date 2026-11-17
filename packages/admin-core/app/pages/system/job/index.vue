@@ -59,7 +59,7 @@ import { h } from 'vue'
 import type { SysJobDto, SysJobHandlerDTO, SysJobQueryDTO } from '#admin/shared/system/job'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
-import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysJobSearch from './components/sys-job-search.vue'
 import SysJobOperate from './components/sys-job-operate.vue'
@@ -114,6 +114,7 @@ const handlerNameMap = computed(() => new Map(handlers.value.map(handler => [han
 const columns = computed<TableColumn<SysJobDto>[]>(() => {
   const actionColumn: TableColumn<SysJobDto> = {
     id: 'actions',
+    ...stickyRightColumn(420),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -180,34 +181,47 @@ const columns = computed<TableColumn<SysJobDto>[]>(() => {
     ...(jobPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
       accessorKey: 'jobName',
-      header: () => $ts('module.system.job.jobName')
+      ...minWidthColumn(180),
+      header: () => $ts('module.system.job.jobName'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-medium', title: row.original.jobName ?? '' }, row.original.jobName || '-')
     },
     {
       accessorKey: 'jobCode',
-      header: () => $ts('module.system.job.jobCode')
+      ...minWidthColumn(200),
+      header: () => $ts('module.system.job.jobCode'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.jobCode ?? '' }, row.original.jobCode || '-')
     },
     {
       accessorKey: 'handlerCode',
+      ...minWidthColumn(220),
       header: () => $ts('module.system.job.handlerCode'),
-      cell: ({ row }) => handlerNameMap.value.get(row.original.handlerCode || '') || row.original.handlerCode || '-'
+      cell: ({ row }) => {
+        const label = handlerNameMap.value.get(row.original.handlerCode || '') || row.original.handlerCode || '-'
+        return h('span', { class: 'block truncate', title: label }, label)
+      }
     },
     {
       accessorKey: 'cronExpression',
-      header: () => $ts('module.system.job.cronExpression')
+      ...minWidthColumn(140),
+      header: () => $ts('module.system.job.cronExpression'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.cronExpression ?? '' }, row.original.cronExpression || '-')
     },
-    useBadgeColumn<SysJobDto>('status', 'module.system.job.status', jobStatusConfig.value, 1),
-    useBadgeColumn<SysJobDto>('runningStatus', 'module.system.job.runningStatus.title', jobRunningStatusConfig.value, 0),
+    withColumnWidth(useBadgeColumn<SysJobDto>('status', 'module.system.job.status', jobStatusConfig.value, 1), stableColumn(tableColumnWidth.status)),
+    withColumnWidth(useBadgeColumn<SysJobDto>('runningStatus', 'module.system.job.runningStatus.title', jobRunningStatusConfig.value, 0), stableColumn(tableColumnWidth.status)),
     {
       accessorKey: 'nextRunAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.job.nextRunAt')
     },
     {
       accessorKey: 'lastRunAt',
+      ...stableColumn(tableColumnWidth.time),
       header: () => $ts('module.system.job.lastRunAt')
     },
     ...(jobPermissions.canOperate.value || canRun.value || jobLogPermissions.canList.value ? [actionColumn] : [])

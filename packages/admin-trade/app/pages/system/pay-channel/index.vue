@@ -62,7 +62,7 @@ import {
   payChannelModeRecord,
   payChannelVerifyConfig
 } from '#admin/shared/constants/business'
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysPayChannelSearch from './components/sys-pay-channel-search.vue'
 import SysPayChannelOperate from './components/sys-pay-channel-operate.vue'
@@ -140,6 +140,7 @@ const handleSetDefault = async (channel: SysPayChannelDto) => {
 const columns = computed<TableColumn<SysPayChannelDto>[]>(() => {
   const actionColumn: TableColumn<SysPayChannelDto> = {
     id: 'actions',
+    ...stickyRightColumn(340),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -191,36 +192,45 @@ const columns = computed<TableColumn<SysPayChannelDto>[]>(() => {
     ...(channelPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-muted' }, (pagination.page - 1) * pagination.pageSize + row.index + 1)
     },
     {
       accessorKey: 'configName',
-      header: () => $ts('module.system.payChannel.configName')
+      ...minWidthColumn(150),
+      header: () => $ts('module.system.payChannel.configName'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.configName ?? '' }, row.original.configName || '-')
     },
     {
       accessorKey: 'configKey',
-      header: () => $ts('module.system.payChannel.configKey')
+      ...minWidthColumn(150),
+      header: () => $ts('module.system.payChannel.configKey'),
+      cell: ({ row }) => h('span', { class: 'block truncate font-mono text-xs', title: row.original.configKey ?? '' }, row.original.configKey || '-')
     },
     {
       accessorKey: 'channelCode',
+      ...minWidthColumn(130),
       header: () => $ts('module.system.payChannel.channelCode'),
-      cell: ({ row }) => channelLabel(row.original.channelCode)
+      cell: ({ row }) => h('span', { class: 'block truncate', title: channelLabel(row.original.channelCode) }, channelLabel(row.original.channelCode) || '-')
     },
     {
       accessorKey: 'mode',
+      ...stableColumn(96),
       header: () => $ts('module.system.payChannel.modeLabel'),
       cell: ({ row }) => modeLabel(row.original.mode)
     },
     {
       accessorKey: 'currency',
+      ...stableColumn(88),
       header: () => $ts('module.system.payChannel.currency')
     },
-    useBadgeColumn<SysPayChannelDto>('isDefault', 'module.system.payChannel.isDefault', noYesConfig.value, 0),
-    useBadgeColumn<SysPayChannelDto>('verifyStatus', 'module.system.payChannel.verifyStatus', payChannelVerifyConfig, 0),
-    useBadgeColumn<SysPayChannelDto>('status', 'module.system.payChannel.status', enableStatusConfig.value, 1),
+    withColumnWidth(useBadgeColumn<SysPayChannelDto>('isDefault', 'module.system.payChannel.isDefault', noYesConfig.value, 0), stableColumn(tableColumnWidth.badge)),
+    withColumnWidth(useBadgeColumn<SysPayChannelDto>('verifyStatus', 'module.system.payChannel.verifyStatus', payChannelVerifyConfig, 0), stableColumn(tableColumnWidth.status)),
+    withColumnWidth(useBadgeColumn<SysPayChannelDto>('status', 'module.system.payChannel.status', enableStatusConfig.value, 1), stableColumn(tableColumnWidth.status)),
     {
       accessorKey: 'sortOrder',
+      ...stableColumn(80),
       header: () => $ts('module.system.payChannel.sortOrder')
     },
     ...(channelPermissions.canOperate.value ? [actionColumn] : [])

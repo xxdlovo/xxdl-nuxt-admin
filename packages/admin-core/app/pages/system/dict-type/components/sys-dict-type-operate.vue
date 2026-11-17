@@ -23,7 +23,7 @@ const props = defineProps<{
 
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-16 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 

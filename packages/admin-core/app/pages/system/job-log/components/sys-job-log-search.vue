@@ -9,7 +9,7 @@
       </template>
       <template #content>
         <UForm ref="form" :validate-on="['input']" :schema="schema" :state="state" class="p-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-6">
             <UFormField name="jobName" :label="$ts('module.system.jobLog.jobName')" orientation="horizontal" :ui="formItemUi">
               <UBaseInput v-model="state.jobName" :placeholder="$ts('module.system.jobLog.form.jobName')" trailing="clear" class="w-full" />
             </UFormField>
@@ -19,7 +19,7 @@
             <UFormField name="status" :label="$ts('module.system.jobLog.logStatus')" orientation="horizontal" :ui="formItemUi">
               <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.jobLog.form.status')" class="w-full" :items="statusItems" clearable />
             </UFormField>
-            <div class="lg:col-start-4 flex flex-col pr-8">
+            <div class="col-span-full flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
                 <UButton icon="tabler:reload" variant="outline" color="neutral" @click="reset">{{ $ts('common.reset') }}</UButton>
                 <UButton icon="tabler:search" variant="outline" @click="submit">{{ $ts('common.search') }}</UButton>
@@ -40,7 +40,7 @@ import { type SysJobLogQueryDTO, SysJobLogQuerySchema } from '#admin/shared/syst
 const { $ts } = useI18n()
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-20 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 

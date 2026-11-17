@@ -29,7 +29,7 @@ const emit = defineEmits<{
 
 const formItemUi = {
   root: 'flex flex-col gap-1 sm:flex-row sm:items-center',
-  label: 'sm:w-28 sm:text-right sm:pr-2 flex-shrink-0',
+  label: 'sm:w-28 whitespace-nowrap sm:text-right sm:pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 

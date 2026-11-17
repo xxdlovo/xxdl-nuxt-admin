@@ -7,7 +7,7 @@ import SysUserSearch from './components/sys-user-search.vue'
 import SysUserOperate from './components/sys-user-operate.vue'
 import DeptSideTree, { type DeptTreeItem } from '../dept/components/DeptSideTree.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import {
   downloadExcel,
@@ -101,6 +101,7 @@ const { selectionColumn } = useSelectionColumn<SysUserTableRow>({
 const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
   const actionColumn: TableColumn<SysUserTableRow> = {
     id: 'actions',
+    ...stickyRightColumn(240),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -154,6 +155,7 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     ...(userPermissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => {
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
@@ -162,40 +164,49 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     },
     {
       accessorKey: 'username',
-      header: () => $ts('module.system.user.userName')
+      ...minWidthColumn(180),
+      header: () => $ts('module.system.user.userName'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.username ?? '' }, row.original.username || '-')
     },
     {
       accessorKey: 'phone',
-      header: () => $ts('module.system.user.userPhone')
+      ...minWidthColumn(128),
+      header: () => $ts('module.system.user.userPhone'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.phone ?? '' }, row.original.phone || '-')
     },
     {
       accessorKey: 'deptName',
+      ...minWidthColumn(140),
       header: () => $ts('module.system.user.userDept'),
-      cell: ({ row }) => h('span', { class: 'text-muted' }, row.original.deptName || row.original.deptCode || '-')
+      cell: ({ row }) => h('span', { class: 'block truncate text-muted', title: row.original.deptName || row.original.deptCode || '' }, row.original.deptName || row.original.deptCode || '-')
     },
     {
       accessorKey: 'postNames',
+      ...minWidthColumn(140),
       header: () => $ts('module.system.user.userPost'),
-      cell: ({ row }) => h('span', { class: 'text-muted' }, row.original.postNames || '-')
+      cell: ({ row }) => h('span', { class: 'block truncate text-muted', title: row.original.postNames ?? '' }, row.original.postNames || '-')
     },
-    useBadgeColumn<SysUserTableRow>(
+    withColumnWidth(useBadgeColumn<SysUserTableRow>(
       'gender',
       'module.system.user.userGender',
       userGenderConfig.value,
       0
-    ),
+    ), stableColumn(tableColumnWidth.badge)),
     {
       accessorKey: 'email',
-      header: () => $ts('module.system.user.userEmail')
+      ...minWidthColumn(220),
+      header: () => $ts('module.system.user.userEmail'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.email ?? '' }, row.original.email || '-')
     },
-    useBadgeColumn<SysUserTableRow>(
+    withColumnWidth(useBadgeColumn<SysUserTableRow>(
       'status',
       'module.system.user.userStatus',
       enableStatusConfig.value,
       1
-    ),
+    ), stableColumn(tableColumnWidth.status)),
     {
       id: 'locked',
+      ...stableColumn(tableColumnWidth.status),
       header: () => $ts('module.system.user.locked'),
       cell: ({ row }) => isUserLocked(row.original)
         ? h(resolveComponent('UBadge'), {

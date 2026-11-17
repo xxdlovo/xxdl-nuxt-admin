@@ -3,7 +3,7 @@ import { h, type Component } from 'vue'
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { SysDeptDto } from '#admin/shared/system/department'
 import { businessDictCode } from '#admin/shared/constants/business'
-import { useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { useBadgeColumn, useSelectionColumn, stableColumn, minWidthColumn } from '#admin/app/composables/useTable'
 import { displayOrDash } from '#admin/app/utils/common'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
@@ -47,27 +47,6 @@ const UButton = resolveComponent('UButton')
 const UIcon = resolveComponent('UIcon')
 const UTooltip = resolveComponent('UTooltip')
 const Popconfirm = resolveComponent('Popconfirm')
-
-const stableColumn = (width: number) => ({
-  size: width,
-  minSize: width,
-  meta: {
-    style: {
-      th: { width: `${width}px`, minWidth: `${width}px` },
-      td: { width: `${width}px`, minWidth: `${width}px` }
-    }
-  }
-})
-
-const minWidthColumn = (width: number) => ({
-  minSize: width,
-  meta: {
-    style: {
-      th: { minWidth: `${width}px` },
-      td: { minWidth: `${width}px` }
-    }
-  }
-})
 
 const visibleRows = computed(() => {
   const rows: DeptTreeNode[] = []

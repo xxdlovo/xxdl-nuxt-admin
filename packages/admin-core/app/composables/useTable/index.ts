@@ -30,3 +30,14 @@ export {
   useActionsColumn,
   type ActionConfig
 } from './helpers'
+
+// 列宽工具导出
+export {
+  tableColumnWidth,
+  stableColumn,
+  minWidthColumn,
+  stickyRightColumn,
+  withColumnWidth,
+  overflowTitle,
+  type TableColumnWidthKey
+} from './columns'

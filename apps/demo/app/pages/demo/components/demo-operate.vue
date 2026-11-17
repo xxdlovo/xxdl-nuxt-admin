@@ -25,7 +25,7 @@ const props = defineProps<{
 
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-16 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 
@@ -128,8 +128,9 @@ const title = computed(() => {
 </script>
 <template>
   <UModal v-model:open="visible" :title="title" :dismissible="false" :ui="{
-    content: 'max-w-[30%]',
-    footer: 'justify-end'
+    content: 'w-[calc(100vw-2rem)] max-w-[720px] overflow-hidden',
+    body: 'max-h-[70vh] overflow-auto p-4 sm:p-6',
+    footer: 'justify-end gap-2'
   }">
 
 

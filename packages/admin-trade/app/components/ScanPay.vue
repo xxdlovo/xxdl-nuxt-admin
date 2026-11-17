@@ -480,16 +480,16 @@ defineExpose({ create, syncStatus, stop: stopPolling })
 
       <div v-if="showOrderInfo" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         <UFormField :label="$ts('module.system.payTest.outTradeNo')" orientation="horizontal" :ui="formItemUi">
-          <UInput :model-value="order.outTradeNo" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+          <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="order.outTradeNo">{{ order.outTradeNo }}</div>
         </UFormField>
         <UFormField :label="$ts('module.system.payTest.amount')" orientation="horizontal" :ui="formItemUi">
-          <UInput :model-value="`${order.amount} ${order.currency}`" readonly color="neutral" variant="subtle" class="w-full" />
+          <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="`${order.amount} ${order.currency}`">{{ `${order.amount} ${order.currency}` }}</div>
         </UFormField>
         <UFormField :label="$ts('module.system.payTest.subject')" orientation="horizontal" :ui="formItemUi">
-          <UInput :model-value="order.subject" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+          <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="order.subject">{{ order.subject }}</div>
         </UFormField>
         <UFormField :label="$ts('module.system.payTest.expireAt')" orientation="horizontal" :ui="formItemUi">
-          <UInput :model-value="order.expireAt || '-'" readonly color="neutral" variant="subtle" class="w-full" />
+          <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="order.expireAt || '-'">{{ order.expireAt || '-' }}</div>
         </UFormField>
       </div>
 

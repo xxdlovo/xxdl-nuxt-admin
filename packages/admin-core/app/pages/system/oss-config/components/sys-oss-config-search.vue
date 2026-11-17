@@ -9,7 +9,7 @@
       </template>
       <template #content>
         <UForm ref="form" :validateOn="['input']" :schema="schema" :state="state" class="p-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-6">
             <UFormField name="configKey" :label="$ts('module.system.ossConfig.configKey')" orientation="horizontal" :ui="formItemUi">
               <UBaseInput v-model="state.configKey" :placeholder="$ts('module.system.ossConfig.form.configKey')" trailing="clear" class="w-full" />
             </UFormField>
@@ -22,7 +22,7 @@
             <UFormField name="status" :label="$ts('module.system.ossConfig.configStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
               <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.ossConfig.form.configStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
-            <div class="lg:col-start-4 flex flex-col pr-8">
+            <div class="col-span-full flex flex-col pr-8">
               <div class="gap-2 flex justify-end">
                 <UButton icon="tabler:reload" @click="reset" variant="outline" color="neutral">{{ $ts('common.reset') }}</UButton>
                 <UButton icon="tabler:search" @click="submit" variant="outline">{{ $ts('common.search') }}</UButton>
@@ -43,7 +43,7 @@ import { businessDictCode } from '#admin/shared/constants/business'
 const { $ts } = useI18n()
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-20 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 const emit = defineEmits<{

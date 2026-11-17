@@ -9,7 +9,7 @@
       </template>
       <template #content>
         <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
-          <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4   gap-x-6 gap-y-6">
+          <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4   gap-x-6 gap-y-6">
             <UFormField name="name" :label="$ts('module.system.dictType.name')" orientation="horizontal"   :ui="formItemUi">
               <UBaseInput v-model="state.name" :placeholder="$ts('module.system.dictType.form.name')" trailing="clear" class="w-full" />
             </UFormField>
@@ -19,7 +19,7 @@
             <UFormField name="status" :label="$ts('module.system.dictType.dictStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
               <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.dictType.form.dictStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
-            <div class="lg:col-start-4 flex flex-col  pr-8">
+            <div class="col-span-full flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
                 <UButton icon="tabler:reload" @click="reset"  variant="outline" color="neutral">{{ $ts('common.reset') }}
                 </UButton>
@@ -43,7 +43,7 @@ import { businessDictCode } from "#admin/shared/constants/business";
 import { type SysDictTypeQueryDTO, SysDictTypeQuerySchema } from '#admin/shared/system/dictType';
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-16 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 const emit = defineEmits<{

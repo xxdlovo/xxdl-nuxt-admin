@@ -439,11 +439,38 @@ export const ${config.routerKey}Router = router({
     return { path: `${config.routerDir}/index.ts`, content, language: 'typescript' }
 }
 
+/** 按列类型给出生成列的默认宽度（px），避免生成页面表头折行、操作列被挤出 */
+function generatedColumnWidth(column: GenColumnDto) {
+    const name = String(column.columnName ?? '').toLowerCase()
+    const tsType = String(column.tsType ?? '')
+    const htmlType = String(column.htmlType ?? '')
+
+    if (tsType === 'date' || htmlType === 'date' || name.includes('time') || name.endsWith('_at')) {
+        return 168
+    }
+    if (tsType === 'number' || htmlType === 'number') {
+        return 110
+    }
+    if (column.dictCode || name === 'status') {
+        return 100
+    }
+    if (htmlType === 'textarea' || name.includes('remark') || name.includes('desc')) {
+        return 200
+    }
+    return 160
+}
+
 function buildPage(config: TableConfig): GenFile {
     const cols = listColumns(config)
     const columnDefs = cols.map((column) => {
-        const label = comment(column)
-        return `    {\n        accessorKey: '${property(column)}',\n        header: () => $ts('${config.i18nKey}.${property(column)}'),\n    },`
+        const prop = property(column)
+        const width = generatedColumnWidth(column)
+        return `    {
+        accessorKey: '${prop}',
+        header: () => $ts('${config.i18nKey}.${prop}'),
+        ...minWidthColumn(${width}),
+        cell: ({ row }) => h('span', { class: 'block truncate', title: String(row.original.${prop} ?? '') }, String(row.original.${prop} ?? '-')),
+    },`
     }).join('\n')
 
     const content = `<template>
@@ -499,7 +526,7 @@ import type { Component } from 'vue'
 import { h } from 'vue'
 import type { ${config.businessName}Dto, ${config.businessName}QueryDTO } from '#admin/${config.sharedDir}'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
-import { usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useSelectionColumn, useTableOperate, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth } from '#admin/app/composables/useTable'
 import ${config.businessName}Search from './components/${config.componentPrefix}-search.vue'
 import ${config.businessName}Operate from './components/${config.componentPrefix}-operate.vue'
 
@@ -554,6 +581,7 @@ const { selectionColumn } = useSelectionColumn<${config.businessName}Dto>({
 const columns = computed<TableColumn<${config.businessName}Dto>[]>(() => {
   const actionColumn: TableColumn<${config.businessName}Dto> = {
     id: 'actions',
+    ...stickyRightColumn(240),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -589,6 +617,7 @@ const columns = computed<TableColumn<${config.businessName}Dto>[]>(() => {
     ...(permissions.canDel.value ? [selectionColumn] : []),
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => h('span', { class: 'text-gray-500 dark:text-gray-400' },
         (pagination.page - 1) * pagination.pageSize + row.index + 1),
@@ -672,9 +701,9 @@ function buildSearch(config: TableConfig): GenFile {
       <template #trailing>&nbsp;</template>
       <template #content>
         <UForm ref="form" :schema="schema" :state="state" :validate-on="['input']" class="p-2">
-          <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
 ${fields}
-            <div class="flex flex-col pr-8 lg:col-start-4">
+            <div class="col-span-full flex flex-col pr-8">
               <div class="flex justify-end gap-2">
                 <UButton icon="tabler:reload" color="neutral" variant="outline" @click="reset">{{ $ts('common.reset') }}</UButton>
                 <UButton icon="tabler:search" variant="outline" @click="submit">{{ $ts('common.search') }}</UButton>
@@ -702,7 +731,7 @@ ${dictSetup}
 const items = computed(() => [{ label: $ts('common.search'), icon: '' }])
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-20 shrink-0 pr-2 text-right',
+  label: 'w-20 whitespace-nowrap shrink-0 pr-2 text-right',
   container: 'flex-1',
 }
 
@@ -813,7 +842,7 @@ ${hasStatus ? `const statusValue = computed({
 
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-24 shrink-0 pr-2 text-right',
+  label: 'w-24 whitespace-nowrap shrink-0 pr-2 text-right',
   container: 'flex-1',
 }
 
@@ -851,7 +880,7 @@ const title = computed(() => props.operateType === 'add'
 </script>
 
 <template>
-  <UModal v-model:open="visible" :title="title" :dismissible="false" :ui="{ content: 'max-w-[720px]', footer: 'justify-end' }">
+  <UModal v-model:open="visible" :title="title" :dismissible="false" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[720px] overflow-hidden', body: 'max-h-[70vh] overflow-auto p-4 sm:p-6', footer: 'justify-end gap-2' }">
     <template #body>
       <UForm id="${config.componentPrefix}-form" :validate="validate" :state="state" class="p-2" @submit="handleSubmit">
         <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">

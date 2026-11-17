@@ -9,7 +9,7 @@
       </template>
       <template #content>
         <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
-          <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4   gap-x-6 gap-y-6">
+          <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4   gap-x-6 gap-y-6">
             <UFormField name="username" :label="$ts('module.system.user.userName')" orientation="horizontal"   :ui="formItemUi">
               <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear" class="w-full" />
             </UFormField>
@@ -28,7 +28,7 @@
             <UFormField name="status" :label="$ts('module.system.user.userStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
               <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.user.form.userStatus')" class="w-full" :items="statusItems" clearable />
             </UFormField>
-            <div class="lg:col-start-4 flex flex-col  pr-8">
+            <div class="col-span-full flex flex-col  pr-8">
               <div class="gap-2  flex justify-end ">
                 <UButton icon="tabler:reload" @click="reset"  variant="outline" color="neutral">{{ $ts('common.reset') }}
                 </UButton>
@@ -53,7 +53,7 @@ import type{ Form } from '@nuxt/ui';
 import {type SysUserQueryDTO, SysUserQuerySchema} from "#admin/shared/system/user";
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-16 text-right pr-2 flex-shrink-0',
+  label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
 const emit = defineEmits<{

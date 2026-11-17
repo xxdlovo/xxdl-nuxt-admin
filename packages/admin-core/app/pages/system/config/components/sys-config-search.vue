@@ -7,7 +7,7 @@
       <template #trailing>&nbsp;</template>
       <template #content>
         <UForm ref="form" :schema="schema" :state="state" :validate-on="['input']" class="p-2">
-          <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             <UFormField name="configName" :label="$ts('module.system.config.configName')" orientation="horizontal" :ui="formItemUi">
               <UBaseInput v-model="state.configName" :placeholder="$ts('module.system.config.form.configName')" trailing="clear" class="w-full" />
             </UFormField>
@@ -20,7 +20,7 @@
             <UFormField name="status" :label="$ts('module.system.config.status')" orientation="horizontal" :ui="formItemUi">
               <USelect v-model.nullable="state.status" :items="statusItems" :placeholder="$ts('module.system.config.form.status')" clearable class="w-full" />
             </UFormField>
-            <div class="flex flex-col pr-8 lg:col-start-4">
+            <div class="flex flex-col pr-8 col-span-full">
               <div class="flex justify-end gap-2">
                 <UButton icon="tabler:reload" color="neutral" variant="outline" @click="reset">{{ $ts('common.reset') }}</UButton>
                 <UButton icon="tabler:search" variant="outline" @click="submit">{{ $ts('common.search') }}</UButton>
@@ -52,7 +52,7 @@ const configTypeItems = computed(() => [
 const items = computed(() => [{ label: $ts('common.search'), icon: '' }])
 const formItemUi = {
   root: 'flex items-center',
-  label: 'w-20 shrink-0 pr-2 text-right',
+  label: 'w-20 whitespace-nowrap shrink-0 pr-2 text-right',
   container: 'flex-1'
 }
 

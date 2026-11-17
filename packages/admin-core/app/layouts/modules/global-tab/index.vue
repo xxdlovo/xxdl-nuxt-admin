@@ -10,6 +10,7 @@ const tabsStore = useTabsStore()
 const themeStore = useThemeStore()
 const { tabs, activePath } = storeToRefs(tabsStore)
 const {$ts} = useI18n()
+const tabBarRef = useTemplateRef<HTMLElement>('tabBarRef')
 let lastSyncedPath = route.path
 type RouteMetaTab = {
   title?: string
@@ -55,6 +56,25 @@ watch(
 function isActive(tab: AppTab) {
   return tab.path === activePath.value
 }
+
+/** 打开或切换标签后，把当前选中标签滚进可视区域，避免标签过多时选中项被裁掉。 */
+async function ensureActiveTabVisible(path: string) {
+  await nextTick()
+  const target = Array.from(tabBarRef.value?.querySelectorAll<HTMLElement>('[data-tab-path]') ?? [])
+    .find(item => item.dataset.tabPath === path)
+
+  target?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+}
+
+watch(
+  () => activePath.value,
+  path => {
+    if (path) {
+      void ensureActiveTabVisible(path)
+    }
+  },
+  { immediate: true }
+)
 
 async function activateTab(tab: AppTab) {
   tabsStore.activate(tab.path)
@@ -148,19 +168,25 @@ function menuItems(tab: AppTab) {
     class="flex items-center border-b border-default bg-default px-2"
     :style="{ height: `${themeStore.tab.height}px` }"
   >
-    <div class="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden">
+    <div ref="tabBarRef" class="tab-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto overflow-y-hidden pt-1" role="tablist">
       <UContextMenu
         v-for="tab in tabs"
         :key="tab.path"
         :items="menuItems(tab)"
       >
         <div
-          role="button"
+          role="tab"
+          :aria-selected="isActive(tab)"
+          :data-tab-path="tab.path"
           tabindex="0"
           class="group flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30"
           :class="isActive(tab)
-            ? themeStore.tab.mode === 'button' ? 'bg-primary text-inverted' : 'bg-primary/10 text-primary'
-            : themeStore.tab.mode === 'button' ? 'bg-elevated text-muted hover:text-default' : 'text-muted hover:bg-elevated hover:text-default'"
+            ? themeStore.tab.mode === 'button'
+              ? 'bg-primary text-inverted font-medium shadow-sm'
+              : 'bg-primary/15 text-primary font-medium ring-1 ring-inset ring-primary/25'
+            : themeStore.tab.mode === 'button'
+              ? 'bg-elevated text-muted hover:text-default'
+              : 'text-muted hover:bg-elevated hover:text-default'"
           @click="activateTab(tab)"
           @auxclick.middle.prevent="handleMiddleClick(tab)"
           @keydown.enter.prevent="activateTab(tab)"
@@ -178,11 +204,12 @@ function menuItems(tab: AppTab) {
           <UButton
             v-if="tab.closable"
             icon="i-lucide-x"
-            color="neutral"
+            :color="isActive(tab) && themeStore.tab.mode !== 'button' ? 'primary' : 'neutral'"
             variant="ghost"
             size="xs"
             square
             class="size-5 shrink-0 opacity-60 transition-opacity hover:opacity-100"
+            :class="isActive(tab) && themeStore.tab.mode === 'button' ? 'text-inverted hover:bg-white/15' : ''"
             @pointerdown.stop
             @mousedown.stop
             @mouseup.stop

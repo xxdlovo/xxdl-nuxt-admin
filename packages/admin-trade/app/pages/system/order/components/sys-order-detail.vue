@@ -225,7 +225,7 @@ watch(visible, (opened) => {
               orientation="horizontal"
               :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }"
             >
-              <UInput :model-value="item.value" readonly color="neutral" variant="subtle" class="w-full" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="item.value">{{ item.value }}</div>
             </UFormField>
           </div>
         </UCard>
@@ -240,7 +240,7 @@ watch(visible, (opened) => {
               orientation="horizontal"
               :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }"
             >
-              <UInput :model-value="displayValue(item.value)" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(item.value)">{{ displayValue(item.value) }}</div>
             </UFormField>
           </div>
         </UCard>
@@ -255,7 +255,7 @@ watch(visible, (opened) => {
               orientation="horizontal"
               :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }"
             >
-              <UInput :model-value="displayValue(item.value)" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(item.value)">{{ displayValue(item.value) }}</div>
             </UFormField>
           </div>
         </UCard>
@@ -271,13 +271,13 @@ watch(visible, (opened) => {
               </div>
             </UFormField>
             <UFormField :label="$ts('module.system.order.fulfilledAt')" orientation="horizontal" :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }">
-              <UInput :model-value="displayValue(detail.fulfilledAt)" readonly color="neutral" variant="subtle" class="w-full" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(detail.fulfilledAt)">{{ displayValue(detail.fulfilledAt) }}</div>
             </UFormField>
             <UFormField :label="$ts('module.system.order.fulfillRemark')" orientation="horizontal" :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }">
-              <UInput :model-value="displayValue(detail.fulfillRemark)" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(detail.fulfillRemark)">{{ displayValue(detail.fulfillRemark) }}</div>
             </UFormField>
             <UFormField :label="$ts('module.system.order.fulfillOperatorId')" orientation="horizontal" :ui="{ root: 'items-start', labelWrapper: 'w-28 shrink-0 pt-1', container: 'min-w-0 flex-1' }">
-              <UInput :model-value="displayValue(detail.fulfillOperatorId)" readonly color="neutral" variant="subtle" class="w-full" :ui="{ base: 'break-all' }" />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(detail.fulfillOperatorId)">{{ displayValue(detail.fulfillOperatorId) }}</div>
             </UFormField>
           </div>
         </UCard>

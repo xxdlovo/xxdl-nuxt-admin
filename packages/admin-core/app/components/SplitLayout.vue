@@ -118,12 +118,40 @@ const isDragging = ref(false)
 const storageKey = 'split-layout-width'
 const panelWidth = ref(props.defaultWidth)
 
+/** 左面板最小/最大宽度，避免窄屏下把右侧内容区压到无法使用 */
+const MIN_PANEL_WIDTH = 220
+const MAX_PANEL_WIDTH = 320
+
+const clampPanelWidth = (width: number) => {
+  if (typeof window === 'undefined') {
+    return Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, width))
+  }
+
+  // 左面板最多占用视口 26%，保证右侧列表始终有可用宽度
+  const viewportLimit = Math.max(MIN_PANEL_WIDTH, Math.floor(window.innerWidth * 0.26))
+  return Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, Math.min(width, viewportLimit)))
+}
+
+const handleViewportResize = () => {
+  panelWidth.value = clampPanelWidth(panelWidth.value)
+
+  // 窗口缩到窄屏时自动折叠左面板，避免把右侧列表压到不可用
+  if (window.innerWidth < 1100 && !collapsed.value) {
+    collapsed.value = true
+  }
+}
+
 onMounted(() => {
   const storedWidth = window.localStorage.getItem(storageKey)
   const parsedWidth = storedWidth ? Number(storedWidth) : NaN
-  if (Number.isFinite(parsedWidth)) {
-    panelWidth.value = parsedWidth
+  panelWidth.value = clampPanelWidth(Number.isFinite(parsedWidth) ? parsedWidth : props.defaultWidth)
+
+  // 窄屏下默认折叠左面板，把完整宽度让给右侧列表；用户仍可手动展开
+  if (window.innerWidth < 1100) {
+    collapsed.value = true
   }
+
+  window.addEventListener('resize', handleViewportResize)
 })
 
 const startResize = (e: MouseEvent) => {
@@ -138,10 +166,7 @@ const startResize = (e: MouseEvent) => {
 
 const onMouseMove = (e: MouseEvent) => {
   if (!isDragging.value) return
-  const isMd = window.innerWidth >= 768 && window.innerWidth < 1024
-  const minWidth = isMd ? 200 : 240
-  const maxWidth = isMd ? 400 : 480
-  const newWidth = Math.max(minWidth, Math.min(maxWidth, e.clientX))
+  const newWidth = clampPanelWidth(e.clientX)
   panelWidth.value = newWidth
   window.localStorage.setItem(storageKey, String(newWidth))
   emit('widthChange', newWidth)
@@ -194,6 +219,7 @@ onUnmounted(() => {
   if (searchTimer) {
     clearTimeout(searchTimer)
   }
+  window.removeEventListener('resize', handleViewportResize)
   stopResize()
 })
 </script>

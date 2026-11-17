@@ -62,7 +62,7 @@ import DemoSearch from './components/demo-search.vue'
 import DemoOperate from "./components/demo-operate.vue"
 
 import { businessDictCode } from "#admin/shared/constants/business"
-import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -107,6 +107,7 @@ const { selectionColumn } = useSelectionColumn<DemoDto>({
 const columns = computed<TableColumn<DemoDto>[]>(() => {
   const actionColumn: TableColumn<DemoDto> = {
     id: 'actions',
+    ...stickyRightColumn(240),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
@@ -144,6 +145,7 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
     // 序号列
     {
       id: 'index',
+      ...stableColumn(tableColumnWidth.index),
       header: () => $ts('common.index'),
       cell: ({ row }) => {
         const index = (pagination.page - 1) * pagination.pageSize + row.index + 1
@@ -153,18 +155,22 @@ const columns = computed<TableColumn<DemoDto>[]>(() => {
     // 数据列
     {
       accessorKey: 'field1',
-      header: () => $ts('module.demo.field1')
+      ...minWidthColumn(180),
+      header: () => $ts('module.demo.field1'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.field1 ?? '' }, row.original.field1 || '-')
     },
     {
       accessorKey: 'field2',
-      header: () => $ts('module.demo.field2')
+      ...minWidthColumn(180),
+      header: () => $ts('module.demo.field2'),
+      cell: ({ row }) => h('span', { class: 'block truncate', title: row.original.field2 ?? '' }, row.original.field2 || '-')
     },
-    useBadgeColumn<DemoDto>(
+    withColumnWidth(useBadgeColumn<DemoDto>(
       'status',
       'module.demo.demoStatus',
       enableStatusConfig.value,
       1
-    ),
+    ), stableColumn(tableColumnWidth.status)),
     ...(demoPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })

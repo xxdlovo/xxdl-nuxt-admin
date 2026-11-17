@@ -199,15 +199,7 @@ const formItemUi = {
               >
                 {{ field.badge.label }}
               </span>
-              <UInput
-                v-else
-                :model-value="displayValue(field.value)"
-                readonly
-                color="neutral"
-                variant="subtle"
-                class="w-full"
-                :ui="{ base: 'break-all' }"
-              />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(field.value)">{{ displayValue(field.value) }}</div>
             </UFormField>
           </div>
         </UCard>
@@ -231,15 +223,7 @@ const formItemUi = {
               >
                 {{ field.badge.label }}
               </span>
-              <UInput
-                v-else
-                :model-value="displayValue(field.value)"
-                readonly
-                color="neutral"
-                variant="subtle"
-                class="w-full"
-                :ui="{ base: 'break-all' }"
-              />
+              <div class="min-h-8 w-full break-all rounded-md bg-elevated/40 px-2.5 py-1.5 text-sm leading-5 text-default" :title="displayValue(field.value)">{{ displayValue(field.value) }}</div>
             </UFormField>
           </div>
         </UCard>
