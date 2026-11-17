@@ -370,6 +370,9 @@ export function authService(ctx: Context) {
         id: user.id,
         password: input.password,
         confirmPassword: input.confirmPassword
+      }, {
+        // 本人改密：保留当前浏览器会话，踢掉其他设备上的旧会话
+        exceptSessionId: ctx.session?.sessionId
       })
       log.info('auth password updated', { auth: { action: 'changePassword', id: user.id } })
 
@@ -409,6 +412,9 @@ export function authService(ctx: Context) {
         id: user.id,
         password: input.password,
         confirmPassword: input.confirmPassword
+      }, {
+        // 本人设置/修改密码：保留当前浏览器会话，踢掉其他设备上的旧会话
+        exceptSessionId: ctx.session?.sessionId
       })
       log.info('auth password set', { auth: { action: 'setPassword', id: user.id } })
 

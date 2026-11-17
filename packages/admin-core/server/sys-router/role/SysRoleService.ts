@@ -10,6 +10,8 @@ import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCac
 import { sysMenuService } from '#admin/server/sys-router/menu/SysMenuService'
 import { sysRoleDeptRepo } from '#admin/server/sys-router/roleDept/SysRoleDeptRepo'
 import { sysUserRoleRepo } from '#admin/server/sys-router/userRole/SysUserRoleRepo'
+import { sysUserRepo } from '#admin/server/sys-router/user/SysUserRepo'
+import { assertLastAdmin, assertSystemRoleDeletable, assertSystemRoleProtected } from '#admin/server/utils/adminGuard'
 import type { SysRoleAssignUsersDTO } from '#admin/shared/system/role'
 
 type SysRoleDataScope = NonNullable<SysRoleDto['dataScope']>
@@ -37,6 +39,7 @@ export function sysRoleService(ctx: Context) {
     const repo = sysRoleRepo(ctx)
     const roleDeptRepo = sysRoleDeptRepo(ctx)
     const userRoleRepo = sysUserRoleRepo(ctx)
+    const userRepo = sysUserRepo(ctx)
     const rbacCache = rbacCacheService()
     // evlog 宽事件：只记动作与标识（id / 条数），不打印完整入参出参
     const log = useLogger(ctx.event, 'server/sys-router/role')
@@ -51,6 +54,13 @@ export function sysRoleService(ctx: Context) {
         },
         async remove(id: string): Promise<boolean> {
             const old = await repo.getById(id)
+            if (!old) {
+                throw new AppError('common.notExist')
+            }
+
+            // 内置角色是系统初始化语义的一部分，删掉后无法从代码恢复。
+            assertSystemRoleDeletable(old)
+
             await repo.remove(id)
             await roleDeptRepo.removeByRoleId(id, ctx.user?.id ?? null)
             old?.code ? await rbacCache.invalidateRole(old.code) : await rbacCache.invalidateAllRoles()
@@ -60,18 +70,33 @@ export function sysRoleService(ctx: Context) {
         },
         async batchRemove(ids: string[]): Promise<number> {
             const old = await repo.listByIds(ids)
-            await repo.batchRemove(ids)
-            await Promise.all(ids.map(id => roleDeptRepo.removeByRoleId(id, ctx.user?.id ?? null)))
+            if (old.length === 0) {
+                return 0
+            }
+
+            // 批量操作要么全部成功，要么一个都不删；只要包含系统角色就整批拒绝。
+            old.forEach(assertSystemRoleDeletable)
+
+            const roleIds = old.map(role => role.id)
+            await repo.batchRemove(roleIds)
+            await Promise.all(roleIds.map(id => roleDeptRepo.removeByRoleId(id, ctx.user?.id ?? null)))
             await Promise.all(old.map(role => rbacCache.invalidateRole(role.code)))
             await rbacCache.invalidateAllUsers()
-            log.info('role batch removed', { role: { action: 'batchRemove', count: ids.length } })
-            return ids.length
+            log.info('role batch removed', { role: { action: 'batchRemove', count: roleIds.length } })
+            return roleIds.length
         },
         async updateById(id: string, data: SysRoleUpdateDTO): Promise<boolean> {
             const current = await repo.getById(id)
+            if (!current) {
+                throw new AppError('common.notExist')
+            }
+
+            // 系统角色只允许改展示字段；code/status/dataScope 变更统一拒绝。
+            assertSystemRoleProtected(current, data)
+
             await repo.updateById(id, {
                 ...data,
-                dataScope: data.dataScope ?? current?.dataScope ?? '5'
+                dataScope: data.dataScope ?? current.dataScope ?? '5'
             })
             if (current?.code && data.code && current.code !== data.code) {
                 await Promise.all([rbacCache.invalidateRole(current.code), rbacCache.invalidateRole(data.code)])
@@ -82,6 +107,14 @@ export function sysRoleService(ctx: Context) {
             return true
         },
         async updateDataScope(data: SysRoleDataScopeUpdateDTO): Promise<boolean> {
+            const current = await repo.getById(data.id)
+            if (!current) {
+                throw new AppError('common.notExist')
+            }
+
+            // updateDataScope 是独立入口，不能绕过系统角色的 dataScope 保护。
+            assertSystemRoleProtected(current, { dataScope: data.dataScope })
+
             await repo.updateById(data.id, {
                 dataScope: data.dataScope
             })
@@ -164,6 +197,16 @@ export function sysRoleService(ctx: Context) {
             const userIds = Array.from(new Set(data.userIds.filter(Boolean)))
             const selected = new Set(userIds)
             const existing = await userRoleRepo.listByRoleId(data.roleId)
+
+            // 系统角色移除可用管理员时，必须保证系统里还剩至少一个可用管理员。
+            if (role.isSystem === 1) {
+                const assignedAdminIds = await userRoleRepo.listAssignedAdminIds(data.roleId)
+                const removedAdminIds = assignedAdminIds.filter(userId => !selected.has(userId))
+
+                if (removedAdminIds.length > 0) {
+                    assertLastAdmin(await userRepo.countActiveAdmins(removedAdminIds))
+                }
+            }
 
             const enableIds = existing
                 .filter(row => selected.has(row.userId))

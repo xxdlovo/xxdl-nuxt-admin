@@ -1,7 +1,7 @@
 import { CommonRepo } from "#admin/server/drizzle/CommonRepo"
 import type { Context } from "#admin/server/trpc/context"
 import { SysUserBaseSchema } from "#admin/shared/system/user/common"
-import { and, count, eq, getTableColumns, sql } from "drizzle-orm"
+import { and, count, eq, getTableColumns, inArray, notInArray, sql } from "drizzle-orm"
 import { sysDepartment, sysUser } from "#admin/server/drizzle/schema"
 import { buildScopedWhere } from "#admin/server/drizzle/queries/buildScope"
 import { buildWhereBySchema } from "#admin/server/drizzle/queries/buildWhereBySchema"
@@ -109,6 +109,53 @@ export const sysUserRepo = (ctx: Context) => {
         .limit(1)
 
       return rows[0] ?? null
+    },
+
+    /**
+     * 按 id 批量取当前数据权限内的用户。
+     *
+     * 删除/禁用前的管理员守卫必须只针对“本次真的会被删除”的用户，
+     * 否则会把数据权限外的用户也算进来，导致误拦截。
+     */
+    async listScopedByIds(ids: string[]) {
+      if (ids.length === 0) {
+        return []
+      }
+
+      return ctx.db
+        .select({
+          id: sysUser.id,
+          username: sysUser.username,
+          isAdmin: sysUser.isAdmin,
+          status: sysUser.status,
+        })
+        .from(sysUser)
+        .where(await buildScopedWhere(sysUser, ctx, inArray(sysUser.id, ids)))
+    },
+
+    /**
+     * 统计全系统仍可用的管理员数量。
+     *
+     * 不叠加数据权限：判断“删掉后还有没有人能管理后台”必须看全局，
+     * 不能因为当前操作者的数据范围而少算。
+     */
+    async countActiveAdmins(excludeIds: string[] = []) {
+      const conditions = [
+        eq(sysUser.isDeleted, 0),
+        eq(sysUser.isAdmin, 1),
+        eq(sysUser.status, 1),
+      ]
+
+      if (excludeIds.length > 0) {
+        conditions.push(notInArray(sysUser.id, excludeIds))
+      }
+
+      const rows = await ctx.db
+        .select({ total: count() })
+        .from(sysUser)
+        .where(and(...conditions))
+
+      return Number(rows[0]?.total ?? 0)
     },
 
     /** 按邮箱取未软删用户（邮箱在库中唯一） */

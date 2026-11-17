@@ -11,7 +11,10 @@
     "businessError": "业务错误",
     "demoReadonly": "演示环境不允许操作",
     "repeatSubmit": "请勿重复提交",
-    "rateLimited": "操作过于频繁，请稍后再试"
+    "rateLimited": "操作过于频繁，请稍后再试",
+    "lastAdmin": "系统至少需要保留一个可用的管理员账号",
+    "cannotOperateSelf": "不能对当前登录账号执行此操作",
+    "systemRoleProtected": "系统内置角色不允许删除、改编码、停用或修改数据范围"
   },
   "auth": {
     "invalidCredentials": "用户名或密码错误",
@@ -629,6 +632,7 @@
         },
         "resetPassword": "重置密码",
         "resetPasswordSuccess": "重置密码成功",
+        "resetPasswordSessionNotice": "重置密码后，该用户的所有登录会话将失效，需要重新登录。",
         "newPassword": "新密码",
         "confirmPassword": "确认密码",
         "locked": "已锁定",

@@ -15,6 +15,7 @@
         "preview": "pnpm --filter xxdl-nuxt-admin-demo preview",
         "typecheck": "pnpm -r --no-bail typecheck",
         "check:layers": "node scripts/check-layers.mjs",
+        "test:guards": "node --import tsx --test packages/admin-core/tests/adminGuard.test.ts",
         "gen:ai:tables": "node scripts/codegen-ai.mjs tables",
         "gen:ai:guide": "node scripts/codegen-ai.mjs guide",
         "gen:ai:plan": "node scripts/codegen-ai.mjs plan",

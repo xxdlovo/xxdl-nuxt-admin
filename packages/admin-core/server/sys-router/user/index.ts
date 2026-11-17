@@ -1,6 +1,5 @@
 //#admin/server/sys-router/user
-import { publicProcedure, router, proc } from '#admin/server/trpc/init'
-import type { Context } from '#admin/server/trpc/context'
+import { router, proc } from '#admin/server/trpc/init'
 import { sysUserService } from './SysUserService'
 import z from 'zod'
 import { SysUserAddSchema, SysUserPageQuerySchema, SysUserQuerySchema, SysUserResetPasswordSchema, SysUserUpdateSchema } from '#admin/shared/system/user'
@@ -12,11 +11,6 @@ const editProc = proc({ permission: 'system:user:edit', repeatSubmit: true })
 const delProc = proc({ permission: 'system:user:del' })
 
 export const sysUserRouter = router({
-    // TODO: 调试用接口，没有任何权限校验，上线前应删除
-    test: publicProcedure.query(async ({ ctx }: { ctx: Context }) => {
-        const get = await sysUserService(ctx).getById('1')
-        return 'hello word'
-    }),
     create: addProc.input(SysUserAddSchema)
         .mutation(async ({ ctx, input }) => {
             return sysUserService(ctx).create(input)

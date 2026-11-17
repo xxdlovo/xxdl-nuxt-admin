@@ -26,6 +26,7 @@ import { sysPostRepo } from '#admin/server/sys-router/post/SysPostRepo'
 import { rbacCacheService } from '#admin/server/sys-router/storage/cache/RbacCacheService'
 import { sysOnlineService } from '#admin/server/sys-router/online/SysOnlineService'
 import { runUserOnboardHooks } from '#admin/server/hooks/userOnboard'
+import { assertLastAdmin, assertNotSelf, isUsableAdmin } from '#admin/server/utils/adminGuard'
 
 function omitPassword<T extends { password?: unknown } | null>(user: T) {
   if (!user) {
@@ -155,6 +156,17 @@ export function sysUserService(ctx: Context) {
     },
 
     async remove(id: string): Promise<boolean> {
+      const target = await repo.getById(id)
+      if (!target) {
+        throw new AppError('common.notExist')
+      }
+
+      // 不能删自己；最后一个可用管理员也不能被删除，否则后台会彻底锁死。
+      assertNotSelf(id, ctx.user?.id)
+      if (isUsableAdmin(target)) {
+        assertLastAdmin(await repo.countActiveAdmins([id]))
+      }
+
       await repo.remove(id)
       await userPostRepo.removeByUserId(id, ctx.user?.id ?? null)
       await sysOnlineService(ctx).revokeUserSessions(id)
@@ -164,14 +176,31 @@ export function sysUserService(ctx: Context) {
     },
 
     async batchRemove(ids: string[]): Promise<number> {
-      await repo.batchRemove(ids)
-      await Promise.all(ids.map(async (id) => {
-        await userPostRepo.removeByUserId(id, ctx.user?.id ?? null)
-        await sysOnlineService(ctx).revokeUserSessions(id)
-        await rbacCache.invalidateUser(id)
+      const targets = await repo.listScopedByIds(ids)
+      if (targets.length === 0) {
+        return 0
+      }
+
+      for (const target of targets) {
+        assertNotSelf(target.id, ctx.user?.id)
+      }
+
+      const removingAdminIds = targets
+        .filter(isUsableAdmin)
+        .map(target => target.id)
+
+      if (removingAdminIds.length > 0) {
+        assertLastAdmin(await repo.countActiveAdmins(removingAdminIds))
+      }
+
+      await repo.batchRemove(targets.map(target => target.id))
+      await Promise.all(targets.map(async (target) => {
+        await userPostRepo.removeByUserId(target.id, ctx.user?.id ?? null)
+        await sysOnlineService(ctx).revokeUserSessions(target.id)
+        await rbacCache.invalidateUser(target.id)
       }))
-      log.info('user batch removed', { user: { action: 'batchRemove', count: ids.length } })
-      return ids.length
+      log.info('user batch removed', { user: { action: 'batchRemove', count: targets.length } })
+      return targets.length
     },
 
     async updateById(id: string, data: SysUserUpdateDTO): Promise<boolean> {
@@ -181,6 +210,14 @@ export function sysUserService(ctx: Context) {
 
       if (!current) {
         throw new AppError('common.notExist')
+      }
+
+      // 禁用账号前先确认：不是自己，且不会把最后一个可用管理员禁用掉。
+      if (data.status !== undefined && data.status !== 1) {
+        assertNotSelf(id, ctx.user?.id)
+        if (isUsableAdmin(current)) {
+          assertLastAdmin(await repo.countActiveAdmins([id]))
+        }
       }
 
       if (deptId) {
@@ -215,12 +252,20 @@ export function sysUserService(ctx: Context) {
 
     /**
      * Reset the user's password without checking the old one.
+     *
+     * options.exceptSessionId 用于本人改密：只踢掉其他会话，保留当前浏览器；
+     * 管理员重置密码不传该参数，目标用户的全部会话都会失效。
      */
-    async resetPassword(data: SysUserResetPasswordDTO): Promise<boolean> {
+    async resetPassword(
+      data: SysUserResetPasswordDTO,
+      options?: { exceptSessionId?: string | null },
+    ): Promise<boolean> {
       const password = await hashUserPassword(data.password)
       await repo.updatePasswordById(data.id, password)
       // 管理员重置密码后同时解锁，避免用户拿到新密码仍被锁在门外
       await repo.clearLoginFailure(data.id)
+      // 改密后旧会话必须失效，否则泄露的会话可以继续使用旧密码登录态
+      await sysOnlineService(ctx).revokeUserSessions(data.id, options)
       log.info('user password reset', { user: { action: 'resetPassword', id: data.id } })
       return true
     },

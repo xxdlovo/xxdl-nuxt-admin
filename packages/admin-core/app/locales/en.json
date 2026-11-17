@@ -11,7 +11,10 @@
     "businessError": "Business error",
     "demoReadonly": "Demo environment does not allow this operation",
     "repeatSubmit": "Please do not submit repeatedly",
-    "rateLimited": "Too many requests, please try again later"
+    "rateLimited": "Too many requests, please try again later",
+    "lastAdmin": "At least one active administrator account must remain",
+    "cannotOperateSelf": "You cannot perform this operation on your current account",
+    "systemRoleProtected": "Built-in system roles cannot be deleted, renamed, disabled, or have their data scope changed"
   },
   "auth": {
     "invalidCredentials": "Invalid username or password",
@@ -629,6 +632,7 @@
         },
         "resetPassword": "Reset Password",
         "resetPasswordSuccess": "Reset password success",
+        "resetPasswordSessionNotice": "After resetting the password, all sessions of this user will be invalidated and they must sign in again.",
         "newPassword": "New Password",
         "confirmPassword": "Confirm Password",
         "locked": "Locked",

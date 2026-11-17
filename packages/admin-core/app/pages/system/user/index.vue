@@ -414,6 +414,13 @@ onMounted(async () => {
       :ui="{ content: 'max-w-md' }"
     >
       <template #body>
+        <UAlert
+          color="warning"
+          variant="subtle"
+          icon="i-lucide-info"
+          :title="$ts('module.system.user.resetPasswordSessionNotice')"
+          class="mb-3"
+        />
         <UForm
           :validate="validateResetPassword"
           :state="resetPasswordState"

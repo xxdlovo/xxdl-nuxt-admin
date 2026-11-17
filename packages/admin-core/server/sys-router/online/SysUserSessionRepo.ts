@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gt, inArray, isNull, like, or, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gt, inArray, isNull, like, ne, or, sql } from 'drizzle-orm'
 import type { Context } from '#admin/server/trpc/context'
 import { sysUserSession } from '#admin/server/drizzle/schema'
 import type { SysOnlinePageQueryDTO } from '#admin/shared/system/online'
@@ -108,15 +108,25 @@ export function sysUserSessionRepo(ctx: Context) {
             return ids.length
         },
 
-        /** 禁用/删除用户时撤销其全部会话，返回被撤销的会话 id 供本地缓存失效。 */
-        async revokeByUserId(userId: string, revokedBy?: string | null) {
+        /** 禁用/删除用户时撤销其全部会话；本人改密时可用 exceptSessionId 保留当前会话。 */
+        async revokeByUserId(
+            userId: string,
+            revokedBy?: string | null,
+            exceptSessionId?: string | null,
+        ) {
+            const conditions = [
+                eq(sysUserSession.userId, userId),
+                isNull(sysUserSession.revokedAt),
+            ]
+
+            if (exceptSessionId) {
+                conditions.push(ne(sysUserSession.id, exceptSessionId))
+            }
+
             const rows = await db
                 .select({ id: sysUserSession.id })
                 .from(sysUserSession)
-                .where(and(
-                    eq(sysUserSession.userId, userId),
-                    isNull(sysUserSession.revokedAt)
-                ))
+                .where(and(...conditions))
 
             if (rows.length === 0) {
                 return [] as string[]
@@ -128,10 +138,7 @@ export function sysUserSessionRepo(ctx: Context) {
                     revokedAt: sql`CURRENT_TIMESTAMP`,
                     revokedBy: revokedBy ?? null,
                 })
-                .where(and(
-                    eq(sysUserSession.userId, userId),
-                    isNull(sysUserSession.revokedAt)
-                ))
+                .where(and(...conditions))
 
             return rows.map(row => row.id)
         },

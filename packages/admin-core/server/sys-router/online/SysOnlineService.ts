@@ -42,11 +42,33 @@ export function sysOnlineService(ctx: Context) {
             return ids.length
         },
 
-        /** 用户被禁用/删除时调用；不抛错，避免影响主流程。 */
-        async revokeUserSessions(userId: string) {
-            const sessionIds = await repo.revokeByUserId(userId, ctx.user?.id)
-            sessionIds.forEach(invalidateSessionCache)
-            log.info('user sessions revoked', { online: { action: 'revokeUserSessions', userId, count: sessionIds.length } })
+        /**
+         * 用户被禁用/删除时调用；不抛错，避免影响主流程。
+         * 本人改密时传 exceptSessionId，保留当前会话。
+         */
+        async revokeUserSessions(
+            userId: string,
+            options?: { exceptSessionId?: string | null },
+        ) {
+            try {
+                const sessionIds = await repo.revokeByUserId(
+                    userId,
+                    ctx.user?.id,
+                    options?.exceptSessionId,
+                )
+                sessionIds.forEach(invalidateSessionCache)
+                log.info('user sessions revoked', {
+                    online: {
+                        action: 'revokeUserSessions',
+                        userId,
+                        count: sessionIds.length,
+                    },
+                })
+            }
+            catch (error) {
+                // 会话撤销失败不应让“禁用用户/改密”整体失败，记录后继续。
+                console.error('[Online] revoke user sessions failed', error)
+            }
         },
     }
 }
