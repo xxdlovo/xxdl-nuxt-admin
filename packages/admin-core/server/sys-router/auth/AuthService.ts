@@ -12,6 +12,7 @@ import { isPlaceholderPassword, verifyUserPassword } from '#admin/server/utils/p
 import { clearCaptcha, verifyCaptcha } from '#admin/server/utils/captcha'
 import { getRequestInfo } from '#admin/server/utils/requestInfo'
 import { cleanupExpiredSessions, invalidateSessionCache } from '#admin/server/utils/sessionGuard'
+import { clearRememberedLogin, setRememberedLogin } from '#admin/server/utils/rememberedLogin'
 import type { RbacFlatMenu, RbacMenu, RbacProfile } from '#admin/shared/auth'
 import {
   systemCaptchaEnum,
@@ -257,6 +258,17 @@ export function authService(ctx: Context) {
           sessionId
         }, options.rememberMe ? { maxAge: REMEMBER_ME_MAX_AGE } : undefined)
 
+        // “记住我”：密码用 HttpOnly + AES-GCM 凭据保存，登录页按需回填。
+        if (options.rememberMe) {
+          setRememberedLogin(ctx.event, {
+            username: user.username,
+            password
+          })
+        }
+        else {
+          clearRememberedLogin(ctx.event)
+        }
+
         ctx.user = sessionUser
         clearCaptcha(ctx.event)
         await logRecorder(ctx).loginSuccess()
@@ -281,6 +293,7 @@ export function authService(ctx: Context) {
       }
 
       await clearUserSession(ctx.event)
+      clearRememberedLogin(ctx.event)
       log.info('auth logged out', { auth: { action: 'logout' } })
 
       return true
@@ -375,6 +388,7 @@ export function authService(ctx: Context) {
         exceptSessionId: ctx.session?.sessionId
       })
       log.info('auth password updated', { auth: { action: 'changePassword', id: user.id } })
+      clearRememberedLogin(ctx.event)
 
       return result
     },
@@ -417,6 +431,7 @@ export function authService(ctx: Context) {
         exceptSessionId: ctx.session?.sessionId
       })
       log.info('auth password set', { auth: { action: 'setPassword', id: user.id } })
+      clearRememberedLogin(ctx.event)
 
       return result
     }

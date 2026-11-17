@@ -32,11 +32,15 @@ const visible = computed({
 
 const configs = ref<UploadConfig[]>([])
 const configId = ref('')
-const file = ref<File | null>(null)
+const files = ref<File[]>([])
 const loadingConfigs = ref(false)
 const uploading = ref(false)
 const progress = ref(0)
+const completedCount = ref(0)
+const totalCount = ref(0)
+const failedFiles = ref<Array<{ name: string, message: string }>>([])
 const xhrRef = shallowRef<XMLHttpRequest | null>(null)
+let canceled = false
 
 const configItems = computed(() => configs.value.map(config => ({
   label: [
@@ -48,7 +52,8 @@ const configItems = computed(() => configs.value.map(config => ({
 })))
 
 const selectedConfig = computed(() => configs.value.find(config => config.id === configId.value))
-const canUpload = computed(() => Boolean(configId.value && file.value && !uploading.value))
+const totalSize = computed(() => files.value.reduce((sum, item) => sum + item.size, 0))
+const canUpload = computed(() => Boolean(configId.value && files.value.length > 0 && !uploading.value))
 
 const formatFileSize = (size?: number | null) => {
   const value = Number(size || 0)
@@ -59,9 +64,13 @@ const formatFileSize = (size?: number | null) => {
 }
 
 const resetUploadState = () => {
-  file.value = null
+  files.value = []
+  failedFiles.value = []
   progress.value = 0
+  completedCount.value = 0
+  totalCount.value = 0
   uploading.value = false
+  canceled = false
   xhrRef.value = null
 }
 
@@ -98,73 +107,128 @@ const parseUploadError = (xhr: XMLHttpRequest) => {
   }
 }
 
+const uploadOne = (current: File, index: number) => new Promise<{ ok: boolean, canceled?: boolean, message?: string }>((resolve) => {
+  const formData = new FormData()
+  formData.append('configId', configId.value)
+  formData.append('file', current)
+
+  const xhr = new XMLHttpRequest()
+  xhrRef.value = xhr
+  xhr.open('POST', '/api/system/oss/upload')
+  xhr.withCredentials = true
+
+  const locale = useCookie<string>('i18n_locale').value || 'en'
+  xhr.setRequestHeader('x-locale', locale)
+  xhr.setRequestHeader('accept-language', locale)
+
+  xhr.upload.onprogress = (event) => {
+    if (!event.lengthComputable || totalCount.value === 0) return
+    const fileProgress = event.loaded / event.total
+    progress.value = Math.min(95, Math.round(((index + fileProgress) / totalCount.value) * 100))
+  }
+
+  xhr.onload = () => {
+    xhrRef.value = null
+    if (xhr.status >= 200 && xhr.status < 300) {
+      resolve({ ok: true })
+      return
+    }
+    resolve({ ok: false, message: parseUploadError(xhr) })
+  }
+
+  xhr.onerror = () => {
+    xhrRef.value = null
+    resolve({ ok: false, message: $ts('module.system.oss.uploadFailed') })
+  }
+
+  xhr.onabort = () => {
+    xhrRef.value = null
+    resolve({ ok: false, canceled: true })
+  }
+
+  xhr.send(formData)
+})
+
 const upload = async () => {
   if (!configId.value) {
     useToastWarning($ts('module.system.oss.uploadConfigRequired'))
     return
   }
-  if (!file.value) {
+  if (files.value.length === 0) {
     useToastWarning($ts('module.system.oss.uploadFileRequired'))
     return
   }
 
-  const formData = new FormData()
-  formData.append('configId', configId.value)
-  formData.append('file', file.value)
-
-  uploading.value = true
+  const selectedFiles = [...files.value]
+  totalCount.value = selectedFiles.length
+  completedCount.value = 0
+  failedFiles.value = []
   progress.value = 0
+  canceled = false
+  uploading.value = true
 
-  await new Promise<void>((resolve) => {
-    const xhr = new XMLHttpRequest()
-    xhrRef.value = xhr
-    xhr.open('POST', '/api/system/oss/upload')
-    xhr.withCredentials = true
+  const failedIndexes = new Set<number>()
 
-    const locale = useCookie<string>('i18n_locale').value || 'en'
-    xhr.setRequestHeader('x-locale', locale)
-    xhr.setRequestHeader('accept-language', locale)
+  try {
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      if (canceled) break
 
-    xhr.upload.onprogress = (event) => {
-      if (!event.lengthComputable) return
-      progress.value = Math.min(95, Math.round((event.loaded / event.total) * 100))
-    }
+      const result = await uploadOne(selectedFiles[index]!, index)
 
-    xhr.onload = async () => {
-      uploading.value = false
-      xhrRef.value = null
-
-      if (xhr.status >= 200 && xhr.status < 300) {
-        progress.value = 100
-        useToastSuccess($ts('module.system.oss.uploadSuccess'))
-        visible.value = false
-        await props.refresh?.()
-      } else {
-        useToastError($ts('module.system.oss.uploadFailed'), 5000, parseUploadError(xhr))
+      if (result.canceled) {
+        canceled = true
+        break
       }
-      resolve()
-    }
 
-    xhr.onerror = () => {
-      uploading.value = false
-      xhrRef.value = null
-      useToastError($ts('module.system.oss.uploadFailed'))
-      resolve()
-    }
+      if (result.ok) {
+        completedCount.value += 1
+      }
+      else {
+        failedIndexes.add(index)
+        failedFiles.value.push({
+          name: selectedFiles[index]!.name,
+          message: result.message || $ts('module.system.oss.uploadFailed'),
+        })
+      }
 
-    xhr.onabort = () => {
-      uploading.value = false
-      xhrRef.value = null
-      progress.value = 0
-      useToastWarning($ts('module.system.oss.uploadCanceled'))
-      resolve()
+      progress.value = Math.min(100, Math.round(((index + 1) / totalCount.value) * 100))
     }
+  }
+  finally {
+    uploading.value = false
+    xhrRef.value = null
+  }
 
-    xhr.send(formData)
-  })
+  if (canceled) {
+    progress.value = 0
+    useToastWarning($ts('module.system.oss.uploadCanceled'))
+    return
+  }
+
+  if (failedFiles.value.length === 0) {
+    progress.value = 100
+    useToastSuccess($ts('module.system.oss.uploadSuccess'))
+    visible.value = false
+    await props.refresh?.()
+    return
+  }
+
+  // 保留失败文件，用户可以直接重试；成功文件不重复上传。
+  files.value = selectedFiles.filter((_, index) => failedIndexes.has(index))
+  progress.value = 0
+  useToastError(
+    $ts('module.system.oss.uploadPartial', {
+      success: completedCount.value,
+      failed: failedFiles.value.length,
+    }),
+    5000,
+    failedFiles.value.map(item => `${item.name}: ${item.message}`).join('\n')
+  )
+  await props.refresh?.()
 }
 
 const cancelUpload = () => {
+  canceled = true
   xhrRef.value?.abort()
 }
 </script>
@@ -209,25 +273,41 @@ const cancelUpload = () => {
 
         <UFormField name="file" required :label="$ts('module.system.oss.uploadFile')">
           <UFileUpload
-            v-model="file"
+            v-model="files"
             variant="area"
             layout="list"
             :disabled="uploading"
-            :multiple="false"
+            :multiple="true"
             :label="$ts('module.system.oss.form.uploadFile')"
-            :description="$ts('module.system.oss.uploadSingleOnly')"
+            :description="$ts('module.system.oss.uploadMultiHint')"
             class="w-full"
           />
         </UFormField>
 
-        <div v-if="file" class="text-sm text-muted">
-          {{ file.name }} / {{ formatFileSize(file.size) }}
+        <div v-if="files.length > 0" class="text-sm text-muted">
+          {{ $ts('module.system.oss.uploadTotal', { count: files.length }) }} / {{ formatFileSize(totalSize) }}
         </div>
+
+        <UAlert
+          v-if="failedFiles.length > 0"
+          color="error"
+          variant="soft"
+          icon="i-lucide-circle-alert"
+          :title="$ts('module.system.oss.uploadFailedFiles')"
+        >
+          <template #description>
+            <ul class="list-disc space-y-1 pl-4">
+              <li v-for="item in failedFiles" :key="item.name">
+                {{ item.name }}：{{ item.message }}
+              </li>
+            </ul>
+          </template>
+        </UAlert>
 
         <div v-if="uploading || progress > 0" class="space-y-2">
           <div class="flex items-center justify-between text-sm text-muted">
             <span>{{ uploading ? $ts('module.system.oss.uploading') : $ts('module.system.oss.uploadProgress') }}</span>
-            <span>{{ progress }}%</span>
+            <span>{{ progress }}%<template v-if="uploading && totalCount > 0">（{{ completedCount }}/{{ totalCount }}）</template></span>
           </div>
           <UProgress :model-value="progress" color="primary" />
         </div>

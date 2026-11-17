@@ -108,13 +108,28 @@ const topShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.44 : 0.94 
 const bottomShapeStyle = computed(() => ({ opacity: isDarkMode.value ? 0.38 : 0.94 }))
 
 /**
- * “记住我”只记住用户名，绝不把密码写进 localStorage。
+ * “记住我”的凭据由服务端写入 HttpOnly + AES-GCM Cookie，
+ * 前端只能通过同源接口读取，避免把密码明文放进 localStorage。
  *
- * 是否保持登录由服务端 session Cookie 的 maxAge 决定（见 AuthService.login 的 rememberMe）。
+ * localStorage 仅保留旧版本的用户名作为降级，不再保存密码。
  */
-function readRememberedLogin(): { username: string } | null {
+type RememberedLogin = {
+  username: string
+  password: string
+}
+
+async function readRememberedLogin(): Promise<RememberedLogin | null> {
   if (!import.meta.client) {
     return null
+  }
+
+  try {
+    const remembered = await $fetch<RememberedLogin | null>('/api/auth/remembered-login')
+    if (remembered?.username && remembered.password) {
+      return remembered
+    }
+  } catch {
+    // 接口不可用时继续尝试旧版本用户名，保证登录页仍可使用。
   }
 
   const rawValue = window.localStorage.getItem(loginRememberStorageKey)
@@ -125,11 +140,11 @@ function readRememberedLogin(): { username: string } | null {
   try {
     const value = JSON.parse(rawValue) as { username?: unknown }
     if (typeof value.username === 'string' && value.username.trim()) {
-      // 兼容旧版本：旧数据里可能还带着 password，读到后立即重写为只含用户名。
+      // 旧版本可能带着 password；读到后立即重写为只含用户名。
       window.localStorage.setItem(loginRememberStorageKey, JSON.stringify({
         username: value.username
       }))
-      return { username: value.username }
+      return { username: value.username, password: '' }
     }
   } catch {
     // Ignore malformed persisted state and fall back to the empty form.
@@ -138,19 +153,18 @@ function readRememberedLogin(): { username: string } | null {
   return null
 }
 
-function persistRememberedLogin() {
+async function clearRememberedLogin() {
   if (!import.meta.client) {
     return
   }
 
-  if (rememberMe.value) {
-    window.localStorage.setItem(loginRememberStorageKey, JSON.stringify({
-      username: form.username
-    }))
-    return
-  }
-
   window.localStorage.removeItem(loginRememberStorageKey)
+
+  try {
+    await $fetch('/api/auth/remembered-login', { method: 'DELETE' })
+  } catch {
+    // Cookie 清除失败不阻断取消勾选；下次登录仍会覆盖。
+  }
 }
 
 function toggleColorMode() {
@@ -211,11 +225,12 @@ onMounted(async () => {
     await navigateTo({ path: route.path, query: nextQuery }, { replace: true })
   }
 
-  const rememberedLogin = readRememberedLogin()
+  const rememberedLogin = await readRememberedLogin()
 
   if (rememberedLogin) {
-    Object.assign(form, rememberedLogin)
-    rememberMe.value = true
+    form.username = rememberedLogin.username
+    form.password = rememberedLogin.password
+    rememberMe.value = Boolean(rememberedLogin.password)
   }
 
   // 验证码开关：配置缺失时按关闭处理，避免未执行迁移的环境被锁在登录页。
@@ -264,7 +279,7 @@ watch(rememberMe, (checked) => {
     return
   }
 
-  window.localStorage.removeItem(loginRememberStorageKey)
+  void clearRememberedLogin()
 })
 
 async function handleLogin() {
@@ -306,7 +321,6 @@ async function handleLogin() {
       return
     }
 
-    persistRememberedLogin()
     toast.add({
       title: loginText.value.loginSuccess,
       color: 'success'
