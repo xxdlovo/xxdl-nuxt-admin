@@ -27,6 +27,8 @@ const props = withDefaults(defineProps<{
   collapsible?: boolean
   loading?: boolean
   showDraw?: boolean
+  /** 移动端顶部当前筛选名称（页面自行维护选中项时传入，如“全部部门”） */
+  selectedLabel?: string
 }>(), {
   data: () => [],
   pagination: () => ({ page: 1, pageSize: 10, total: 0 }),
@@ -36,7 +38,8 @@ const props = withDefaults(defineProps<{
   defaultWidth: 320,
   collapsible: true,
   loading: false,
-  showDraw: true
+  showDraw: true,
+  selectedLabel: ''
 })
 
 const emit = defineEmits<{
@@ -108,6 +111,9 @@ const isSelected = (item: SelectableItem): boolean => {
 
 // Collapse
 const collapsed = ref(false)
+/** 是否小屏（<1024）：用 JS 控制只渲染一个布局分支，避免桌面/移动两份内容同时挂载 */
+const isSmallScreen = useIsMobile(1023)
+
 const toggleCollapse = () => {
   collapsed.value = !collapsed.value
 }
@@ -229,13 +235,14 @@ onUnmounted(() => {
     <div class="flex h-full w-full overflow-hidden">
       <!-- Left Panel -->
       <div
+        v-if="!isSmallScreen"
         v-show="!collapsed"
         ref="leftPanelRef"
         :style="{
           width: collapsed ? '0px' : `${panelWidth}px`,
           minWidth: collapsed ? '0px' : undefined
         }"
-        class="relative hidden flex-col border-r border-(--ui-border) bg-(--ui-bg-elevated)/30 transition-[width] duration-200 lg:flex"
+        class="relative flex flex-col border-r border-(--ui-border) bg-(--ui-bg-elevated)/30 transition-[width] duration-200"
         :class="{
           'overflow-hidden': collapsed,
           'min-w-0': collapsed
@@ -351,8 +358,8 @@ onUnmounted(() => {
 
       <!-- Resize Handle -->
       <div
-        v-if="showDraw && !collapsed"
-        class="relative hidden lg:flex w-1.5 cursor-col-resize shrink-0 group"
+        v-if="showDraw && !collapsed && !isSmallScreen"
+        class="relative flex w-1.5 cursor-col-resize shrink-0 group"
         :class="{ 'bg-(--ui-primary)/10': isDragging }"
         @mousedown="startResize"
       >
@@ -363,7 +370,7 @@ onUnmounted(() => {
       </div>
 
       <!-- Right Panel - Desktop/Tablet -->
-      <div class="flex-1 flex flex-col min-w-0 hidden lg:flex">
+      <div v-if="!isSmallScreen" class="flex-1 flex flex-col min-w-0">
         <!-- Collapsed sidebar indicator button -->
         <div v-if="collapsible && collapsed" class="absolute left-0 top-1/2 -translate-y-1/2 z-10">
           <UButton
@@ -389,18 +396,19 @@ onUnmounted(() => {
       </div>
 
       <!-- Mobile Layout -->
-      <div class="flex flex-col h-full w-full lg:hidden">
-        <!-- Mobile header with list toggle -->
+      <div v-else class="flex flex-col h-full w-full">
+        <!-- Mobile header：用部门/分类语义图标，避免与顶栏菜单按钮视觉重复 -->
         <div class="flex items-center gap-2 p-2 border-b border-(--ui-border) bg-(--ui-bg)">
           <UButton
-            icon="i-lucide-list"
+            icon="i-lucide-building-2"
             size="sm"
-            color="neutral"
-            variant="ghost"
+            color="primary"
+            variant="soft"
+            aria-label="选择"
             @click="openMobileList"
           />
           <div class="flex-1 text-sm font-medium truncate">
-            {{ selectedItem ? ((selectedItem as Record<string, unknown>).label || (selectedItem as Record<string, unknown>).name || '已选择') : '请选择' }}
+            {{ selectedItem ? ((selectedItem as Record<string, unknown>).label || (selectedItem as Record<string, unknown>).name || '已选择') : (props.selectedLabel || '请选择') }}
           </div>
         </div>
 
@@ -447,7 +455,9 @@ onUnmounted(() => {
         </div>
 
         <!-- Mobile Slideover for list -->
+        <!-- v-if：未打开时完全不渲染列表内容，避免列表被渲染进文档流、与内容区上下堆叠 -->
         <USlideover
+          v-if="mobileListOpen"
           v-model:open="mobileListOpen"
           side="left"
           :ui="{
@@ -480,8 +490,9 @@ onUnmounted(() => {
             </div>
           </template>
 
-          <slot v-if="$slots['mobile-sidebar']" name="mobile-sidebar" :query="searchQuery" />
-          <slot v-else name="sidebar" :query="searchQuery" />
+          <template #body>
+            <slot v-if="$slots['mobile-sidebar']" name="mobile-sidebar" :query="searchQuery" />
+            <slot v-else name="sidebar" :query="searchQuery" />
 
           <UScrollArea v-if="!$slots['mobile-sidebar'] && !$slots.sidebar" class="flex-1 h-full">
             <template #default>
@@ -516,6 +527,7 @@ onUnmounted(() => {
               </div>
             </template>
           </UScrollArea>
+          </template>
 
           <!-- Mobile slideover pagination -->
           <template v-if="showPagination && pagination.total > 0" #footer>

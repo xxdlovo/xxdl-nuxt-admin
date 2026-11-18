@@ -1,11 +1,15 @@
 <template>
   <UDropdownMenu :items="menuItems" :content="{ align: 'end' }">
     <UButton
-        :label="label"
         color="neutral"
         variant="outline"
-        trailing-icon="i-lucide-chevron-down"
-    />
+        icon="i-lucide-sliders-horizontal"
+        :trailing-icon="compact ? undefined : 'i-lucide-chevron-down'"
+        :aria-label="label"
+        :title="label"
+    >
+      <span :class="compact ? 'hidden md:inline' : ''">{{ label }}</span>
+    </UButton>
   </UDropdownMenu>
 </template>
 
@@ -29,7 +33,9 @@ const props = defineProps<{
   /** 表格实例，必须提供 getAllColumns / getColumn 方法 */
   tableRef: UTableExpose | null,
   /** 按钮文本，默认 "Columns" */
-  label?: string
+  label?: string,
+  /** 移动端图标化：<768px 只显示图标 */
+  compact?: boolean
 }>()
 
 // 获取执行后的标题

@@ -15,6 +15,8 @@ const props = defineProps<{
   deletePermission?: string | string[]
   addLabel?: string
   addIcon?: string
+  /** 移动端图标化：<768px 时按钮只保留图标，避免工具栏折成多行 */
+  compactMobile?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -73,7 +75,10 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
       <slot name="prefix" />
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
+    <div
+        class="flex flex-wrap items-center gap-2"
+        :class="compactMobile ? 'flex-nowrap sm:flex-wrap' : ''"
+    >
     <!-- default slot -->
     <slot>
       <!-- 新增 -->
@@ -86,7 +91,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
         <template #leading>
           <UIcon :name="addIcon || 'i-ic-round-plus'" class="w-4 h-4" />
         </template>
-       {{ addLabel || $ts('common.add') }}
+        <span :class="compactMobile ? 'hidden md:inline' : ''">{{ addLabel || $ts('common.add') }}</span>
       </UButton>
 
       <!-- 批量删除 -->
@@ -101,7 +106,7 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
           <template #leading>
             <UIcon name="i-ic-round-delete" class="w-4 h-4" />
           </template>
-          {{ $ts('common.batchDelete') }}
+          <span :class="compactMobile ? 'hidden md:inline' : ''">{{ $ts('common.batchDelete') }}</span>
         </UButton>
 
         <template #content>
@@ -142,11 +147,11 @@ watch(() => props.batchDeleteLoading, (newLoading) => {
             :class="{ 'animate-spin': loading }"
         />
       </template>
-      {{ $ts('common.refresh') }}
+      <span :class="compactMobile ? 'hidden md:inline' : ''">{{ $ts('common.refresh') }}</span>
     </UButton>
 
     <!-- 列设置 -->
-<TableColumnSetting :tableRef="tableRef" />
+<TableColumnSetting :tableRef="tableRef" :compact="compactMobile" />
     <!-- suffix slot -->
     <slot name="suffix" />
     </div>

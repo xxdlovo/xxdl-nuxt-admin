@@ -22,6 +22,7 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="configPermissions.codes.add"
             :delete-permission="configPermissions.codes.del"
+            compact-mobile
             class="shrink-0 border-b border-gray-200 px-4 py-2 dark:border-gray-800"
             @add="handleAdd"
             @delete="handleBatchDelete"

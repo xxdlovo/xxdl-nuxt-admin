@@ -5,9 +5,10 @@
 
     <!-- 表格容器 -->
     <div
+        ref="scrollRef"
         class="flex-1 overflow-auto px-4 min-h-0 relative table-scroll-container"
         :class="{ 'hide-expanded-slot-row': hideExpandedSlotRow }"
-        :style="{ '--table-min-width': `${minTableWidth}px` }"
+        :style="minTableWidth ? { '--table-min-width': `${minTableWidth}px` } : undefined"
     >
       <!-- Loading 遮罩 -->
       <div
@@ -23,7 +24,7 @@
       <UTable
           ref="tableRef"
           :data="data"
-          :columns="normalizedColumns"
+          :columns="renderedColumns"
           :loading="loading"
           :ui="tableUi"
           :get-sub-rows="getSubRows"
@@ -40,8 +41,11 @@
     </div>
 
     <!-- 分页 -->
-    <div class="flex-shrink-0 px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-      <div class="flex items-center justify-end gap-2">
+    <div
+        class="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+        :class="isMobile ? 'px-2 py-1' : 'px-4 py-2'"
+    >
+      <div class="flex items-center justify-end" :class="isMobile ? 'gap-1' : 'gap-2'">
         <!-- 总数 -->
         <div class="hidden sm:block text-sm text-gray-700 dark:text-gray-300">
           {{ $ts('datatable.itemCount', { total: pagination.total }) }}
@@ -51,16 +55,18 @@
         <USelect
             v-model="pagination.pageSize"
             :items="pageSizeOptions"
+            :size="isMobile ? 'xs' : 'sm'"
             :disabled="loading"
-            class="w-16 sm:w-20"
+            :class="isMobile ? 'w-14' : 'w-16 sm:w-20'"
         />
 
-        <!-- 分页器 -->
+        <!-- 分页器：移动端使用最小号 -->
         <UPagination
             v-model:page="pagination.page"
             :items-per-page="pagination.pageSize"
             :total="pagination.total"
-            :max="5"
+            :max="isMobile ? 3 : 5"
+            :size="isMobile ? 'xs' : 'sm'"
             :disabled="loading"
             show-first
             show-last
@@ -92,12 +98,23 @@ interface Props {
   getRowId?: (originalRow: T, index: number, parent?: TableRow<T>) => string
   expandedOptions?: Omit<ExpandedOptions<T>, 'getExpandedRowModel' | 'onExpandedChange'>
   hideExpandedSlotRow?: boolean
+  /**
+   * 移动端精简表格：<768px 时只渲染 mobileColumns 指定的列 + 操作列，
+   * 并关闭 table-fixed / 最小宽度 / 操作列吸附，避免窄屏下内容列被操作列遮住。
+   */
+  compactMobile?: boolean
+  /** 移动端保留的列 id（compactMobile 生效时使用） */
+  mobileColumns?: string[]
+  /** 移动端操作列宽度（px） */
+  mobileActionsWidth?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   pageSizeOptions: () => [10, 20, 50, 100],
-  hideExpandedSlotRow: false
+  hideExpandedSlotRow: false,
+  compactMobile: false,
+  mobileActionsWidth: 140
 })
 
 const expanded = defineModel<ExpandedState>('expanded', {
@@ -111,6 +128,33 @@ const tableSlots = computed(() => {
   return rest
 })
 
+/** 移动端断点：与 Tailwind md 保持一致 */
+const isMobile = useIsMobile()
+const scrollRef = useTemplateRef<HTMLElement>('scrollRef')
+const containerWidth = ref(0)
+let resizeObserver: ResizeObserver | null = null
+
+const measureContainer = () => {
+  containerWidth.value = scrollRef.value?.clientWidth ?? 0
+}
+
+onMounted(() => {
+  measureContainer()
+  if (typeof ResizeObserver !== 'undefined' && scrollRef.value) {
+    resizeObserver = new ResizeObserver(() => measureContainer())
+    resizeObserver.observe(scrollRef.value)
+  }
+})
+
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+})
+
+const compactMode = computed(() => props.compactMobile && isMobile.value)
+
+const columnId = (column: TableColumn<T>) =>
+  String(column.id ?? (column as { accessorKey?: string }).accessorKey ?? '')
+
 /**
  * 统一表格外观：
  * - table-fixed：列宽稳定，避免长内容把表格撑宽、把操作列挤出视口
@@ -120,10 +164,14 @@ const tableSlots = computed(() => {
  */
 const tableUi = computed(() => {
   const custom = props.ui ?? {}
+  const base = ['table-fixed', custom.base].filter(Boolean).join(' ')
+  // 移动端精简模式减小单元格内边距，把宽度留给内容
+  const horizontalPadding = compactMode.value ? 'px-2' : ''
+
   return {
-    base: ['table-fixed', custom.base].filter(Boolean).join(' '),
-    th: ['whitespace-nowrap', custom.th].filter(Boolean).join(' '),
-    td: ['overflow-hidden align-middle', custom.td].filter(Boolean).join(' '),
+    base,
+    th: ['whitespace-nowrap', horizontalPadding, custom.th].filter(Boolean).join(' '),
+    td: ['overflow-hidden align-middle', horizontalPadding, custom.td].filter(Boolean).join(' '),
     ...custom
   } as Record<string, unknown>
 })
@@ -158,12 +206,68 @@ const normalizedColumns = computed<TableColumn<T>[]>(() => {
 })
 
 /**
+ * 实际渲染的列：
+ * 移动端精简模式下只保留 mobileColumns 指定的列 + 操作列，
+ * 并去掉操作列的 sticky（窄屏下吸附会直接盖住内容列）。
+ */
+const renderedColumns = computed<TableColumn<T>[]>(() => {
+  if (!compactMode.value) {
+    return normalizedColumns.value
+  }
+
+  const allow = new Set(props.mobileColumns ?? [])
+  // 未指定 mobileColumns 时保留全部列，交给横向滚动查看
+  const filtered = normalizedColumns.value
+    .filter(column => columnId(column) === 'actions' || allow.size === 0 || allow.has(columnId(column)))
+
+  const hasActions = filtered.some(column => columnId(column) === 'actions')
+  const dataCount = filtered.length - (hasActions ? 1 : 0)
+  const actionsWidth = props.mobileActionsWidth
+
+  const withMobileWidth = (column: TableColumn<T>, width: number): TableColumn<T> => {
+    // 统一宽度，并清掉桌面端的 sticky 样式
+    return {
+      ...column,
+      size: width,
+      minSize: width,
+      meta: {
+        style: {
+          th: { width: `${width}px`, minWidth: `${width}px` },
+          td: { width: `${width}px`, minWidth: `${width}px` }
+        }
+      }
+    } as TableColumn<T>
+  }
+
+  // 全列模式：保留页面定义的列宽，只把操作列收窄并取消吸附
+  if (allow.size === 0) {
+    return filtered.map(column =>
+      columnId(column) === 'actions' ? withMobileWidth(column, actionsWidth) : column
+    )
+  }
+
+  // 精简模式：容器内边距 px-4，剩余宽度均分给数据列
+  const available = Math.max((containerWidth.value || 390) - 32, 240)
+  const dataWidth = dataCount > 0
+    ? Math.max(88, Math.floor((available - (hasActions ? actionsWidth : 0)) / dataCount))
+    : 0
+
+  return filtered.map(column =>
+    withMobileWidth(column, columnId(column) === 'actions' ? actionsWidth : dataWidth)
+  )
+})
+
+/**
  * 表格最小宽度 = 各列宽度之和。
- * table-fixed 会把列压到比 minSize 更窄，只有给表格一个不小于列宽总和的最小宽度，
- * 才能保证列宽不被压缩、超出部分由容器横向滚动承接。
+ * 移动端精简（裁剪列）时不需要最小宽度；移动端全列模式仍需按列宽总和撑开，靠横向滚动查看。
  */
 const minTableWidth = computed(() => {
-  const total = normalizedColumns.value.reduce((sum, column) => {
+  const trimmed = compactMode.value && (props.mobileColumns?.length ?? 0) > 0
+  if (trimmed) {
+    return 0
+  }
+
+  const total = renderedColumns.value.reduce((sum, column) => {
     const width = column.size ?? column.minSize
     return sum + (typeof width === 'number' && width > 0 ? width : 140)
   }, 0)

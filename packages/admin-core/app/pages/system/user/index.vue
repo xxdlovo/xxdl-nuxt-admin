@@ -52,6 +52,13 @@ const resetPasswordState = ref<SysUserResetPasswordDTO>({
 
 const searchParams = ref<SysUserQueryDTO>({})
 
+/** 移动端：操作列收成一个「更多」按钮，点击悬浮展示图形化操作 */
+const isMobileView = useIsMobile()
+
+const deleteConfirmVisible = ref(false)
+const pendingDeleteRow = ref<SysUserTableRow | null>(null)
+const deletingUser = ref(false)
+
 const currentDeptId = computed(() => selectedDeptId.value || undefined)
 
 /** 锁定判断以服务端返回的 lockedUntil 为准；过期时间已过则视为未锁定。 */
@@ -99,6 +106,9 @@ const { selectionColumn } = useSelectionColumn<SysUserTableRow>({
 })
 
 const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
+  /** 移动端只保留图标，桌面端显示文字 */
+  const actionText = (text: string) => h('span', { class: 'hidden md:inline' }, text)
+
   const actionColumn: TableColumn<SysUserTableRow> = {
     id: 'actions',
     ...stickyRightColumn(240),
@@ -106,6 +116,26 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
       const Popconfirm = resolveComponent('Popconfirm')
+
+      // 移动端：图形化操作的悬浮菜单
+      if (isMobileView.value) {
+        const UDropdownMenu = resolveComponent('UDropdownMenu')
+
+        return h(UDropdownMenu, {
+          items: buildMobileActions(row.original),
+          content: { align: 'end' }
+        }, {
+          default: () => h(UButton, {
+            icon: 'i-lucide-ellipsis',
+            color: 'primary',
+            variant: 'outline',
+            size: 'xs',
+            square: true,
+            'aria-label': $ts('common.operate')
+          })
+        })
+      }
+
       const actions = []
 
       if (userPermissions.canEdit.value) {
@@ -113,8 +143,10 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           variant: 'outline',
           color: 'primary',
           size: 'xs',
+          icon: 'i-lucide-pencil',
+          class: 'px-2',
           onClick: () => handleEdit(row.original.id as string)
-        }, { default: () => $ts('common.edit') }))
+        }, { default: () => actionText($ts('common.edit')) }))
       }
       if (isUserLocked(row.original) && hasPermission('system:user:unlock')) {
         actions.push(h(UButton, {
@@ -122,8 +154,9 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           color: 'warning',
           size: 'xs',
           icon: 'i-lucide-lock-open',
+          class: 'px-2',
           onClick: () => unlockUser(row.original)
-        }, { default: () => $ts('module.system.user.unlock') }))
+        }, { default: () => actionText($ts('module.system.user.unlock')) }))
       }
       if (hasPermission('system:user:reset')) {
         actions.push(h(UButton, {
@@ -131,8 +164,9 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           color: 'neutral',
           size: 'xs',
           icon: 'i-lucide-key-round',
+          class: 'px-2',
           onClick: () => openResetPassword(row.original)
-        }, { default: () => $ts('module.system.user.resetPassword') }))
+        }, { default: () => actionText($ts('module.system.user.resetPassword')) }))
       }
 
       if (userPermissions.canDel.value) {
@@ -142,12 +176,14 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
           trigger: () => h(UButton, {
             variant: 'outline',
             color: 'error',
-            size: 'xs'
-          }, { default: () => $ts('common.delete') })
+            size: 'xs',
+            icon: 'i-lucide-trash-2',
+            class: 'px-2'
+          }, { default: () => actionText($ts('common.delete')) })
         }))
       }
 
-      return h('div', { class: 'flex gap-2' }, actions)
+      return h('div', { class: 'flex flex-wrap gap-2' }, actions)
     }
   }
 
@@ -240,6 +276,67 @@ const handleDelete = async (id: string) => {
   if (loading.value) return
   await $trpc.sysUser.remove.mutate(id)
   await onDeleted()
+}
+
+/** 移动端「更多」菜单项：图形化操作 */
+function buildMobileActions(row: SysUserTableRow) {
+  const items: Array<Record<string, unknown>> = []
+
+  if (userPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (isUserLocked(row) && hasPermission('system:user:unlock')) {
+    items.push({
+      label: $ts('module.system.user.unlock'),
+      icon: 'i-lucide-lock-open',
+      onSelect: () => unlockUser(row)
+    })
+  }
+
+  if (hasPermission('system:user:reset')) {
+    items.push({
+      label: $ts('module.system.user.resetPassword'),
+      icon: 'i-lucide-key-round',
+      onSelect: () => openResetPassword(row)
+    })
+  }
+
+  if (userPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      onSelect: () => openDeleteConfirm(row)
+    })
+  }
+
+  return items
+}
+
+function openDeleteConfirm(row: SysUserTableRow) {
+  pendingDeleteRow.value = row
+  deleteConfirmVisible.value = true
+}
+
+async function confirmDeleteUser() {
+  const id = pendingDeleteRow.value?.id
+  if (!id || deletingUser.value) {
+    return
+  }
+
+  deletingUser.value = true
+  try {
+    await handleDelete(id)
+    deleteConfirmVisible.value = false
+    pendingDeleteRow.value = null
+  } finally {
+    deletingUser.value = false
+  }
 }
 
 const handleBatchDelete = async () => {
@@ -337,6 +434,7 @@ onMounted(async () => {
       :show-pagination="false"
       :default-width="300"
       :search-placeholder="$ts('common.keywordSearch')"
+      :selected-label="selectedDeptLabel"
       @search="handleDeptSearch"
     >
       <template #sidebar>
@@ -357,6 +455,8 @@ onMounted(async () => {
               :loading="loading"
               :pagination="pagination"
               :page-size-options="pageSizeOptions"
+              compact-mobile
+              :mobile-actions-width="64"
             >
               <template #header>
                 <TableHeaderOperation
@@ -367,13 +467,14 @@ onMounted(async () => {
                   :selected-count="checkedRowKeys.length"
                   :add-permission="userPermissions.codes.add"
                   :delete-permission="userPermissions.codes.del"
+                  compact-mobile
                   class="border-b border-default px-4 py-2"
                   @add="handleAdd"
                   @delete="handleBatchDelete"
                   @refresh="refresh"
                 >
                   <template #prefix>
-                    <div class="flex min-w-0 items-center gap-2">
+                    <div class="hidden min-w-0 items-center gap-2 md:flex">
                       <span>{{ $ts('module.system.user.title') }}</span>
                       <UBadge color="neutral" variant="subtle" size="sm" class="max-w-40 truncate">
                         {{ selectedDeptLabel }}
@@ -387,18 +488,22 @@ onMounted(async () => {
                         color="neutral"
                         variant="outline"
                         icon="i-lucide-download"
+                        :aria-label="$ts('module.system.excel.export')"
+                        :title="$ts('module.system.excel.export')"
                         @click="handleExport"
                     >
-                      {{ $ts('module.system.excel.export') }}
+                      <span class="hidden md:inline">{{ $ts('module.system.excel.export') }}</span>
                     </UButton>
                     <UButton
                         v-if="userPermissions.canAdd.value"
                         color="neutral"
                         variant="outline"
                         icon="i-lucide-upload"
+                        :aria-label="$ts('module.system.excel.import')"
+                        :title="$ts('module.system.excel.import')"
                         @click="openImport"
                     >
-                      {{ $ts('module.system.excel.import') }}
+                      <span class="hidden md:inline">{{ $ts('module.system.excel.import') }}</span>
                     </UButton>
                   </template>
                 </TableHeaderOperation>
@@ -417,6 +522,22 @@ onMounted(async () => {
       :close="closeVisible"
       :refresh="refresh"
     />
+
+    <UModal
+      v-model:open="deleteConfirmVisible"
+      :title="$ts('common.delete')"
+      :ui="{ content: 'max-w-sm' }"
+    >
+      <template #body>
+        <p class="text-sm text-default">
+          {{ $ts('common.confirmDelete', { count: 1 }) }}
+        </p>
+      </template>
+      <template #footer>
+        <UButton :label="$ts('common.cancel')" color="neutral" variant="subtle" @click="deleteConfirmVisible = false" />
+        <UButton :label="$ts('common.confirm')" color="error" :loading="deletingUser" @click="confirmDeleteUser" />
+      </template>
+    </UModal>
 
     <UModal
       v-model:open="resetPasswordVisible"

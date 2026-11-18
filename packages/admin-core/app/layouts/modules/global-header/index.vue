@@ -9,6 +9,8 @@ defineProps<{
   showMenu?: boolean
   showMenuToggler?: boolean
   collapsed?: boolean
+  /** 移动端紧凑模式：隐藏面包屑，只保留菜单按钮与右侧操作区 */
+  compact?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -30,8 +32,11 @@ const themeStore = useThemeStore()
       :style="{ width: `${showLogoTitle === false ? themeStore.sider.mixCollapsedWidth : themeStore.sider.width}px` }"
     />
 
+    <!-- 移动端：菜单按钮由布局层以 fixed 渲染（保证抽屉打开时仍可点击关闭），这里只留占位 -->
+    <div v-if="compact" class="w-9 shrink-0" aria-hidden="true" />
+
     <MenuToggler
-      v-if="showMenu && showMenuToggler"
+      v-else-if="showMenu && showMenuToggler"
       :collapsed="collapsed"
       @click="emit('toggleMenu')"
     />
@@ -40,14 +45,17 @@ const themeStore = useThemeStore()
       <slot name="menu" />
     </div>
 
-    <div v-else class="relative flex h-full min-w-0 flex-1 items-center">
+    <div v-else-if="!compact" class="relative flex h-full min-w-0 flex-1 items-center">
+      <!-- 菜单按钮只保留 header 左侧这一个，避免面包屑内重复的 toggle 造成双重触发 -->
       <AppBreadcrumb
         :collapsed="Boolean(collapsed)"
-        :show-sidebar-toggle="showMenuToggler !== false"
+        :show-sidebar-toggle="false"
         @toggle-sidebar="emit('toggleMenu')"
       />
       <div class="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-default" />
     </div>
+
+    <div v-else class="flex-1" />
 
     <div class="ml-auto flex shrink-0 items-center gap-2">
       <slot name="actions">

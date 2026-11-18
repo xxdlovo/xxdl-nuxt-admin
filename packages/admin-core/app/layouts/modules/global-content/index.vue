@@ -7,9 +7,13 @@ const themeStore = useThemeStore()
 const tabsStore = useTabsStore()
 const { refreshKey } = storeToRefs(tabsStore)
 
-defineProps<{
+const props = withDefaults(defineProps<{
   refreshKey: number
-}>()
+  /** 是否展示标签栏；移动端传 false 隐藏标签页 */
+  showTabs?: boolean
+}>(), {
+  showTabs: true
+})
 
 const pageKey = computed(() => `${route.fullPath}:${refreshKey.value}`)
 
@@ -26,9 +30,9 @@ const contentClass = computed(() => themeStore.content.scrollMode === 'wrapper'
 
 <template>
   <UDashboardPanel id="home" :ui="panelUi">
-    <template #header>
+    <template v-if="$slots.header" #header>
       <slot name="header" />
-      <AppTabsBar v-if="themeStore.tab.visible" />
+      <AppTabsBar v-if="showTabs && themeStore.tab.visible" />
     </template>
 
     <template #body>

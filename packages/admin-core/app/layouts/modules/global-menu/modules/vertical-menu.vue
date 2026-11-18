@@ -16,6 +16,7 @@ const open = defineModel<boolean>('open', { required: true })
 const collapsed = defineModel<boolean>('collapsed', { required: true })
 const route = useRoute()
 const themeStore = useThemeStore()
+const { $ts } = useI18n()
 
 const topLevelActiveClass = 'before:!bg-transparent shadow-none hover:before:!bg-transparent active:before:!bg-transparent focus-visible:before:!bg-transparent'
 const activeTrail = computed(() => resolveActiveTrail(getRenderableMenus(props.menus), route.path))
@@ -100,11 +101,29 @@ function toggleMenu() {
       </template>
     </UDashboardSidebar>
 
-    <LayoutContent :refresh-key="refreshKey">
+    <LayoutContent :refresh-key="refreshKey" :show-tabs="!mobile">
+      <!-- 移动端保留紧凑顶栏（右侧头像等），隐藏面包屑与标签页 -->
       <template #header>
-        <AppHeader :collapsed="props.mobile ? !open : collapsed" show-menu-toggler @toggle-menu="toggleMenu" />
+        <AppHeader
+          :compact="Boolean(mobile)"
+          :collapsed="collapsed"
+          show-menu-toggler
+          @toggle-menu="toggleMenu"
+        />
       </template>
       <slot />
+
+      <!-- 移动端菜单按钮：关闭时显示在左上角；打开后由抽屉内的同名按钮接管（同一位置、同一图标切换） -->
+      <UButton
+        v-if="mobile && !open"
+        icon="i-lucide-menu"
+        color="neutral"
+        variant="ghost"
+        square
+        :aria-label="$ts('icon.expand')"
+        class="fixed left-3 top-3 z-[60]"
+        @click="toggleMenu"
+      />
     </LayoutContent>
   </UDashboardGroup>
 </template>

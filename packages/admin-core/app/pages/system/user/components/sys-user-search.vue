@@ -1,89 +1,75 @@
 <template>
-  <UCard :ui="{ body: ' p-0 sm:p-0 pl-2  sm:pl-2' }" class="w-full cursor-pointer">
-    <UAccordion v-model="active" :items="items">
-      <template #leading="{ open }">
-        <UIcon :name="open ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="cursor-pointer" />
-      </template>
-      <template #trailing>
-        &nbsp;
-      </template>
-      <template #content>
-        <UForm ref="form" :validateOn="['input']"  :schema="schema" :state="state" class="p-2">
-          <div class=" grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4   gap-x-6 gap-y-6">
-            <UFormField name="username" :label="$ts('module.system.user.userName')" orientation="horizontal"   :ui="formItemUi">
-              <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear" class="w-full" />
-            </UFormField>
-            <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.gender" :placeholder="$ts('module.system.user.form.userGender')" class="w-full" :items="genderItems" clearable />
-            </UFormField>
-            <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <UBaseInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')" trailing="clear" class="w-full" />
-            </UFormField>
-            <UFormField name="phone" :label="$ts('module.system.user.userPhone')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <UBaseInput v-model="state.phone" :placeholder="$ts('module.system.user.form.userPhone')" trailing="clear" class="w-full" />
-            </UFormField>
-            <UFormField name="email" :label="$ts('module.system.user.userEmail')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear" class="w-full" />
-            </UFormField>
-            <UFormField name="status" :label="$ts('module.system.user.userStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.user.form.userStatus')" class="w-full" :items="statusItems" clearable />
-            </UFormField>
-            <div class="col-span-full flex flex-col  pr-8">
-              <div class="gap-2  flex justify-end ">
-                <UButton icon="tabler:reload" @click="reset"  variant="outline" color="neutral">{{ $ts('common.reset') }}
-                </UButton>
-                <UButton icon="tabler:search" @click="submit" variant="outline">{{ $ts('common.search') }}</UButton>
-              </div>
-              <div class="min-h-[20px]">
-              </div>
-            </div>
-          </div>
-        </UForm>
-      </template>
-    </UAccordion>
-  </UCard>
+  <FilterPanel
+    storage-key="sys-user-search-fab-pos"
+    :before-submit="handleBeforeSubmit"
+    @search="handleSearch"
+    @reset="handleReset"
+  >
+    <UForm
+      ref="form"
+      :validate-on="['input']"
+      :schema="SysUserQuerySchema"
+      :state="state"
+      class="px-2 pb-1"
+    >
+      <div class="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        <UFormField name="username" :label="$ts('module.system.user.userName')" orientation="horizontal" :ui="formItemUi">
+          <UBaseInput v-model="state.username" :placeholder="$ts('module.system.user.form.userName')" trailing="clear" class="w-full" />
+        </UFormField>
+        <UFormField name="gender" :label="$ts('module.system.user.userGender')" orientation="horizontal" class="w-full" :ui="formItemUi">
+          <USelect v-model.nullable="state.gender" :placeholder="$ts('module.system.user.form.userGender')" class="w-full" :items="genderItems" clearable />
+        </UFormField>
+        <UFormField name="nickname" :label="$ts('module.system.user.nickName')" orientation="horizontal" class="w-full" :ui="formItemUi">
+          <UBaseInput v-model="state.nickname" :placeholder="$ts('module.system.user.form.nickName')" trailing="clear" class="w-full" />
+        </UFormField>
+        <UFormField name="phone" :label="$ts('module.system.user.userPhone')" orientation="horizontal" class="w-full" :ui="formItemUi">
+          <UBaseInput v-model="state.phone" :placeholder="$ts('module.system.user.form.userPhone')" trailing="clear" class="w-full" />
+        </UFormField>
+        <UFormField name="email" :label="$ts('module.system.user.userEmail')" orientation="horizontal" class="w-full" :ui="formItemUi">
+          <UBaseInput v-model="state.email" :placeholder="$ts('module.system.user.form.userEmail')" trailing="clear" class="w-full" />
+        </UFormField>
+        <UFormField name="status" :label="$ts('module.system.user.userStatus')" orientation="horizontal" class="w-full" :ui="formItemUi">
+          <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.user.form.userStatus')" class="w-full" :items="statusItems" clearable />
+        </UFormField>
+        <UFormField name="remark" :label="$ts('module.system.user.remark')" orientation="horizontal" class="w-full sm:col-span-2" :ui="formItemUi">
+          <UBaseInput v-model="state.remark" :placeholder="$ts('module.system.user.form.remark')" trailing="clear" class="w-full" />
+        </UFormField>
+      </div>
+    </UForm>
+  </FilterPanel>
 </template>
 
 <script setup lang="ts">
-import * as z from 'zod'
+import type { SysUserQueryDTO } from '#admin/shared/system/user'
+import { SysUserQuerySchema } from '#admin/shared/system/user'
+import { businessDictCode } from '#admin/shared/constants/business'
+
+const emit = defineEmits<{
+  search: [data: SysUserQueryDTO]
+}>()
+
 const { $ts } = useI18n()
-import { businessDictCode } from "#admin/shared/constants/business";
-import type{ Form } from '@nuxt/ui';
-// set 0: default open search panel
-import {type SysUserQueryDTO, SysUserQuerySchema} from "#admin/shared/system/user";
+const state = defineModel<SysUserQueryDTO>('model', { required: true })
+const form = useTemplateRef('form')
+
 const formItemUi = {
   root: 'flex items-center',
   label: 'w-20 whitespace-nowrap text-right pr-2 flex-shrink-0',
   container: 'flex-1'
 }
-const emit = defineEmits<{
-  search: [data: SysUserQueryDTO]
-}>()
+
 const genderItems = useDictNumberOptions(businessDictCode.userGender)
 const statusItems = useDictNumberOptions(businessDictCode.enableStatus)
-const schema = SysUserQuerySchema
-const form = useTemplateRef('form')
-// const Schema = z.output<typeof SysUserQuerySchema>
-const active = ref(undefined)
-const state = defineModel<SysUserQueryDTO>('model', { required: true });
-const items = computed(() => [
-  {
-    label: $ts('common.search'),
-    icon: ''
-  }
-])
 
-const submit = async () => {
-  const isValid = await form.value?.validate({})
-  if (isValid) {
-    emit('search', state.value)
-  }
+/** 提交前校验；不通过时 FilterPanel 不会提交也不会关闭 */
+const handleBeforeSubmit = async () => Boolean(await form.value?.validate({}))
+
+const handleSearch = () => {
+  emit('search', state.value)
 }
-const reset =()=> {
+
+const handleReset = () => {
   form.value?.clear()
   state.value = {}
-
 }
-
 </script>
-
