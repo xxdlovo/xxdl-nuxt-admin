@@ -40,13 +40,13 @@
         "url": "https://github.com/xxdlovo/xxdl-nuxt-admin/issues"
     },
     "peerDependencies": {
-        "@nuxt/ui": "^4.11.0",
+        "@nuxt/ui": "^4.13.0",
         "@trpc/client": "^11.19.0",
         "@trpc/server": "^11.19.0",
-        "nuxt": "^4.5.0",
-        "pinia": "^4.0.0",
-        "trpc-nuxt": "^2.1.0",
-        "vue": "^3.5.0"
+        "nuxt": "^4.6.0",
+        "pinia": "^4.1.0",
+        "trpc-nuxt": "^2.2.0",
+        "vue": "^3.5.45"
     },
     "dependencies": {
         "@internationalized/date": "^3.12.4",
