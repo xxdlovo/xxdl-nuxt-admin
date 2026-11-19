@@ -12,10 +12,10 @@
         "typecheck": "nuxt typecheck"
     },
     "dependencies": {
-        "nuxt": "4.5.2"
+        "nuxt": "4.6.4"
     },
     "devDependencies": {
         "@types/node": "26.6.2",
-        "typescript": "5.7.3"
+        "typescript": "5.9.3"
     }
 }

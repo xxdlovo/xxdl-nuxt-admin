@@ -73,7 +73,7 @@ const reset = () => {
           <UBaseInput v-model="state.orderNo" :placeholder="$ts('module.system.order.form.orderNo')" trailing="clear" class="w-full" />
         </UFormField>
         <UFormField name="userId" :label="$ts('module.system.order.member')" orientation="horizontal" :ui="formItemUi">
-          <MemberUserSelect v-model="state.userId" source="sysMemberOrder" :placeholder="$ts('module.system.order.form.member')" />
+          <MemberUserSelect v-model="state.userId" source="sysOrder" :placeholder="$ts('module.system.order.form.member')" />
         </UFormField>
         <UFormField name="status" :label="$ts('module.system.order.statusLabel')" orientation="horizontal" :ui="formItemUi">
           <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.order.form.status')" class="w-full" :items="statusItems" clearable />

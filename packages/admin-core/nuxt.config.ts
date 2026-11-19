@@ -93,18 +93,6 @@ export default defineNuxtConfig({
                     delete app.layouts[name]
                 }
             }
-        },
-        // Nuxt 4.5 生成的 .nuxt/tsconfig.*.json 会写入 "libReplacement"，
-        // 而项目锁定的 typescript@5.7.3 不识别该选项，`pnpm typecheck` 会以
-        // TS5023 "Unknown compiler option 'libReplacement'" 失败。
-        //
-        // 这属于「框架版本 × TS 版本」的兼容问题，**每个宿主都会遇到**，
-        // 所以放在基座层统一处理，宿主无需重复配置。
-        'prepare:types'(options: { tsConfig?: { compilerOptions?: Record<string, unknown> } }) {
-            const compilerOptions = options?.tsConfig?.compilerOptions
-            if (compilerOptions && 'libReplacement' in compilerOptions) {
-                delete compilerOptions.libReplacement
-            }
         }
     },
     modules: [
@@ -162,11 +150,8 @@ export default defineNuxtConfig({
         codegenCopySecret: process.env.NUXT_CODEGEN_COPY_SECRET === 'true',
         // nuxt-auth-utils 会把该配置传给 h3 的 useSession，
         // 登录接口 setUserSession 和客户端 /api/_auth/session 会共用这些 Cookie 规则。
+        // password 自 0.6 起不再接受配置项，只能通过 NUXT_SESSION_PASSWORD 环境变量注入。
         session: {
-            // SessionConfig 的 password 在模块类型中是必填字段；这里保留空字符串作为配置默认值。
-            // 真实密钥始终通过 NUXT_SESSION_PASSWORD 注入，Nuxt 会在运行时用该环境变量覆盖此值，
-            // 因此不能在源码中填写真实密码，也不能省略该字段而触发 TypeScript 类型错误。
-            password: '',
             cookie: {
                 path: '/',
                 sameSite: 'lax',
@@ -238,8 +223,9 @@ export default defineNuxtConfig({
         // i18n_locale 不一致，导致重启后模块读取不到上次选择的语言并回退英文。
         localeCookie: 'i18n_locale',
         locales: [
-            { code: 'en', iso: 'en-US', dir: 'ltr', name: 'English' },
-            { code: 'zh', iso: 'zh-CN', dir: 'ltr', name: '中文' }
+            // v4 起显示名字段为 displayName（name 已不再读取）
+            { code: 'en', iso: 'en-US', dir: 'ltr', displayName: 'English' },
+            { code: 'zh', iso: 'zh-CN', dir: 'ltr', displayName: '中文' }
         ],
         defaultLocale: 'en',
         // 该选项相对每个 layer 的 rootDir 解析（nuxt-i18n-micro 对每层分别扫描），

@@ -1,4 +1,5 @@
 import type { H3Event } from 'h3'
+import type { RequestEvent } from 'nuxt/server'
 import { deleteCookie, getCookie, getQuery, getRequestURL, getRouterParam, sendRedirect, setCookie } from 'h3'
 import { createContext } from '#admin/server/trpc/context'
 import { AppError } from '#admin/server/utils/appError'
@@ -132,8 +133,8 @@ async function handleLinuxDo(
         redirectURL: string
         scope?: string | null
         extra: OauthExtra
-        onSuccess: (event: H3Event, result: { user: unknown }) => Promise<unknown>
-        onError: (event: H3Event, error: unknown) => Promise<unknown>
+        onSuccess: (event: RequestEvent, result: { user: unknown }) => Promise<unknown>
+        onError: (event: RequestEvent, error: unknown) => Promise<unknown>
     }
 ) {
     const query = getQuery(event)
@@ -173,7 +174,7 @@ async function handleLinuxDo(
     deleteCookie(event, LINUXDO_STATE_COOKIE, { path: '/' })
 
     if (!expectedState || expectedState !== query.state) {
-        return options.onError(event, new AppError('auth.oauthStateMismatch'))
+        return options.onError(event as unknown as RequestEvent, new AppError('auth.oauthStateMismatch'))
     }
 
     try {
@@ -212,10 +213,10 @@ async function handleLinuxDo(
             user.avatar_url = filled.startsWith('http') ? filled : `${base}${filled}`
         }
 
-        return options.onSuccess(event, { user })
+        return options.onSuccess(event as unknown as RequestEvent, { user })
     }
     catch (error) {
-        return options.onError(event, error)
+        return options.onError(event as unknown as RequestEvent, error)
     }
 }
 
@@ -266,8 +267,11 @@ export default defineEventHandler(async (event: H3Event) => {
 
     /** 各平台共用的业务处理：建号/绑定 → 建 session → 记日志 */
     const handlers = {
-        onSuccess: async (successEvent: H3Event, result: { user: any }) => {
-            const successCtx = await createContext(successEvent)
+        onSuccess: async (successEvent: RequestEvent, result: { user: any }) => {
+            // nuxt-auth-utils 0.6 的 OAuth 回调用的是 nuxt/server 的 RequestEvent，
+            // 而 setUserSession / sendRedirect / createContext 仍接收 h3 的 H3Event，这里统一转换一次。
+            const event = successEvent as unknown as H3Event
+            const successCtx = await createContext(event)
             const normalized = normalize((result?.user ?? {}) as Record<string, unknown>)
 
             try {
@@ -286,14 +290,14 @@ export default defineEventHandler(async (event: H3Event) => {
                     defaultRoleId: cfg.defaultRoleId ?? null
                 })
 
-                await setUserSession(successEvent, {
+                await setUserSession(event, {
                     user: sessionUser,
                     loggedInAt: new Date().toISOString()
                 })
 
                 await logRecorder(successCtx).loginSuccess()
 
-                return sendRedirect(successEvent, SUCCESS_REDIRECT)
+                return sendRedirect(event, SUCCESS_REDIRECT)
             }
             catch (error) {
                 await logRecorder(successCtx).loginFailure(
@@ -301,14 +305,15 @@ export default defineEventHandler(async (event: H3Event) => {
                     'oauth login failure',
                     error
                 )
-                return sendRedirect(successEvent, toRedirect(LOGIN_PATH, toI18nKey(error)))
+                return sendRedirect(event, toRedirect(LOGIN_PATH, toI18nKey(error)))
             }
         },
-        onError: async (errorEvent: H3Event, error: any) => {
-            const errorCtx = await createContext(errorEvent)
+        onError: async (errorEvent: RequestEvent, error: any) => {
+            const event = errorEvent as unknown as H3Event
+            const errorCtx = await createContext(event)
             await logRecorder(errorCtx).loginFailure(null, 'oauth callback failure', error)
             return sendRedirect(
-                errorEvent,
+                event,
                 toRedirect(LOGIN_PATH, error?.message || 'auth.oauthFailed')
             )
         }
@@ -318,15 +323,15 @@ export default defineEventHandler(async (event: H3Event) => {
     // 该包只导出主入口，无法按子路径 import，因此这里显式映射平台。
     switch (platform) {
         case 'github':
-            return defineOAuthGitHubEventHandler({ config: handlerConfig, ...handlers })(event)
+            return defineOAuthGitHubEventHandler({ config: handlerConfig, ...handlers })(event as unknown as RequestEvent)
         case 'google':
-            return defineOAuthGoogleEventHandler({ config: handlerConfig, ...handlers })(event)
+            return defineOAuthGoogleEventHandler({ config: handlerConfig, ...handlers })(event as unknown as RequestEvent)
         case 'gitlab':
-            return defineOAuthGitLabEventHandler({ config: handlerConfig, ...handlers })(event)
+            return defineOAuthGitLabEventHandler({ config: handlerConfig, ...handlers })(event as unknown as RequestEvent)
         case 'gitee':
-            return defineOAuthGiteaEventHandler({ config: handlerConfig, ...handlers })(event)
+            return defineOAuthGiteaEventHandler({ config: handlerConfig, ...handlers })(event as unknown as RequestEvent)
         case 'microsoft':
-            return defineOAuthMicrosoftEventHandler({ config: handlerConfig, ...handlers })(event)
+            return defineOAuthMicrosoftEventHandler({ config: handlerConfig, ...handlers })(event as unknown as RequestEvent)
         case 'linuxdo':
             return handleLinuxDo(event, {
                 clientId: cfg.clientId,

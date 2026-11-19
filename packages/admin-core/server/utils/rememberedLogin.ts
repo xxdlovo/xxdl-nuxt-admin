@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto'
+import { getSessionSecret } from '#admin/server/utils/sessionSecret'
 
 /**
  * “记住我”的凭据存储。
@@ -46,7 +47,7 @@ function runtimeConfig(event: H3Event) {
 }
 
 function secret(event: H3Event) {
-    return runtimeConfig(event).session?.password || ''
+    return getSessionSecret(event)
 }
 
 function cookieSecure(event: H3Event) {

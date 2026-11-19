@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { createHmac, randomInt, timingSafeEqual } from 'node:crypto'
 import { deleteCookie, getCookie, setCookie } from 'h3'
+import { getSessionSecret } from '#admin/server/utils/sessionSecret'
 
 /**
  * 登录图形验证码。
@@ -31,8 +32,7 @@ type CaptchaRuntimeConfig = {
 }
 
 function getSecret(event: H3Event) {
-    const config = useRuntimeConfig(event) as CaptchaRuntimeConfig
-    const secret = config.session?.password
+    const secret = getSessionSecret(event)
     if (!secret) {
         // 项目要求必须配置 NUXT_SESSION_PASSWORD；缺失时验证码无法安全签发。
         throw new Error('NUXT_SESSION_PASSWORD is required for captcha signing')

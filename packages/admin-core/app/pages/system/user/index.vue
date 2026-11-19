@@ -109,7 +109,8 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
 
   const actionColumn: TableColumn<SysUserTableRow> = {
     id: 'actions',
-    ...stickyRightColumn(240),
+    // 三个操作按钮（编辑/重置密码/删除）在 240px 内会换行，留足宽度保持单行
+    ...stickyRightColumn(268),
     header: () => $ts('common.operate'),
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')

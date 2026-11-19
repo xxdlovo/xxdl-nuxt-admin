@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import { getSessionSecret } from '#admin/server/utils/sessionSecret'
 
 /**
  * 代码生成 V2 的短期访问令牌。
@@ -24,7 +25,7 @@ type CodegenRuntimeConfig = {
 
 function getSecret(event: H3Event) {
     const config = useRuntimeConfig(event) as CodegenRuntimeConfig
-    return config.session?.password || config.codegenToken || ''
+    return getSessionSecret(event) || config.codegenToken || ''
 }
 
 function sign(payload: string, secret: string) {

@@ -17,7 +17,7 @@ const activeLocale = computed(() => localeCookie.value || $getLocale())
 
 const items = computed<DropdownMenuItem[]>(() =>
     locales.map((item) => ({
-        label: item.name as string,
+        label: (item.displayName || item.code) as string,
         icon: item.code === activeLocale.value ? 'i-lucide-check' : undefined,
         color: item.code === activeLocale.value ? 'primary' : 'neutral',
         onSelect: () => {

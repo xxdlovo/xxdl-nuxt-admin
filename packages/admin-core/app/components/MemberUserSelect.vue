@@ -15,8 +15,8 @@ type MemberUserOption = {
 }
 
 const props = withDefaults(defineProps<{
-  /** 调用哪个模块的 userOptions 接口：sysMember / sysMemberRecharge / sysMemberBalanceLog / sysMemberOrder */
-  source?: 'sysMember' | 'sysMemberRecharge' | 'sysMemberBalanceLog' | 'sysMemberOrder'
+  /** 调用哪个模块的 userOptions 接口：sysMember / sysMemberRecharge / sysMemberBalanceLog / sysOrder */
+  source?: 'sysMember' | 'sysMemberRecharge' | 'sysMemberBalanceLog' | 'sysOrder'
   /** member 只列已有档案的会员；unprofiled 只列待建档用户 */
   scope?: 'member' | 'unprofiled'
   placeholder?: string
