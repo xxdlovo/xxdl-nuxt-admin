@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,12 +24,13 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="undefined"
             :delete-permission="logPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.jobLog.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.jobLog.title') }}</span>
             </template>
             <template #default>
               <UButton
@@ -36,9 +39,11 @@
                 color="neutral"
                 icon="i-lucide-download"
                 :loading="loading"
+                :aria-label="$ts('module.system.jobLog.export')"
+                :title="$ts('module.system.jobLog.export')"
                 @click="handleExport"
               >
-                {{ $ts('module.system.jobLog.export') }}
+                <span class="hidden md:inline">{{ $ts('module.system.jobLog.export') }}</span>
               </UButton>
 
               <UPopover v-model:open="showClearPopover">
@@ -48,8 +53,10 @@
                   color="warning"
                   icon="i-lucide-eraser"
                   :disabled="loading"
+                  :aria-label="$ts('module.system.jobLog.clear')"
+                  :title="$ts('module.system.jobLog.clear')"
                 >
-                  {{ $ts('module.system.jobLog.clear') }}
+                  <span class="hidden md:inline">{{ $ts('module.system.jobLog.clear') }}</span>
                 </UButton>
                 <template #content>
                   <div class="p-3">
@@ -74,11 +81,13 @@
                   variant="outline"
                   color="error"
                   :disabled="checkedRowKeys.length === 0 || loading"
+                  :aria-label="$ts('common.batchDelete')"
+                  :title="$ts('common.batchDelete')"
                 >
                   <template #leading>
                     <UIcon name="i-ic-round-delete" class="w-4 h-4" />
                   </template>
-                  {{ $ts('common.batchDelete') }}
+                  <span class="hidden md:inline">{{ $ts('common.batchDelete') }}</span>
                 </UButton>
 
                 <template #content>
@@ -120,6 +129,7 @@ import { h } from 'vue'
 import type { SysJobLogDto, SysJobLogQueryDTO } from '#admin/shared/system/jobLog'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysJobLogSearch from './components/sys-job-log-search.vue'
 import SysJobLogDetail from './components/sys-job-log-detail.vue'
@@ -165,6 +175,16 @@ const { selectionColumn } = useSelectionColumn<SysJobLogDto>({
   checkedRowKeys,
   checkboxComponent: UCheckbox as Component
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysJobLogDto): MobileRowAction[] => [
+  {
+    label: $ts('common.detail'),
+    icon: 'i-lucide-eye',
+    color: 'primary',
+    onSelect: () => handleDetail(row)
+  }
+]
 
 const handleDetail = (row: SysJobLogDto) => {
   detailData.value = JSON.parse(JSON.stringify(row))

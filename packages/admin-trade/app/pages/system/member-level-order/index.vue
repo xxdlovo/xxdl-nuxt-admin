@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -20,11 +22,12 @@
             :loading="loading"
             :disabled-delete="checkedRowKeys.length === 0 || loading"
             :selected-count="checkedRowKeys.length"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberLevelOrder.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberLevelOrder.title') }}</span>
             </template>
             <!-- 开通单是资金凭证：没有「新增」，批量删除也只对已关闭/失败的单开放 -->
             <template #default>
@@ -41,8 +44,10 @@
                     color="error"
                     icon="i-ic-round-delete"
                     :disabled="deletableCheckedKeys.length === 0 || loading"
+                    :aria-label="$ts('common.batchDelete')"
+                    :title="$ts('common.batchDelete')"
                   >
-                    {{ $ts('common.batchDelete') }}
+                    <span class="hidden md:inline">{{ $ts('common.batchDelete') }}</span>
                   </UButton>
                 </template>
               </Popconfirm>
@@ -72,6 +77,7 @@ import { h } from 'vue'
 import { payOrderStatusConfig } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
 import { usePaginatedTable, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import CopyValueBadge from '#admin/app/components/base/CopyValueBadge.vue'
 import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
@@ -216,6 +222,47 @@ const handleBatchDelete = async () => {
   useToastSuccess($ts('common.deleteSuccess'))
   checkedRowKeys.value = []
   await refresh()
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: MemberLevelOrderDetail): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canSync.value && row.status === PENDING_STATUS) {
+    items.push({
+      label: $ts('module.system.memberLevelOrder.sync'),
+      icon: 'i-lucide-refresh-cw',
+      onSelect: () => handleSync(row)
+    })
+  }
+
+  if (orderPermissions.canEdit.value && row.status === PENDING_STATUS) {
+    items.push({
+      label: $ts('module.system.memberLevelOrder.close'),
+      icon: 'i-lucide-x-circle',
+      color: 'warning',
+      onSelect: () => handleOpenClose(row)
+    })
+  }
+
+  if (orderPermissions.canDel.value && canDelete(row)) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const columns = computed<TableColumn<MemberLevelOrderDetail>[]>(() => {

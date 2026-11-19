@@ -12,6 +12,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
               :selected-count="checkedRowKeys.length"
               :add-permission="postPermissions.codes.add"
               :delete-permission="postPermissions.codes.del"
+              compact-mobile
               class="shrink-0 border-b border-gray-200 px-4 py-2 dark:border-gray-800"
               @add="handleAdd"
               @delete="handleBatchDelete"
               @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.post.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.post.title') }}</span>
             </template>
             <template #suffix>
               <UButton
@@ -36,9 +39,11 @@
                   color="neutral"
                   variant="outline"
                   icon="i-lucide-download"
+                  :aria-label="$ts('module.system.excel.export')"
+                  :title="$ts('module.system.excel.export')"
                   @click="handleExport"
               >
-                {{ $ts('module.system.excel.export') }}
+                <span class="hidden md:inline">{{ $ts('module.system.excel.export') }}</span>
               </UButton>
             </template>
           </TableHeaderOperation>
@@ -64,6 +69,7 @@ import type { SysPostDto, SysPostQueryDTO } from '#admin/shared/system/post'
 import { businessDictCode } from '#admin/shared/constants/business'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import SysPostSearch from './components/sys-post-search.vue'
 import SysPostOperate from './components/sys-post-operate.vue'
@@ -185,6 +191,32 @@ const columns = computed<TableColumn<SysPostDto>[]>(() => {
     ...(postPermissions.canOperate.value ? [actionColumn] : []),
   ]
 })
+
+/** 移动端行操作：点击行弹出底部操作面板 */
+const rowActions = (row: SysPostDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (postPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string),
+    })
+  }
+
+  if (postPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string),
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

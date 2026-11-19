@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="levelPermissions.codes.add"
             :delete-permission="levelPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberLevel.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberLevel.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -58,6 +61,7 @@ import { h } from 'vue'
 import type { SysMemberLevelDto, SysMemberLevelQueryDTO } from '#trade/shared/system/memberLevel'
 import type { BadgeConfig } from '#admin/shared/types/nuxtui'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysMemberLevelSearch from './components/sys-member-level-search.vue'
 import SysMemberLevelOperate from './components/sys-member-level-operate.vue'
@@ -212,6 +216,32 @@ const columns = computed<TableColumn<SysMemberLevelDto>[]>(() => {
     ...(levelPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysMemberLevelDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (levelPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (levelPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

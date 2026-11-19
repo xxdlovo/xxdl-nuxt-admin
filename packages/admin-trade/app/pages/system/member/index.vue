@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="memberPermissions.codes.add"
             :delete-permission="memberPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.member.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.member.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -56,6 +59,7 @@ import { h } from 'vue'
 import type { SysMemberQueryDTO } from '#trade/shared/system/member'
 import { memberStatusConfig } from '#admin/shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import SysMemberSearch from './components/sys-member-search.vue'
@@ -130,6 +134,56 @@ const { selectionColumn } = useSelectionColumn<MemberProfileRow>({
   checkedRowKeys,
   checkboxComponent: UCheckbox as Component
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: MemberProfileRow): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canAdjust.value) {
+    items.push({
+      label: $ts('module.system.member.adjust'),
+      icon: 'i-lucide-wallet',
+      color: 'warning',
+      onSelect: () => handleAdjust(row)
+    })
+  }
+
+  if (canGrant.value) {
+    items.push({
+      label: $ts('module.system.member.grant'),
+      icon: 'i-lucide-gift',
+      color: 'success',
+      onSelect: () => handleGrant(row)
+    })
+  }
+
+  if (memberPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (memberPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDetail = (row: MemberProfileRow) => {
   detailTarget.value = row

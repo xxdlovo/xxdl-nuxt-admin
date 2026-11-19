@@ -12,17 +12,20 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
             v-if="tableRef?.tableRef"
             :table-ref="tableRef.tableRef"
             :loading="loading"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.payNotifyLog.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.payNotifyLog.title') }}</span>
             </template>
             <!-- 空默认插槽：回调日志只读，不展示新增/批量删除（同 sys-log 的处理方式） -->
             <template #default />
@@ -52,6 +55,7 @@ import {
   payNotifySourceRecord
 } from '#admin/shared/constants/business'
 import { usePaginatedTable, useBadgeColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysPayNotifyLogSearch from './components/sys-pay-notify-log-search.vue'
 import SysPayNotifyLogDetail from './components/sys-pay-notify-log-detail.vue'
@@ -85,6 +89,16 @@ const translate = (record: Record<string, string>, value?: string | null) => {
   const key = record[value]
   return key ? $ts(key) : value
 }
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysPayNotifyLogDto): MobileRowAction[] => [
+  {
+    label: $ts('common.detail'),
+    icon: 'i-lucide-eye',
+    color: 'primary',
+    onSelect: () => handleDetail(row)
+  }
+]
 
 const handleDetail = (log: SysPayNotifyLogDto) => {
   detailData.value = log

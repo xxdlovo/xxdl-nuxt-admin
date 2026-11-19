@@ -38,6 +38,22 @@
           <slot :name="name" v-bind="slotData" />
         </template>
       </UTable>
+
+      <!-- 行操作二次确认 -->
+      <UModal
+        v-if="confirmAction"
+        v-model:open="confirmOpen"
+        :title="$ts('common.confirm')"
+        :ui="{ content: 'max-w-sm' }"
+      >
+        <template #body>
+          <p class="text-sm text-default">{{ confirmAction.confirm }}</p>
+        </template>
+        <template #footer>
+          <UButton :label="$ts('common.cancel')" color="neutral" variant="subtle" @click="confirmOpen = false" />
+          <UButton :label="$ts('common.confirm')" color="error" @click="confirmActionRun" />
+        </template>
+      </UModal>
     </div>
 
     <!-- 分页 -->
@@ -79,6 +95,8 @@
 <script setup lang="ts" generic="T">
 import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { ExpandedOptions, ExpandedState } from '@tanstack/vue-table'
+import { h } from 'vue'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { stableColumn, stickyRightColumn, tableColumnWidth } from '#admin/app/composables/useTable/columns'
 
 interface Pagination {
@@ -107,6 +125,11 @@ interface Props {
   mobileColumns?: string[]
   /** 移动端操作列宽度（px） */
   mobileActionsWidth?: number
+  /**
+   * 移动端行操作：传入后移动端隐藏「操作」列，点击行弹出底部操作面板。
+   * 返回空数组时该行不可点击。
+   */
+  mobileRowActions?: (row: T) => MobileRowAction[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -209,20 +232,69 @@ const normalizedColumns = computed<TableColumn<T>[]>(() => {
  * 实际渲染的列：
  * 移动端精简模式下只保留 mobileColumns 指定的列 + 操作列，
  * 并去掉操作列的 sticky（窄屏下吸附会直接盖住内容列）。
+ * 传入 mobileRowActions 时移动端隐藏操作列，改由点击行弹出操作面板。
  */
 const renderedColumns = computed<TableColumn<T>[]>(() => {
   if (!compactMode.value) {
     return normalizedColumns.value
   }
 
+  const hideActions = Boolean(props.mobileRowActions)
   const allow = new Set(props.mobileColumns ?? [])
   // 未指定 mobileColumns 时保留全部列，交给横向滚动查看
   const filtered = normalizedColumns.value
     .filter(column => columnId(column) === 'actions' || allow.size === 0 || allow.has(columnId(column)))
+    .map((column) => {
+      if (!hideActions || columnId(column) !== 'actions') {
+        return column
+      }
+
+      // 移动端操作列：只保留一个「更多」入口，点击打开操作面板（右侧吸附，始终可见）
+      const width = 56
+      return {
+        ...column,
+        header: () => $ts('common.operate'),
+        size: width,
+        minSize: width,
+        meta: {
+          style: {
+            th: { width: `${width}px`, minWidth: `${width}px` },
+            td: { width: `${width}px`, minWidth: `${width}px` }
+          }
+        },
+        cell: ({ row }: any) => {
+          const actions = props.mobileRowActions?.(row.original as T) ?? []
+          if (!actions.length) {
+            return null
+          }
+
+          const items = actions.map(action => ({
+            label: action.label,
+            icon: action.icon,
+            color: action.color,
+            disabled: action.disabled,
+            onSelect: () => handleMobileAction(action)
+          }))
+
+          return h(resolveComponent('UDropdownMenu'), {
+            items,
+            content: { align: 'end' }
+          }, {
+            default: () => h(resolveComponent('UButton'), {
+              icon: 'i-lucide-ellipsis',
+              color: 'primary',
+              variant: 'outline',
+              size: 'xs',
+              square: true,
+              'aria-label': $ts('common.operate')
+            })
+          })
+        }
+      } as TableColumn<T>
+    })
 
   const hasActions = filtered.some(column => columnId(column) === 'actions')
   const dataCount = filtered.length - (hasActions ? 1 : 0)
-  const actionsWidth = props.mobileActionsWidth
 
   const withMobileWidth = (column: TableColumn<T>, width: number): TableColumn<T> => {
     // 统一宽度，并清掉桌面端的 sticky 样式
@@ -239,21 +311,19 @@ const renderedColumns = computed<TableColumn<T>[]>(() => {
     } as TableColumn<T>
   }
 
-  // 全列模式：保留页面定义的列宽，只把操作列收窄并取消吸附
+  // 全列模式：保留页面定义的列宽；操作列已在上面替换为「更多」入口
   if (allow.size === 0) {
-    return filtered.map(column =>
-      columnId(column) === 'actions' ? withMobileWidth(column, actionsWidth) : column
-    )
+    return filtered
   }
 
   // 精简模式：容器内边距 px-4，剩余宽度均分给数据列
   const available = Math.max((containerWidth.value || 390) - 32, 240)
   const dataWidth = dataCount > 0
-    ? Math.max(88, Math.floor((available - (hasActions ? actionsWidth : 0)) / dataCount))
+    ? Math.max(88, Math.floor((available - 56) / dataCount))
     : 0
 
   return filtered.map(column =>
-    withMobileWidth(column, columnId(column) === 'actions' ? actionsWidth : dataWidth)
+    columnId(column) === 'actions' ? column : withMobileWidth(column, dataWidth)
   )
 })
 
@@ -274,6 +344,32 @@ const minTableWidth = computed(() => {
 
   return Math.max(total, 100)
 })
+
+/* ---------------- 移动端行操作 ---------------- */
+
+const confirmAction = ref<MobileRowAction | null>(null)
+const confirmOpen = ref(false)
+
+const handleMobileAction = (action: MobileRowAction) => {
+  if (action.disabled) {
+    return
+  }
+
+  if (action.confirm) {
+    confirmAction.value = action
+    confirmOpen.value = true
+    return
+  }
+
+  action.onSelect()
+}
+
+const confirmActionRun = () => {
+  const action = confirmAction.value
+  confirmOpen.value = false
+  confirmAction.value = null
+  action?.onSelect()
+}
 
 function mergeColumn(
   column: TableColumn<T>,

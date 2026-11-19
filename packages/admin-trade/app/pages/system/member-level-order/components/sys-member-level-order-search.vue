@@ -27,7 +27,6 @@ const $trpc = useTradeTrpc()
 
 const schema = memberLevelOrderQuerySchema
 const form = useTemplateRef('form')
-const active = ref(undefined)
 const state = defineModel<MemberLevelOrderQuery>('model', { required: true })
 
 /** 状态 / 支付方式下拉：取值来自共享契约的枚举，文案复用支付状态常量 */
@@ -65,24 +64,13 @@ const loadLevels = async () => {
 const createdFrom = ref<string>('')
 const createdTo = ref<string>('')
 
-const items = computed(() => [
-  {
-    label: $ts('common.search'),
-    icon: ''
-  }
-])
-
 const submit = async () => {
-  const isValid = await form.value?.validate({})
-
-  if (!isValid) {
-    return
-  }
-
   state.value.createdFrom = createdFrom.value ? `${createdFrom.value} 00:00:00` : undefined
   state.value.createdTo = createdTo.value ? `${createdTo.value} 23:59:59` : undefined
   emit('search', state.value)
 }
+
+const beforeSubmit = async () => Boolean(await form.value?.validate({}))
 
 const reset = () => {
   form.value?.clear()
@@ -97,49 +85,36 @@ onMounted(() => {
 </script>
 
 <template>
-  <UCard :ui="{ body: ' p-0 sm:p-0 pl-2  sm:pl-2' }" class="w-full cursor-pointer">
-    <UAccordion v-model="active" :items="items">
-      <template #leading="{ open }">
-        <UIcon :name="open ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="cursor-pointer" />
-      </template>
-      <template #trailing>
-        &nbsp;
-      </template>
-      <template #content>
-        <UForm ref="form" :validate-on="['input']" :schema="schema" :state="state" class="p-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-6">
-            <UFormField name="outTradeNo" :label="$ts('module.system.memberLevelOrder.outTradeNo')" orientation="horizontal" :ui="formItemUi">
-              <UBaseInput v-model="state.outTradeNo" :placeholder="$ts('module.system.memberLevelOrder.form.outTradeNo')" trailing="clear" class="w-full" />
-            </UFormField>
-            <UFormField name="userId" :label="$ts('module.system.memberLevelOrder.member')" orientation="horizontal" :ui="formItemUi">
-              <MemberUserSelect v-model="state.userId" source="sysMember" scope="member" :placeholder="$ts('module.system.memberLevelOrder.form.member')" />
-            </UFormField>
-            <UFormField name="levelId" :label="$ts('module.system.memberLevelOrder.levelName')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.levelId" :placeholder="$ts('module.system.memberLevelOrder.form.levelName')" class="w-full" :items="levelItems" clearable />
-            </UFormField>
-            <UFormField name="status" :label="$ts('module.system.memberLevelOrder.statusLabel')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.memberLevelOrder.form.status')" class="w-full" :items="statusItems" clearable />
-            </UFormField>
-            <UFormField name="payMode" :label="$ts('module.system.memberLevelOrder.payModeLabel')" orientation="horizontal" :ui="formItemUi">
-              <USelect v-model.nullable="state.payMode" :placeholder="$ts('module.system.memberLevelOrder.form.payMode')" class="w-full" :items="payModeItems" clearable />
-            </UFormField>
-            <UFormField name="createdFrom" :label="$ts('module.system.memberLevelOrder.createdFrom')" orientation="horizontal" :ui="formItemUi">
-              <UInput v-model="createdFrom" type="date" class="w-full" />
-            </UFormField>
-            <UFormField name="createdTo" :label="$ts('module.system.memberLevelOrder.createdTo')" orientation="horizontal" :ui="formItemUi">
-              <UInput v-model="createdTo" type="date" class="w-full" />
-            </UFormField>
-            <div class="col-span-full flex flex-col pr-8">
-              <div class="gap-2 flex justify-end">
-                <UButton icon="tabler:reload" @click="reset" variant="outline" color="neutral">{{ $ts('common.reset') }}
-                </UButton>
-                <UButton icon="tabler:search" @click="submit" variant="outline">{{ $ts('common.search') }}</UButton>
-              </div>
-              <div class="min-h-[20px]"></div>
-            </div>
-          </div>
-        </UForm>
-      </template>
-    </UAccordion>
-  </UCard>
+  <FilterPanel
+    storage-key="sys-member-level-order-search-fab-pos"
+    :before-submit="beforeSubmit"
+    @search="submit"
+    @reset="reset"
+  >
+    <UForm ref="form" :validate-on="['input']" :schema="schema" :state="state" class="px-2 pb-1">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-6">
+        <UFormField name="outTradeNo" :label="$ts('module.system.memberLevelOrder.outTradeNo')" orientation="horizontal" :ui="formItemUi">
+          <UBaseInput v-model="state.outTradeNo" :placeholder="$ts('module.system.memberLevelOrder.form.outTradeNo')" trailing="clear" class="w-full" />
+        </UFormField>
+        <UFormField name="userId" :label="$ts('module.system.memberLevelOrder.member')" orientation="horizontal" :ui="formItemUi">
+          <MemberUserSelect v-model="state.userId" source="sysMember" scope="member" :placeholder="$ts('module.system.memberLevelOrder.form.member')" />
+        </UFormField>
+        <UFormField name="levelId" :label="$ts('module.system.memberLevelOrder.levelName')" orientation="horizontal" :ui="formItemUi">
+          <USelect v-model.nullable="state.levelId" :placeholder="$ts('module.system.memberLevelOrder.form.levelName')" class="w-full" :items="levelItems" clearable />
+        </UFormField>
+        <UFormField name="status" :label="$ts('module.system.memberLevelOrder.statusLabel')" orientation="horizontal" :ui="formItemUi">
+          <USelect v-model.nullable="state.status" :placeholder="$ts('module.system.memberLevelOrder.form.status')" class="w-full" :items="statusItems" clearable />
+        </UFormField>
+        <UFormField name="payMode" :label="$ts('module.system.memberLevelOrder.payModeLabel')" orientation="horizontal" :ui="formItemUi">
+          <USelect v-model.nullable="state.payMode" :placeholder="$ts('module.system.memberLevelOrder.form.payMode')" class="w-full" :items="payModeItems" clearable />
+        </UFormField>
+        <UFormField name="createdFrom" :label="$ts('module.system.memberLevelOrder.createdFrom')" orientation="horizontal" :ui="formItemUi">
+          <UInput v-model="createdFrom" type="date" class="w-full" />
+        </UFormField>
+        <UFormField name="createdTo" :label="$ts('module.system.memberLevelOrder.createdTo')" orientation="horizontal" :ui="formItemUi">
+          <UInput v-model="createdTo" type="date" class="w-full" />
+        </UFormField>
+      </div>
+    </UForm>
+  </FilterPanel>
 </template>

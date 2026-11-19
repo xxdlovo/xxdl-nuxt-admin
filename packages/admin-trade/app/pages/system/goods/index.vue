@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="goodsPermissions.codes.add"
             :delete-permission="goodsPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.goods.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.goods.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -59,6 +62,7 @@ import type { SysGoodsQueryDTO, SysGoodsRespDTO } from '#trade/shared/system/goo
 import { goodsStatusConfig, goodsTypeRecord } from '#admin/shared/constants/business'
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysGoodsSearch from './components/sys-goods-search.vue'
 import SysGoodsOperate from './components/sys-goods-operate.vue'
@@ -235,6 +239,32 @@ const columns = computed<TableColumn<SysGoodsRespDTO>[]>(() => {
     ...(goodsPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysGoodsRespDTO): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (goodsPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (goodsPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

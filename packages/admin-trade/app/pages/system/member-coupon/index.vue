@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="couponPermissions.codes.add"
             :delete-permission="couponPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberCoupon.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberCoupon.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -100,6 +103,7 @@ import type { SysMemberCouponQueryDTO, SysMemberCouponRespDTO } from '#trade/sha
 import { memberCouponSceneRecord, memberCouponTypeRecord } from '#admin/shared/constants/business'
 import type { BadgeConfig } from '#admin/shared/types/nuxtui'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import CopyValueBadge from '#admin/app/components/base/CopyValueBadge.vue'
 import SysMemberCouponSearch from './components/sys-member-coupon-search.vue'
@@ -369,6 +373,47 @@ const columns = computed<TableColumn<SysMemberCouponRespDTO>[]>(() => {
     actionColumn
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysMemberCouponRespDTO): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('module.system.memberCoupon.uses'),
+      icon: 'i-lucide-list',
+      color: 'primary',
+      onSelect: () => handleUses(row)
+    }
+  ]
+
+  if (couponPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (canVoid.value && row.status !== 2) {
+    items.push({
+      label: $ts('module.system.memberCoupon.void'),
+      icon: 'i-lucide-ban',
+      color: 'warning',
+      onSelect: () => handleVoidOpen(row)
+    })
+  }
+
+  if (couponPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

@@ -8,6 +8,7 @@ import SysUserOperate from './components/sys-user-operate.vue'
 import DeptSideTree, { type DeptTreeItem } from '../dept/components/DeptSideTree.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import {
   downloadExcel,
@@ -51,9 +52,6 @@ const resetPasswordState = ref<SysUserResetPasswordDTO>({
 })
 
 const searchParams = ref<SysUserQueryDTO>({})
-
-/** 移动端：操作列收成一个「更多」按钮，点击悬浮展示图形化操作 */
-const isMobileView = useIsMobile()
 
 const deleteConfirmVisible = ref(false)
 const pendingDeleteRow = ref<SysUserTableRow | null>(null)
@@ -116,25 +114,6 @@ const columns = computed<TableColumn<SysUserTableRow>[]>(() => {
     cell: ({ row }) => {
       const UButton = resolveComponent('UButton')
       const Popconfirm = resolveComponent('Popconfirm')
-
-      // 移动端：图形化操作的悬浮菜单
-      if (isMobileView.value) {
-        const UDropdownMenu = resolveComponent('UDropdownMenu')
-
-        return h(UDropdownMenu, {
-          items: buildMobileActions(row.original),
-          content: { align: 'end' }
-        }, {
-          default: () => h(UButton, {
-            icon: 'i-lucide-ellipsis',
-            color: 'primary',
-            variant: 'outline',
-            size: 'xs',
-            square: true,
-            'aria-label': $ts('common.operate')
-          })
-        })
-      }
 
       const actions = []
 
@@ -278,14 +257,15 @@ const handleDelete = async (id: string) => {
   await onDeleted()
 }
 
-/** 移动端「更多」菜单项：图形化操作 */
-function buildMobileActions(row: SysUserTableRow) {
-  const items: Array<Record<string, unknown>> = []
+/** 移动端行操作：点击行后弹出底部操作面板 */
+const rowActions = (row: SysUserTableRow): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
 
   if (userPermissions.canEdit.value) {
     items.push({
       label: $ts('common.edit'),
       icon: 'i-lucide-pencil',
+      color: 'primary',
       onSelect: () => handleEdit(row.id as string)
     })
   }
@@ -294,6 +274,7 @@ function buildMobileActions(row: SysUserTableRow) {
     items.push({
       label: $ts('module.system.user.unlock'),
       icon: 'i-lucide-lock-open',
+      color: 'warning',
       onSelect: () => unlockUser(row)
     })
   }
@@ -457,6 +438,7 @@ onMounted(async () => {
               :page-size-options="pageSizeOptions"
               compact-mobile
               :mobile-actions-width="64"
+              :mobile-row-actions="rowActions"
             >
               <template #header>
                 <TableHeaderOperation

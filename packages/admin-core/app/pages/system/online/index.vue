@@ -1,28 +1,20 @@
 <template>
   <div class="h-full flex flex-col gap-3 p-3">
     <!-- 搜索 -->
-    <div class="flex flex-wrap items-center gap-2">
-      <UInput
-          v-model="filters.username"
-          :placeholder="$ts('module.system.online.search.userName')"
-          icon="i-lucide-user"
-          class="w-56"
-          @keyup.enter="handleSearch"
-      />
-      <UInput
-          v-model="filters.ip"
-          :placeholder="$ts('module.system.online.search.ip')"
-          icon="i-lucide-network"
-          class="w-56"
-          @keyup.enter="handleSearch"
-      />
-      <UButton color="primary" icon="i-lucide-search" @click="handleSearch">
-        {{ $ts('common.search') }}
-      </UButton>
-      <UButton color="neutral" variant="outline" icon="i-lucide-rotate-ccw" @click="handleReset">
-        {{ $ts('common.reset') }}
-      </UButton>
-    </div>
+    <FilterPanel
+      storage-key="sys-online-search-fab-pos"
+      @search="handleSearch"
+      @reset="handleReset"
+    >
+      <div class="grid grid-cols-1 gap-4 px-2 pb-1 sm:grid-cols-2">
+        <UFormField :label="$ts('module.system.online.search.userName')" orientation="horizontal" :ui="onlineFormItemUi">
+          <UInput v-model="filters.username" :placeholder="$ts('module.system.online.search.userName')" icon="i-lucide-user" class="w-full" @keyup.enter="handleSearch" />
+        </UFormField>
+        <UFormField :label="$ts('module.system.online.search.ip')" orientation="horizontal" :ui="onlineFormItemUi">
+          <UInput v-model="filters.ip" :placeholder="$ts('module.system.online.search.ip')" icon="i-lucide-network" class="w-full" @keyup.enter="handleSearch" />
+        </UFormField>
+      </div>
+    </FilterPanel>
 
     <UCard class="flex min-h-0 flex-1 flex-col overflow-hidden" :ui="{ body: 'flex h-full flex-col p-0 sm:p-0' }">
       <TableWithPagination
@@ -32,6 +24,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -39,11 +33,12 @@
               :table-ref="tableRef?.tableRef"
               :loading="loading"
               :selected-count="checkedRowKeys.length"
+              compact-mobile
               class="border-b border-gray-200 px-4 py-2 dark:border-gray-800"
               @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.online.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.online.title') }}</span>
             </template>
 
             <UButton
@@ -52,9 +47,11 @@
                 variant="outline"
                 icon="i-lucide-log-out"
                 :disabled="checkedRowKeys.length === 0"
+                :aria-label="$ts('module.system.online.batchForceLogout')"
+                :title="$ts('module.system.online.batchForceLogout')"
                 @click="batchConfirmOpen = true"
             >
-              {{ $ts('module.system.online.batchForceLogout') }}
+              <span class="hidden md:inline">{{ $ts('module.system.online.batchForceLogout') }}</span>
             </UButton>
           </TableHeaderOperation>
         </template>
@@ -90,6 +87,7 @@ import { h } from 'vue'
 import type { SysOnlineSessionDto } from '#admin/shared/system/online'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { usePaginatedTable, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { useToastSuccess } from '#admin/app/utils/toast'
 
 definePageMeta({
@@ -104,6 +102,11 @@ const { hasPermission } = useRbacProfile()
 
 const tableRef = useTemplateRef('table')
 const canForceLogout = computed(() => hasPermission('system:online:forceLogout'))
+const onlineFormItemUi = {
+  root: 'flex items-center',
+  label: 'w-24 whitespace-nowrap text-right pr-2 flex-shrink-0',
+  container: 'flex-1'
+}
 const filters = reactive({
   username: '',
   ip: ''
@@ -184,8 +187,22 @@ const handleBatchForceLogout = async () => {
   }
 }
 
-const columns = computed<TableColumn<SysOnlineSessionDto>[]>(() => {
-  const actionColumn: TableColumn<SysOnlineSessionDto> = {
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysOnlineSessionDto): MobileRowAction[] => {
+  if (!canForceLogout.value) {
+    return []
+  }
+
+  return [{
+    label: $ts('module.system.online.forceLogout'),
+    icon: 'i-lucide-log-out',
+    color: 'error',
+    confirm: $ts('module.system.online.kickConfirmUser', { user: row.username || '-' }),
+    onSelect: () => forceLogout(row)
+  }]
+}
+
+const columns = computed<TableColumn<SysOnlineSessionDto>[]>(() => {  const actionColumn: TableColumn<SysOnlineSessionDto> = {
     id: 'actions',
     header: () => $ts('common.operate'),
     cell: ({ row }) => {

@@ -9,33 +9,46 @@
     />
 
     <UCard class="flex min-h-0 flex-1 flex-col overflow-hidden" :ui="{ body: 'flex h-full flex-col p-0 sm:p-0' }">
-      <div class="flex flex-wrap items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
-        <div class="flex rounded-md border border-gray-200 p-1 dark:border-gray-700">
-          <UButton
-            v-for="item in bucketItems"
-            :key="item.value"
-            size="sm"
-            :variant="bucket === item.value ? 'solid' : 'ghost'"
-            :color="bucket === item.value ? 'primary' : 'neutral'"
-            @click="switchBucket(item.value)"
-          >
-            {{ item.label }}
-          </UButton>
-        </div>
-        <UInput
-          v-if="bucket === 'assets'"
-          v-model="resourcePath"
-          class="w-64"
-          :placeholder="$ts('module.system.storage.resourcePathPlaceholder')"
-          @keyup.enter="searchByPrefix"
-        />
-        <UInput v-model="prefix" class="w-56" :placeholder="$ts('module.system.storage.prefixPlaceholder')" @keyup.enter="searchByPrefix" />
-        <UButton color="neutral" variant="outline" icon="i-lucide-refresh-cw" :loading="loading" @click="refresh">
-          {{ $ts('common.refresh') }}
-        </UButton>
+      <div class="border-b border-gray-200 px-2 py-2 dark:border-gray-800">
+        <FilterPanel
+          storage-key="sys-storage-search-fab-pos"
+          @search="searchByPrefix"
+          @reset="handleResetFilters"
+        >
+          <div class="flex flex-col gap-3 px-2 pb-1 sm:flex-row sm:items-center">
+            <div class="flex rounded-md border border-gray-200 p-1 dark:border-gray-700">
+              <UButton
+                v-for="item in bucketItems"
+                :key="item.value"
+                size="sm"
+                :variant="bucket === item.value ? 'solid' : 'ghost'"
+                :color="bucket === item.value ? 'primary' : 'neutral'"
+                @click="switchBucket(item.value)"
+              >
+                {{ item.label }}
+              </UButton>
+            </div>
+            <UInput
+              v-if="bucket === 'assets'"
+              v-model="resourcePath"
+              class="w-full sm:w-64"
+              :placeholder="$ts('module.system.storage.resourcePathPlaceholder')"
+              @keyup.enter="searchByPrefix"
+            />
+            <UInput v-model="prefix" class="w-full sm:w-56" :placeholder="$ts('module.system.storage.prefixPlaceholder')" @keyup.enter="searchByPrefix" />
+          </div>
+        </FilterPanel>
       </div>
 
-      <TableWithPagination :data="data" :columns="columns" :loading="loading" :pagination="pagination" :page-size-options="pageSizeOptions" />
+      <TableWithPagination
+        :data="data"
+        :columns="columns"
+        :loading="loading"
+        :pagination="pagination"
+        :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
+      />
     </UCard>
 
     <UModal v-model:open="detailVisible" :title="$ts('module.system.storage.detailTitle')" :ui="{ content: 'max-w-[760px]' }">
@@ -64,6 +77,7 @@ import { h } from 'vue'
 import type { SysStorageDetail, SysStorageEntry, StorageBucket } from '#admin/shared/system/storage'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { usePaginatedTable } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 
 definePageMeta({ layout: 'system', title: '存储管理', icon: 'i-lucide-database' })
 
@@ -124,12 +138,42 @@ const columns = computed<TableColumn<SysStorageEntry>[]>(() => [
   } }
 ])
 
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysStorageEntry): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => showDetail(row)
+    }
+  ]
+
+  if (canDeleteMemory.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => removeMemory(row)
+    })
+  }
+
+  return items
+}
+
 const switchBucket = async (value: StorageBucket) => {
   if (bucket.value === value) return
   bucket.value = value
   await getDataByPage(1)
 }
 const searchByPrefix = async () => getDataByPage(1)
+
+const handleResetFilters = async () => {
+  prefix.value = ''
+  resourcePath.value = ''
+  await getDataByPage(1)
+}
 
 onMounted(() => search())
 </script>

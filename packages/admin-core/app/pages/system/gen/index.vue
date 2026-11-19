@@ -1,23 +1,19 @@
 <template>
   <div class="flex h-full flex-col gap-3 p-3">
-    <div class="flex flex-wrap items-center gap-2">
-      <UInput
-          v-model="filters.tableName"
-          :placeholder="$ts('module.system.gen.searchTableName')"
-          icon="i-lucide-table"
-          class="w-56"
-          @keyup.enter="handleSearch"
-      />
-      <UInput
-          v-model="filters.tableComment"
-          :placeholder="$ts('module.system.gen.searchTableComment')"
-          icon="i-lucide-message-square"
-          class="w-56"
-          @keyup.enter="handleSearch"
-      />
-      <UButton color="primary" icon="i-lucide-search" @click="handleSearch">{{ $ts('common.search') }}</UButton>
-      <UButton color="neutral" variant="outline" icon="i-lucide-rotate-ccw" @click="handleReset">{{ $ts('common.reset') }}</UButton>
-    </div>
+    <FilterPanel
+      storage-key="sys-gen-search-fab-pos"
+      @search="handleSearch"
+      @reset="handleReset"
+    >
+      <div class="grid grid-cols-1 gap-4 px-2 pb-1 sm:grid-cols-2">
+        <UFormField :label="$ts('module.system.gen.searchTableName')" orientation="horizontal" :ui="genFormItemUi">
+          <UInput v-model="filters.tableName" :placeholder="$ts('module.system.gen.searchTableName')" icon="i-lucide-table" class="w-full" @keyup.enter="handleSearch" />
+        </UFormField>
+        <UFormField :label="$ts('module.system.gen.searchTableComment')" orientation="horizontal" :ui="genFormItemUi">
+          <UInput v-model="filters.tableComment" :placeholder="$ts('module.system.gen.searchTableComment')" icon="i-lucide-message-square" class="w-full" @keyup.enter="handleSearch" />
+        </UFormField>
+      </div>
+    </FilterPanel>
 
     <UCard class="flex min-h-0 flex-1 flex-col overflow-hidden" :ui="{ body: 'flex h-full flex-col p-0 sm:p-0' }">
       <TableWithPagination
@@ -27,17 +23,20 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
               v-if="tableRef?.tableRef"
               :table-ref="tableRef?.tableRef"
               :loading="loading"
+              compact-mobile
               class="border-b border-gray-200 px-4 py-2 dark:border-gray-800"
               @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.gen.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.gen.title') }}</span>
             </template>
             <template #default>
               <UButton
@@ -45,17 +44,21 @@
                   color="primary"
                   variant="outline"
                   icon="i-lucide-database"
+                  :aria-label="$ts('module.system.gen.importTables')"
+                  :title="$ts('module.system.gen.importTables')"
                   @click="openImport"
               >
-                {{ $ts('module.system.gen.importTables') }}
+                <span class="hidden md:inline">{{ $ts('module.system.gen.importTables') }}</span>
               </UButton>
               <UButton
                   color="neutral"
                   variant="outline"
                   icon="i-lucide-bot"
+                  :aria-label="$ts('module.system.gen.ai.access')"
+                  :title="$ts('module.system.gen.ai.access')"
                   @click="aiVisible = true"
               >
-                {{ $ts('module.system.gen.ai.access') }}
+                <span class="hidden md:inline">{{ $ts('module.system.gen.ai.access') }}</span>
               </UButton>
             </template>
           </TableHeaderOperation>
@@ -262,6 +265,7 @@ import { h } from 'vue'
 import type { GenDbTable, GenFile, GenTableConfig, GenTableDto } from '#admin/shared/system/gen'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { usePaginatedTable } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import { copyToClipboard } from '#admin/app/utils/clipboard'
 import { buildGenFileTree, downloadGenZip } from '#admin/app/utils/gen'
@@ -280,6 +284,11 @@ const runtimeConfig = useRuntimeConfig()
 const codegenAiEnabled = computed(() => runtimeConfig.public.codegenAiEnabled === true)
 const tableRef = useTemplateRef('table')
 const filters = reactive({ tableName: '', tableComment: '' })
+const genFormItemUi = {
+  root: 'flex items-center',
+  label: 'w-24 whitespace-nowrap text-right pr-2 flex-shrink-0',
+  container: 'flex-1'
+}
 
 const aiVisible = ref(false)
 const aiEndpoints = `GET  /api/system/gen/ai/guide
@@ -553,6 +562,55 @@ const handleDelete = async (row: GenTableDto) => {
   if (!row.id) return
   await $trpc.sysGen.remove.mutate(row.id)
   await refresh()
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: GenTableDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (hasPermission('system:gen:edit')) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-settings-2',
+      color: 'primary',
+      onSelect: () => openEdit(row)
+    })
+  }
+
+  if (hasPermission('system:gen:preview')) {
+    items.push({
+      label: $ts('module.system.gen.preview'),
+      icon: 'i-lucide-eye',
+      color: 'info',
+      onSelect: () => openPreview(row)
+    })
+  }
+
+  items.push({
+    label: $ts('module.system.gen.ai.button'),
+    icon: 'i-lucide-sparkles',
+    onSelect: () => handleAiCopy(row)
+  })
+
+  if (hasPermission('system:gen:download')) {
+    items.push({
+      label: $ts('module.system.gen.download'),
+      icon: 'i-lucide-download',
+      onSelect: () => handleDownload(row)
+    })
+  }
+
+  if (hasPermission('system:gen:del')) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row)
+    })
+  }
+
+  return items
 }
 
 const columns = computed<TableColumn<GenTableDto>[]>(() => {

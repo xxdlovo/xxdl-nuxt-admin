@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="channelPermissions.codes.add"
             :delete-permission="channelPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.payChannel.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.payChannel.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -63,6 +66,7 @@ import {
   payChannelVerifyConfig
 } from '#admin/shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysPayChannelSearch from './components/sys-pay-channel-search.vue'
 import SysPayChannelOperate from './components/sys-pay-channel-operate.vue'
@@ -236,6 +240,47 @@ const columns = computed<TableColumn<SysPayChannelDto>[]>(() => {
     ...(channelPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysPayChannelDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (channelPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  items.push({
+    label: $ts('module.system.payChannel.testConfig'),
+    icon: 'i-lucide-flask-conical',
+    onSelect: () => handleVerify(row)
+  })
+
+  if (!row.isDefault) {
+    items.push({
+      label: $ts('module.system.payChannel.setDefault'),
+      icon: 'i-lucide-star',
+      color: 'success',
+      onSelect: () => handleSetDefault(row)
+    })
+  }
+
+  if (channelPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

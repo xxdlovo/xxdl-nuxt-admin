@@ -14,6 +14,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -27,10 +29,11 @@
               :selectedCount="checkedRowKeys.length"
               :add-permission="rolePermissions.codes.add"
               :delete-permission="rolePermissions.codes.del"
+              compact-mobile
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
-            <span>{{ $ts('module.system.role.title') }}</span>
+            <span class="hidden md:inline">{{ $ts('module.system.role.title') }}</span>
           </template>
           <template #suffix>
             <UButton
@@ -38,9 +41,11 @@
                 color="neutral"
                 variant="outline"
                 icon="i-lucide-download"
+                :aria-label="$ts('module.system.excel.export')"
+                :title="$ts('module.system.excel.export')"
                 @click="handleExport"
             >
-              {{ $ts('module.system.excel.export') }}
+              <span class="hidden md:inline">{{ $ts('module.system.excel.export') }}</span>
             </UButton>
           </template>
         </TableHeaderOperation>
@@ -88,6 +93,7 @@ import RoleUserAssignModal from './components/RoleUserAssignModal.vue'
 
 import { businessDictCode } from "#admin/shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
@@ -246,6 +252,47 @@ const openDataScope = (role: SysRoleDto) => {
 const openAssignUsers = (role: SysRoleDto) => {
   assignRole.value = JSON.parse(JSON.stringify(role))
   assignVisible.value = true
+}
+
+/** 移动端行操作：点击行弹出底部操作面板 */
+const rowActions = (row: SysRoleDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (rolePermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+
+    items.push({
+      label: $ts('module.system.role.dataScope'),
+      icon: 'i-lucide-database',
+      color: 'info',
+      onSelect: () => openDataScope(row)
+    })
+
+    if (hasPermission('system:role:assign')) {
+      items.push({
+        label: $ts('module.system.role.assignUsers'),
+        icon: 'i-lucide-users',
+        onSelect: () => openAssignUsers(row)
+      })
+    }
+  }
+
+  if (rolePermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const handleExport = async () => {

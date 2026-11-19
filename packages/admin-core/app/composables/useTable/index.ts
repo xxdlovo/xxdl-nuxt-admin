@@ -15,7 +15,8 @@ export type {
   UsePaginatedTableOptions,
   UseTableOperateOptions,
   TableOperateReturn,
-  PaginatedTableReturn
+  PaginatedTableReturn,
+  MobileRowAction
 } from './types'
 
 // hooks 导出

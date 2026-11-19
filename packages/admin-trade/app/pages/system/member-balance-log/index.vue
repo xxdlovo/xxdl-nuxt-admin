@@ -45,17 +45,20 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
             v-if="tableRef?.tableRef"
             :table-ref="tableRef.tableRef"
             :loading="loading"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberBalanceLog.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberBalanceLog.title') }}</span>
             </template>
             <!-- 流水是资金凭证：不提供新增/编辑/删除 -->
             <template #default>
@@ -67,9 +70,11 @@
                   color="neutral"
                   icon="i-lucide-scale"
                   :loading="reconciling"
+                  :aria-label="$ts('module.system.memberBalanceLog.reconcile')"
+                  :title="$ts('module.system.memberBalanceLog.reconcile')"
                   @click="handleReconcile"
                 >
-                  {{ $ts('module.system.memberBalanceLog.reconcile') }}
+                  <span class="hidden md:inline">{{ $ts('module.system.memberBalanceLog.reconcile') }}</span>
                 </UButton>
                 <UButton
                   v-if="canExport"
@@ -78,9 +83,11 @@
                   color="primary"
                   icon="i-lucide-download"
                   :loading="exporting"
+                  :aria-label="$ts('module.system.memberBalanceLog.export')"
+                  :title="$ts('module.system.memberBalanceLog.export')"
                   @click="handleExport"
                 >
-                  {{ $ts('module.system.memberBalanceLog.export') }}
+                  <span class="hidden md:inline">{{ $ts('module.system.memberBalanceLog.export') }}</span>
                 </UButton>
               </div>
             </template>
@@ -158,6 +165,7 @@ import { h } from 'vue'
 import type { SysMemberBalanceLogDto, SysMemberBalanceLogQueryDTO } from '#trade/shared/system/memberBalanceLog'
 import { memberAccountRecord, memberBizTypeRecord, memberDirectionRecord } from '#admin/shared/constants/business'
 import { usePaginatedTable } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 import { downloadTextFile } from '#admin/app/utils/download'
@@ -231,6 +239,16 @@ const loadSummary = async () => {
 
   pendingRechargeCount.value = summaryResult.pendingRechargeCount
 }
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysMemberBalanceLogDto): MobileRowAction[] => [
+  {
+    label: $ts('common.detail'),
+    icon: 'i-lucide-eye',
+    color: 'primary',
+    onSelect: () => handleDetail(row)
+  }
+]
 
 const handleDetail = (row: SysMemberBalanceLogDto) => {
   detailTarget.value = row

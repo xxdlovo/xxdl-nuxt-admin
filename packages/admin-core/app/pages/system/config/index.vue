@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -29,7 +31,7 @@
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.config.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.config.title') }}</span>
             </template>
           </TableHeaderOperation>
 
@@ -54,6 +56,7 @@ import type { SysConfigDto, SysConfigQueryDTO } from '#admin/shared/system/confi
 import { businessDictCode } from '#admin/shared/constants/business'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import SysConfigOperate from './components/sys-config-operate.vue'
 import SysConfigSearch from './components/sys-config-search.vue'
 
@@ -179,6 +182,32 @@ const columns = computed<TableColumn<SysConfigDto>[]>(() => {
     ...(configPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击行弹出底部操作面板 */
+const rowActions = (row: SysConfigDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (configPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (configPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

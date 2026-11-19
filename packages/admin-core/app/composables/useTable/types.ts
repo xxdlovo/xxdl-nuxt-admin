@@ -20,6 +20,20 @@ export type PaginationParams = ApiReq
 export type PaginatedData<T> = TrpcPageResp<T>
 
 /**
+ * 移动端行操作项
+ * 用于 TableWithPagination 的 mobileRowActions：移动端隐藏操作列，点击行弹出底部操作面板
+ */
+export interface MobileRowAction {
+  label: string
+  icon?: string
+  color?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'
+  disabled?: boolean
+  /** 有值时点击先弹出确认框（内容即确认文案），确认后再执行 */
+  confirm?: string
+  onSelect: () => void
+}
+
+/**
  * 表格操作类型
  */
 export type OperateType = 'add' | 'edit'

@@ -14,6 +14,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -27,10 +29,11 @@
               :selectedCount="checkedRowKeys.length"
               :add-permission="permissions.codes.add"
               :delete-permission="permissions.codes.del"
+              compact-mobile
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
-            <span>{{ $ts('module.system.oauthAccount.title') }}</span>
+            <span class="hidden md:inline">{{ $ts('module.system.oauthAccount.title') }}</span>
           </template>
         </TableHeaderOperation>
 
@@ -62,6 +65,7 @@ import SysOauthAccountSearch from './components/sys-oauth-account-search.vue'
 import SysOauthAccountOperate from './components/sys-oauth-account-operate.vue'
 
 import { usePaginatedTable, useTableOperate, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -104,6 +108,32 @@ const { selectionColumn } = useSelectionColumn<SysOauthAccountDto>({
 /**
  * 处理删除
  */
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysOauthAccountDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (permissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (permissions.canDel.value) {
+    items.push({
+      label: $ts('module.system.oauthAccount.unbind'),
+      icon: 'i-lucide-unlink',
+      color: 'error',
+      confirm: $ts('module.system.oauthAccount.unbindConfirm'),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
+
 const handleDelete = async (id: string) => {
   if (loading.value) return
   await $trpc.sysOauthAccount.remove.mutate(id)

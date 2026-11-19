@@ -12,17 +12,20 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
             v-if="tableRef?.tableRef"
             :table-ref="tableRef.tableRef"
             :loading="loading"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberFreeze.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberFreeze.title') }}</span>
             </template>
             <!-- 空默认插槽：冻结单由业务事务写入，管理端不提供新增/批量删除（同 pay-order 的处理方式） -->
             <template #default />
@@ -49,6 +52,7 @@ import type { SysMemberFreezeDto, SysMemberFreezeQueryDTO } from '#trade/shared/
 import { memberFreezeStatusConfig } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
 import { usePaginatedTable, useBadgeColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysMemberFreezeSearch from './components/sys-member-freeze-search.vue'
 import SysMemberFreezeRelease from './components/sys-member-freeze-release.vue'
@@ -101,6 +105,39 @@ const handleDelete = async (id: string) => {
   await $trpc.sysMemberFreeze.remove.mutate(id)
   useToastSuccess($ts('common.deleteSuccess'))
   await refresh()
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysMemberFreezeDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canRelease.value && row.status === FROZEN_STATUS) {
+    items.push({
+      label: $ts('module.system.memberFreeze.release'),
+      icon: 'i-lucide-lock-open',
+      color: 'warning',
+      onSelect: () => handleOpenRelease(row)
+    })
+  }
+
+  if (freezePermissions.canDel.value && row.status !== FROZEN_STATUS) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const columns = computed<TableColumn<SysMemberFreezeDto>[]>(() => {

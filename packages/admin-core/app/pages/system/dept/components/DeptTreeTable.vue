@@ -4,6 +4,7 @@ import type { TableColumn, TableRow } from '@nuxt/ui'
 import type { SysDeptDto } from '#admin/shared/system/department'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, useSelectionColumn, stableColumn, minWidthColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { displayOrDash } from '#admin/app/utils/common'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
@@ -220,6 +221,32 @@ const columns = computed<TableColumn<DeptTreeNode>[]>(() => [
 watch([() => props.items, visibleRows], () => {
   checkedRowKeys.value = checkedRowKeys.value.filter(id => visibleRows.value.some(row => row.id === id))
 }, { immediate: true })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: DeptTreeNode): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (props.canEdit) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => emit('edit', row)
+    })
+  }
+
+  if (props.canDel) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => emit('remove', row)
+    })
+  }
+
+  return items
+}
 </script>
 
 <template>
@@ -234,6 +261,8 @@ watch([() => props.items, visibleRows], () => {
     :get-sub-rows="getSubRows"
     :get-row-id="getRowId"
     :expanded-options="expandedOptions"
+    compact-mobile
+    :mobile-row-actions="rowActions"
     :ui="{ base: 'table-fixed w-full min-w-[1126px]', th: 'overflow-hidden whitespace-nowrap', td: 'empty:p-0 overflow-hidden' }"
   >
     <template #header>
@@ -245,13 +274,14 @@ watch([() => props.items, visibleRows], () => {
         :selected-count="checkedRowKeys.length"
         :add-permission="addPermission"
         :delete-permission="deletePermission"
+        compact-mobile
         class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
         @add="emit('add')"
         @delete="handleBatchDelete"
         @refresh="emit('refresh')"
       >
         <template #prefix>
-          <span>{{ $ts('module.system.department.title') }}</span>
+          <span class="hidden md:inline">{{ $ts('module.system.department.title') }}</span>
         </template>
       </TableHeaderOperation>
     </template>

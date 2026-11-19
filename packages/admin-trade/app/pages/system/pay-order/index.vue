@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -19,11 +21,12 @@
             :table-ref="tableRef.tableRef"
             :loading="loading"
             :add-permission="orderPermissions.codes.add"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.payOrder.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.payOrder.title') }}</span>
             </template>
             <!-- 空默认插槽：支付记录由支付链路写入，不展示新增/批量删除（同 sys-log 的处理方式） -->
             <template #default />
@@ -48,6 +51,7 @@ import { h } from 'vue'
 import type { SysPayOrderDto, SysPayOrderQueryDTO } from '#trade/shared/system/payOrder'
 import { payChannelCodeRecord, payOrderStatusConfig } from '#admin/shared/constants/business'
 import { usePaginatedTable, useBadgeColumn, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysPayOrderSearch from './components/sys-pay-order-search.vue'
 import SysPayOrderDetail from './components/sys-pay-order-detail.vue'
@@ -104,6 +108,47 @@ const handleClose = async (order: SysPayOrderDto) => {
   await $trpc.sysPayOrder.close.mutate(order.id)
   useToastSuccess($ts('module.system.payOrder.closeSuccess'))
   await refresh()
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysPayOrderDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canQuery.value) {
+    items.push({
+      label: $ts('module.system.payOrder.syncStatus'),
+      icon: 'i-lucide-refresh-cw',
+      onSelect: () => handleSync(row)
+    })
+  }
+
+  if (orderPermissions.canEdit.value && row.status === 'WP') {
+    items.push({
+      label: $ts('module.system.payOrder.close'),
+      icon: 'i-lucide-x-circle',
+      color: 'warning',
+      onSelect: () => handleClose(row)
+    })
+  }
+
+  if (orderPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const handleDelete = async (id: string) => {

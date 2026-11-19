@@ -12,6 +12,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -21,10 +23,11 @@
               :loading="loading"
               :add-permission="permissions.codes.add"
               :delete-permission="permissions.codes.del"
+              compact-mobile
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.loginLog.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.loginLog.title') }}</span>
             </template>
             <template #default>
               <UButton
@@ -32,9 +35,11 @@
                   color="neutral"
                   variant="outline"
                   icon="i-lucide-download"
+                  :aria-label="$ts('module.system.excel.export')"
+                  :title="$ts('module.system.excel.export')"
                   @click="handleExport"
               >
-                {{ $ts('module.system.excel.export') }}
+                <span class="hidden md:inline">{{ $ts('module.system.excel.export') }}</span>
               </UButton>
               <Popconfirm
                   v-if="permissions.canDel.value"
@@ -43,8 +48,8 @@
                   @confirm="handleClear"
               >
                 <template #trigger>
-                  <UButton color="error" variant="outline" icon="i-lucide-trash-2">
-                    {{ $ts('module.system.loginLog.clear') }}
+                  <UButton color="error" variant="outline" icon="i-lucide-trash-2" :aria-label="$ts('module.system.loginLog.clear')" :title="$ts('module.system.loginLog.clear')">
+                    <span class="hidden md:inline">{{ $ts('module.system.loginLog.clear') }}</span>
                   </UButton>
                 </template>
               </Popconfirm>
@@ -72,6 +77,7 @@ import SysLoginLogSearch from './components/sys-login-log-search.vue'
 import SysLoginLogDetail from './components/sys-login-log-detail.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import { downloadExcel } from '#admin/app/utils/excel'
 import { useToastSuccess } from '#admin/app/utils/toast'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
@@ -98,6 +104,29 @@ const {
   query: params => $trpc.sysLoginLog.page.query(params),
   pageSizeOptions: [10, 20, 50, 100]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysLoginLogDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (row.status === 2 && hasPermission('system:user:unlock')) {
+    items.push({
+      label: $ts('module.system.loginLog.unlock'),
+      icon: 'i-lucide-lock-open',
+      color: 'warning',
+      onSelect: () => handleUnlock(row)
+    })
+  }
+
+  return items
+}
 
 const handleDetail = (row: SysLoginLogDto) => {
   detailData.value = JSON.parse(JSON.stringify(row))

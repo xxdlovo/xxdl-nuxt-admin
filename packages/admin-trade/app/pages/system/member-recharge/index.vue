@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -24,13 +26,14 @@
             :delete-permission="rechargePermissions.codes.del"
             :add-label="$ts('module.system.memberRecharge.manualAdd')"
             add-icon="i-lucide-hand-coins"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.memberRecharge.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.memberRecharge.title') }}</span>
             </template>
           </TableHeaderOperation>
         </template>
@@ -57,6 +60,7 @@ import type { SysMemberRechargeDto, SysMemberRechargeQueryDTO } from '#trade/sha
 import { memberRechargeStatusConfig, payChannelCodeRecord } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
 import { usePaginatedTable, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysMemberRechargeSearch from './components/sys-member-recharge-search.vue'
 import SysMemberRechargeAdd from './components/sys-member-recharge-add.vue'
@@ -142,6 +146,39 @@ const handleBatchDelete = async () => {
   useToastSuccess($ts('common.deleteSuccess'))
   checkedRowKeys.value = []
   await refresh()
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysMemberRechargeDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canClose.value && row.status === CLOSABLE_STATUS) {
+    items.push({
+      label: $ts('module.system.memberRecharge.close'),
+      icon: 'i-lucide-x-circle',
+      color: 'warning',
+      onSelect: () => handleOpenClose(row)
+    })
+  }
+
+  if (rechargePermissions.canDel.value && row.status !== CREDITED_STATUS) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const columns = computed<TableColumn<SysMemberRechargeDto>[]>(() => {

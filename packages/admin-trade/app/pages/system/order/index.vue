@@ -32,6 +32,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -41,11 +43,12 @@
             :disabled-delete="checkedRowKeys.length === 0 || loading"
             :batch-delete-loading="batchDeleting"
             :selected-count="checkedRowKeys.length"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.order.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.order.title') }}</span>
             </template>
             <!-- 默认插槽只保留批量删除（显式授权 + 有选中才显示）：订单由会员下单产生，不提供新增 -->
             <template #default>
@@ -56,9 +59,11 @@
                 color="error"
                 icon="i-lucide-trash-2"
                 :loading="batchDeleting"
+                :aria-label="$ts('common.batchDelete')"
+                :title="$ts('common.batchDelete')"
                 @click="batchDeleteVisible = true"
               >
-                {{ $ts('common.batchDelete') }}
+                <span class="hidden md:inline">{{ $ts('common.batchDelete') }}</span>
               </UButton>
             </template>
           </TableHeaderOperation>
@@ -116,6 +121,7 @@ import {
 import { customPermissionCode } from '#admin/shared/auth'
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastError, useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 import SysOrderSearch from './components/sys-order-search.vue'
@@ -319,6 +325,67 @@ const handleBatchDelete = async () => {
   } finally {
     batchDeleting.value = false
   }
+}
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysOrderRespDTO): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('common.detail'),
+      icon: 'i-lucide-eye',
+      color: 'primary',
+      onSelect: () => handleDetail(row)
+    }
+  ]
+
+  if (canConfirm.value && row.status === 'WP' && row.payMode === 'balance') {
+    items.push({
+      label: $ts('module.system.order.confirm'),
+      icon: 'i-lucide-check-circle',
+      color: 'success',
+      confirm: $ts('module.system.order.confirmConfirm'),
+      onSelect: () => handleConfirm(row)
+    })
+  }
+
+  if (canSync.value && row.status === 'WP' && row.payMode === 'online') {
+    items.push({
+      label: $ts('module.system.order.viewPayCode'),
+      icon: 'i-lucide-qr-code',
+      color: 'info',
+      onSelect: () => handleSync(row)
+    })
+  }
+
+  if (canFulfill.value && row.status === 'OD' && row.fulfillStatus === 'pending') {
+    items.push({
+      label: $ts('module.system.order.fulfill'),
+      icon: 'i-lucide-package-check',
+      onSelect: () => handleOpenFulfill(row)
+    })
+  }
+
+  if (canClose.value && row.status === 'WP') {
+    items.push({
+      label: $ts('module.system.order.close'),
+      icon: 'i-lucide-x-circle',
+      color: 'warning',
+      confirm: $ts('module.system.order.closeConfirm'),
+      onSelect: () => handleOpenClose(row)
+    })
+  }
+
+  if (canDel.value && (row.status === 'CL' || row.status === 'FL')) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
 }
 
 const columns = computed<TableColumn<SysOrderRespDTO>[]>(() => {

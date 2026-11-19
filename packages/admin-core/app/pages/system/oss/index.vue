@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -27,10 +29,11 @@
             :delete-permission="ossPermissions.codes.del"
             :add-label="$ts('module.system.oss.upload')"
             add-icon="i-lucide-upload"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.oss.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.oss.title') }}</span>
             </template>
           </TableHeaderOperation>
 
@@ -62,6 +65,7 @@ import SysOssSearch from './components/sys-oss-search.vue'
 import SysOssOperate from './components/sys-oss-operate.vue'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import { useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 
@@ -233,6 +237,37 @@ const columns = computed<TableColumn<SysOssDto>[]>(() => {
     ...(ossPermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysOssDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = [
+    {
+      label: $ts('module.system.oss.download'),
+      icon: 'i-lucide-download',
+      disabled: !row.url,
+      onSelect: () => downloadFile(row)
+    },
+    {
+      label: $ts('module.system.oss.copyLink'),
+      icon: 'i-lucide-copy',
+      color: 'primary',
+      disabled: !row.url,
+      onSelect: () => copyLink(row.url)
+    }
+  ]
+
+  if (ossPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

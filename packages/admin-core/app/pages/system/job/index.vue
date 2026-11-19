@@ -13,6 +13,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -23,13 +25,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="jobPermissions.codes.add"
             :delete-permission="jobPermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.job.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.job.title') }}</span>
             </template>
           </TableHeaderOperation>
 
@@ -60,6 +63,7 @@ import type { SysJobDto, SysJobHandlerDTO, SysJobQueryDTO } from '#admin/shared/
 import { businessDictCode } from '#admin/shared/constants/business'
 import { customPermissionCode } from '#admin/shared/auth'
 import { useBadgeColumn, usePaginatedTable, useSelectionColumn, useTableOperate, minWidthColumn, stableColumn, stickyRightColumn, tableColumnWidth, withColumnWidth } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysJobSearch from './components/sys-job-search.vue'
 import SysJobOperate from './components/sys-job-operate.vue'
@@ -227,6 +231,58 @@ const columns = computed<TableColumn<SysJobDto>[]>(() => {
     ...(jobPermissions.canOperate.value || canRun.value || jobLogPermissions.canList.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysJobDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (jobLogPermissions.canList.value) {
+    items.push({
+      label: $ts('module.system.job.viewLogs'),
+      icon: 'i-lucide-file-clock',
+      color: 'info',
+      onSelect: () => handleViewLogs(row)
+    })
+  }
+
+  if (canRun.value) {
+    items.push({
+      label: $ts('module.system.job.runNow'),
+      icon: 'i-lucide-play',
+      color: 'success',
+      onSelect: () => handleRunNow(row)
+    })
+  }
+
+  if (jobPermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+
+    const enabled = row.status === 1
+    items.push({
+      label: enabled ? $ts('module.system.job.disable') : $ts('module.system.job.enable'),
+      icon: enabled ? 'i-lucide-pause' : 'i-lucide-play',
+      color: enabled ? 'warning' : 'success',
+      onSelect: () => handleToggleStatus(row)
+    })
+  }
+
+  if (jobPermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

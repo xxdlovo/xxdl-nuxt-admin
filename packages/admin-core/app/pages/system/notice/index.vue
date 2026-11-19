@@ -12,6 +12,8 @@
         :loading="loading"
         :pagination="pagination"
         :page-size-options="pageSizeOptions"
+        compact-mobile
+        :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -22,13 +24,14 @@
             :selected-count="checkedRowKeys.length"
             :add-permission="noticePermissions.codes.add"
             :delete-permission="noticePermissions.codes.del"
+            compact-mobile
             class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
             @add="handleAdd"
             @delete="handleBatchDelete"
             @refresh="refresh"
           >
             <template #prefix>
-              <span>{{ $ts('module.system.notice.title') }}</span>
+              <span class="hidden md:inline">{{ $ts('module.system.notice.title') }}</span>
             </template>
           </TableHeaderOperation>
 
@@ -57,6 +60,7 @@ import { h } from 'vue'
 import type { SysNoticeDto, SysNoticeQueryDTO } from '#admin/shared/system/notice'
 import { businessDictCode } from '#admin/shared/constants/business'
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 import SysNoticeSearch from './components/sys-notice-search.vue'
 import SysNoticeOperate from './components/sys-notice-operate.vue'
@@ -164,6 +168,40 @@ const columns = computed<TableColumn<SysNoticeDto>[]>(() => {
     ...(noticePermissions.canOperate.value ? [actionColumn] : [])
   ]
 })
+
+/** 移动端行操作：点击行弹出底部操作面板 */
+const rowActions = (row: SysNoticeDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (noticePermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+
+    const isPublished = row.publishStatus === 1
+    items.push({
+      label: isPublished ? $ts('module.system.notice.withdraw') : $ts('module.system.notice.publish'),
+      icon: isPublished ? 'i-lucide-undo-2' : 'i-lucide-send',
+      color: isPublished ? 'warning' : 'success',
+      onSelect: () => handleTogglePublish(row)
+    })
+  }
+
+  if (noticePermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
 
 const handleDelete = async (id: string) => {
   if (loading.value) return

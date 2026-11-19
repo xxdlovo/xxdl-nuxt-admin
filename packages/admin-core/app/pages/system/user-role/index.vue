@@ -14,6 +14,8 @@
           :loading="loading"
           :pagination="pagination"
           :page-size-options="pageSizeOptions"
+          compact-mobile
+          :mobile-row-actions="rowActions"
       >
         <template #header>
           <TableHeaderOperation
@@ -27,10 +29,11 @@
               :selectedCount="checkedRowKeys.length"
               :add-permission="userRolePermissions.codes.add"
               :delete-permission="userRolePermissions.codes.del"
+              compact-mobile
               class="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex-shrink-0"
           >
           <template #prefix>
-            <span>{{ $ts('module.system.userRole.title') }}</span>
+            <span class="hidden md:inline">{{ $ts('module.system.userRole.title') }}</span>
           </template>
         </TableHeaderOperation>
 
@@ -63,6 +66,7 @@ import SysUserRoleOperate from "./components/sys-user-role-operate.vue"
 
 import { businessDictCode } from "#admin/shared/constants/business"
 import { usePaginatedTable, useTableOperate, useBadgeColumn, useSelectionColumn } from '#admin/app/composables/useTable'
+import type { MobileRowAction } from '#admin/app/composables/useTable'
 import TableWithPagination from '#admin/app/components/table/TableWithPagination.vue'
 
 const { $trpc } = useNuxtApp()
@@ -172,6 +176,32 @@ const columns = computed<TableColumn<SysUserRoleDto>[]>(() => {
 /**
  * 处理删除
  */
+/** 移动端行操作：点击「⋯」在按钮下方展示 */
+const rowActions = (row: SysUserRoleDto): MobileRowAction[] => {
+  const items: MobileRowAction[] = []
+
+  if (userRolePermissions.canEdit.value) {
+    items.push({
+      label: $ts('common.edit'),
+      icon: 'i-lucide-pencil',
+      color: 'primary',
+      onSelect: () => handleEdit(row.id as string)
+    })
+  }
+
+  if (userRolePermissions.canDel.value) {
+    items.push({
+      label: $ts('common.delete'),
+      icon: 'i-lucide-trash-2',
+      color: 'error',
+      confirm: $ts('common.confirmDelete', { count: 1 }),
+      onSelect: () => handleDelete(row.id as string)
+    })
+  }
+
+  return items
+}
+
 const handleDelete = async (id: string) => {
   if (loading.value) return
   await $trpc.sysUserRole.remove.mutate(id)
