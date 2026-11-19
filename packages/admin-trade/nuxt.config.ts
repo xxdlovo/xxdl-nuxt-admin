@@ -18,7 +18,11 @@ export default defineNuxtConfig({
     $meta: {
         name: 'admin-trade'
     },
-    extends: ['../admin-core'],
+    // 必须用包名，不能用 '../admin-core' 这类相对路径：
+    // Nuxt 按本文件所在目录解析相对路径，发布成 npm 包后会变成
+    // node_modules/admin-core（实际包名是 xxdl-admin-core），导致宿主 extends 失败。
+    // monorepo 内由 pnpm 的 workspace 链接提供，发布后由本包的 dependencies 提供。
+    extends: ['xxdl-admin-core'],
     compatibilityDate: '2025-07-15',
     alias: {
         '#trade': currentDir
