@@ -44,6 +44,17 @@ export function listEntitlementResolvers(): string[] {
   return Array.from(usageResolvers.keys())
 }
 
+/**
+ * 读取已注册的计量器（未注册返回 undefined）。
+ *
+ * 唯一使用者是 `server/exports/entitlement` 门面的 `remainingEntitlement`：它需要
+ * 和 `assertEntitlement` 用**同一份**注册表算已用量，而不是在门面里再维护一份。
+ * 只读，不改变注册表语义。
+ */
+export function getEntitlementResolver(resolverKey: string): EntitlementUsageResolver | undefined {
+  return usageResolvers.get(resolverKey)
+}
+
 /** 读取能力原始数值；未登录或未注入能力档案时按 0 处理。 */
 export function getEntitlement(ctx: any, key: string): number {
   return quotaOf(ctx?.entitlements?.features?.[key])
