@@ -5,6 +5,7 @@ import { randomUuid } from '#admin/shared/utils/uuid'
 import { orderPayModeRecord, payOrderStatusConfig } from '#admin/shared/constants/business'
 import type { SysMemberLevelBlockedReason, SysMemberLevelOptionDTO } from '#trade/shared/system/member'
 import { badgeColorClasses } from '#admin/app/composables/badgeColorClasses'
+import type { EntitlementMeta } from '#admin/shared/entitlement/types'
 import { useToastError, useToastSuccess, useToastWarning } from '#admin/app/utils/toast'
 
 /**
@@ -82,9 +83,32 @@ type LevelOrderStatus = {
   endAt?: string | null
 }
 
+/**
+ * 我的权益的数据来源：`rbacProfile.profile.entitlements`（随 `auth.profile` 一次下发，
+ * 形状见 core 的 `EntitlementProfile`），因此**不额外请求** entitlement 接口。
+ *
+ * `hiddenFeatures` 里的功能只做后端强制，用户侧**不展示任何信息**（名称 / 额度 /
+ * 上限都不显示，也不做「升级可解锁」之类会间接暴露它的引导）。
+ * `meta[key].used` 目前不在契约里：若以后补了已用量，这里会自动从「上限 N」
+ * 切成「已用 x/N」。
+ */
+type EntitlementMetaWithUsed = EntitlementMeta & { used?: number | null }
+
+/** 权益卡片的一行：已按「用户可见」过滤，只含可展示字段 */
+type EntitlementItem = {
+  key: string
+  name: string
+  kind: 'switch' | 'quota'
+  unit: string
+  limit: number
+  used: number | null
+}
+
 const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
 const memberProfileStore = useMemberProfileStore()
+const { profile: entitlementProfile } = useEntitlement()
+const { loadProfile } = useRbacProfile()
 
 const loading = ref(false)
 const levelOptions = ref<MyLevelOption[]>([])
@@ -318,9 +342,84 @@ const loadOrders = async () => {
   }
 }
 
-/** 当前状态 + 可购买等级 + 开通记录一起来一遍（开通 / 续费成功后调用） */
+/**
+ * 等级变化后让权益跟上：`entitlements` 随 `auth.profile` 下发，开通 / 续费成功后
+ * 若档案里的 levelId 与 profile.entitlements.levelId 不一致，就强制重取一次 profile
+ * （不单独请求 entitlement 接口）。平时（等级没变）不会多发请求。
+ */
+const syncEntitlements = async () => {
+  const currentLevelId = memberProfileStore.profile?.levelId ?? null
+  const loadedLevelId = entitlementProfile.value?.levelId ?? null
+
+  if (!currentLevelId || currentLevelId === loadedLevelId) {
+    return
+  }
+
+  try {
+    await loadProfile(true)
+  } catch {
+    // 刷新失败不抛给页面：权益区沿用旧快照，下次进入会再同步
+  }
+}
+
+/**
+ * 可展示的权益项。
+ *
+ * 过滤规则（顺序执行）：
+ * 1. `hiddenFeatures` 里的键直接跳过 —— 隐藏项连名称都不出现；
+ * 2. `meta[key].userShow === false` 双保险（后端没把它放进 hiddenFeatures 时也不展示）；
+ * 3. 没有 meta 或值不是数字的项丢弃（防止脏数据渲染出 NaN）；
+ * 4. 开关型看 > 0 即「已开通」，配额型 -1 即「不限」。
+ */
+const entitlementItems = computed<EntitlementItem[]>(() => {
+  const data = entitlementProfile.value
+
+  if (!data?.levelId) {
+    return []
+  }
+
+  const features = data.features ?? {}
+  const meta = data.meta ?? {}
+  const hidden = new Set(data.hiddenFeatures ?? [])
+  const items: EntitlementItem[] = []
+
+  for (const [key, rawLimit] of Object.entries(features)) {
+    if (hidden.has(key)) {
+      continue
+    }
+
+    const info = meta[key] as EntitlementMetaWithUsed | undefined
+
+    if (!info || info.userShow === false) {
+      continue
+    }
+
+    const limit = Number(rawLimit)
+
+    if (rawLimit === null || rawLimit === undefined || !Number.isFinite(limit)) {
+      continue
+    }
+
+    const hasUsed = info.used !== null && info.used !== undefined && Number.isFinite(Number(info.used))
+
+    items.push({
+      key,
+      name: info.name || key,
+      kind: info.kind === 'quota' ? 'quota' : 'switch',
+      unit: info.unit ?? '',
+      limit,
+      used: hasUsed ? Number(info.used) : null
+    })
+  }
+
+  return items.sort((a, b) => a.name.localeCompare(b.name))
+})
+
+/** 当前状态 + 可购买等级 + 开通记录 + 权益一起来一遍（开通 / 续费成功后调用） */
 const refreshAll = async () => {
   await Promise.all([loadLevels(), loadOrders(), memberProfileStore.refresh()])
+  // 权益挂在当前等级上：等档案刷新完再比对，等级变了就重取 profile
+  await syncEntitlements()
 }
 
 // ── 轮询（骨架与 wallet 页一致） ─────────────────────────────────────────
@@ -593,7 +692,65 @@ onBeforeUnmount(stopPolling)
       />
     </UCard>
 
-    <!-- 2. 可购买等级 -->
+    <!-- 2. 我的权益：只渲染用户可见项，hiddenFeatures 里的项完全不出现 -->
+    <UCard v-if="entitlementItems.length > 0" :ui="{ body: 'space-y-3' }">
+      <template #header>
+        <div class="flex flex-wrap items-center gap-2">
+          <UIcon name="i-lucide-shield-check" />
+          <span>{{ $ts('module.system.profile.memberEntitlements') }}</span>
+          <UBadge v-if="entitlementProfile?.levelName" :label="entitlementProfile.levelName" color="warning" variant="soft" size="sm" />
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div
+          v-for="item in entitlementItems"
+          :key="item.key"
+          class="flex items-center justify-between gap-2 rounded-lg border border-default px-3 py-2"
+        >
+          <span class="min-w-0 truncate text-sm">{{ item.name }}</span>
+
+          <!-- 开关型：✓ 已开通 / ✗ 未开通 -->
+          <template v-if="item.kind === 'switch'">
+            <UBadge
+              v-if="item.limit > 0"
+              icon="i-lucide-check"
+              :label="$ts('module.system.profile.entitlementSwitchOn')"
+              color="success"
+              variant="soft"
+              size="sm"
+            />
+            <UBadge
+              v-else
+              icon="i-lucide-x"
+              :label="$ts('module.system.profile.entitlementSwitchOff')"
+              color="neutral"
+              variant="soft"
+              size="sm"
+            />
+          </template>
+
+          <!-- 配额型：不限 / 已用 x/N（后端没回已用量时只给上限） -->
+          <template v-else>
+            <UBadge
+              v-if="item.limit === -1"
+              :label="$ts('module.system.profile.entitlementUnlimited')"
+              color="primary"
+              variant="soft"
+              size="sm"
+            />
+            <span v-else class="whitespace-nowrap text-xs text-muted">
+              {{ item.used !== null
+                ? $ts('module.system.profile.entitlementQuota', { used: item.used, limit: item.limit })
+                : $ts('module.system.profile.entitlementLimit', { limit: item.limit }) }}
+              <span v-if="item.unit"> {{ item.unit }}</span>
+            </span>
+          </template>
+        </div>
+      </div>
+    </UCard>
+
+    <!-- 3. 可购买等级 -->
     <UCard :ui="{ body: 'space-y-3' }">
       <template #header>
         <div class="flex items-center gap-2">
@@ -654,7 +811,7 @@ onBeforeUnmount(stopPolling)
       </div>
     </UCard>
 
-    <!-- 3. 开通记录 -->
+    <!-- 4. 开通记录 -->
     <UCard :ui="{ body: 'p-0 sm:p-0' }">
       <template #header>
         <div class="flex items-center gap-2">
@@ -666,7 +823,7 @@ onBeforeUnmount(stopPolling)
       <UTable :data="orders" :columns="orderColumns" :loading="ordersLoading" class="w-full" />
     </UCard>
 
-    <!-- 4. 开通 / 续费弹窗：下单后原地切换到二维码 + 轮询 -->
+    <!-- 5. 开通 / 续费弹窗：下单后原地切换到二维码 + 轮询 -->
     <UModal v-model:open="dialogOpen" :title="actionLabel(targetLevel)" :ui="{ content: 'w-[calc(100vw-2rem)] max-w-[560px]' }">
       <template #body>
         <div class="space-y-4">

@@ -205,6 +205,17 @@ const columns = computed<TableColumn<SysMemberLevelDto>[]>(() => {
     useBadgeColumn<SysMemberLevelDto>('isLongTerm', 'module.system.memberLevel.isLongTerm', memberLevelYesNoConfig, 0),
     useBadgeColumn<SysMemberLevelDto>('status', 'module.system.memberLevel.statusLabel', memberLevelStatusConfig, 1),
     {
+      // 能力项数：列表行上的可选字段 `featureCount`（后端未返回时显示 -）。
+      // 刻意不为每行发 featureMatrix 请求，避免 N+1。
+      accessorKey: 'featureCount',
+      header: () => $ts('module.system.memberLevel.featureCount'),
+      cell: ({ row }) => {
+        const count = (row.original as SysMemberLevelDto & { featureCount?: number | null }).featureCount
+
+        return typeof count === 'number' ? count : '-'
+      }
+    },
+    {
       accessorKey: 'remark',
       header: () => $ts('module.system.memberLevel.remark'),
       cell: ({ row }) => row.original.remark || '-'

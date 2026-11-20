@@ -6,11 +6,19 @@ import {
   type SysMemberLevelUpdateDTO,
   SysMemberLevelUpdateSchema
 } from '#trade/shared/system/memberLevel'
+import type { SysMemberLevelFeatureMatrixItemDTO } from '#trade/shared/system/memberFeature'
 import type { FormSubmitEvent } from '@nuxt/ui'
-import { useToastSuccess } from '#admin/app/utils/toast'
+import { customPermissionCode } from '#admin/shared/auth'
+import { useToastError, useToastSuccess } from '#admin/app/utils/toast'
 
 const $trpc = useTradeTrpc()
 const { $ts } = useI18n()
+
+/**
+ * 能力矩阵行：直接用 shared 的 `SysMemberLevelFeatureMatrixItemDTO`
+ * （`featureMatrix` 返回项，`value` 已是「等级配置值优先、否则功能目录默认值」的最终值）。
+ */
+type LevelFeatureItem = SysMemberLevelFeatureMatrixItemDTO
 
 const props = defineProps<{
   visible: boolean
@@ -104,6 +112,167 @@ const { validate } = useZodValidation({
   schema: levelFormSchema
 })
 
+// ── 能力配置（featureMatrix / saveFeatures） ─────────────────────────────
+//
+// 独立权限 system:memberLevel:feature：有权限才可编辑矩阵，否则只读展示。
+// 新增态没有 levelId，无法读写矩阵，因此该区只在编辑态渲染控件，新增态只给一句
+// 「保存等级后可配置能力」的提示（见模板 featureNeedSaveFirst）。
+
+/** 保存等级矩阵用的权限码 */
+const featurePermissionCode = customPermissionCode('system:memberLevel', 'feature')
+const { hasPermission, isAdmin } = useRbacProfile()
+const canEditFeatures = computed(() => isAdmin.value || hasPermission(featurePermissionCode))
+
+const featureItems = ref<LevelFeatureItem[]>([])
+/** 当前编辑值：featureKey → value */
+const featureValues = ref<Record<string, number>>({})
+/** 加载时的快照：用于判断「能力区是否有改动」，避免无谓的 saveFeatures */
+const featureSnapshot = ref<Record<string, number>>({})
+const featureLoading = ref(false)
+
+const isEdit = computed(() => props.operateType === 'edit')
+
+/** 取初始值：矩阵的 `value` 已是最终值（等级配置优先，否则目录默认值） */
+const resolveFeatureValue = (item: LevelFeatureItem) => {
+  const value = Number(item.value)
+
+  return Number.isFinite(value) ? value : Number(item.defaultValue ?? 0)
+}
+
+const loadFeatureMatrix = async () => {
+  featureItems.value = []
+  featureValues.value = {}
+  featureSnapshot.value = {}
+
+  if (!isEdit.value || !props.data?.id) {
+    return
+  }
+
+  featureLoading.value = true
+
+  try {
+    const result = await $trpc.sysMemberLevel.featureMatrix.query({ levelId: String(props.data.id) })
+    const items = result.items ?? []
+    const values: Record<string, number> = {}
+
+    for (const item of items) {
+      values[item.featureKey] = resolveFeatureValue(item)
+    }
+
+    featureItems.value = items
+    featureValues.value = values
+    featureSnapshot.value = { ...values }
+  } catch {
+    // 矩阵拿不到就按「无可配置项」处理：不阻断等级主体保存（tRPC 客户端已提示错误）
+    featureItems.value = []
+  } finally {
+    featureLoading.value = false
+  }
+}
+
+/** 按 groupName 分组（空分组归到「通用」），组内按 sortOrder / 名称排序 */
+const featureGroups = computed(() => {
+  const groups = new Map<string, LevelFeatureItem[]>()
+
+  for (const item of featureItems.value) {
+    const name = String(item.groupName ?? '').trim() || $ts('module.system.memberFeature.groupDefault')
+    const list = groups.get(name) ?? []
+
+    list.push(item)
+    groups.set(name, list)
+  }
+
+  return [...groups.entries()].map(([name, items]) => ({
+    name,
+    items: [...items].sort((a, b) => {
+      const diff = Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0)
+
+      return diff !== 0 ? diff : String(a.name ?? a.featureKey).localeCompare(String(b.name ?? b.featureKey))
+    })
+  }))
+})
+
+/** 能力区是否有改动（逐项比对快照；新增态矩阵为空，恒为 false） */
+const featuresDirty = computed(() => {
+  const keys = new Set([...Object.keys(featureSnapshot.value), ...Object.keys(featureValues.value)])
+
+  for (const key of keys) {
+    if (Number(featureSnapshot.value[key] ?? 0) !== Number(featureValues.value[key] ?? 0)) {
+      return true
+    }
+  }
+
+  return false
+})
+
+const featureIsSwitch = (item: LevelFeatureItem) => item.kind !== 'quota'
+
+const isUnlimitedFeature = (item: LevelFeatureItem) => Number(featureValues.value[item.featureKey] ?? 0) === -1
+
+const quotaNumberValue = (item: LevelFeatureItem) => {
+  const value = Number(featureValues.value[item.featureKey] ?? 0)
+
+  return value === -1 ? 0 : Math.max(0, Number.isFinite(value) ? value : 0)
+}
+
+const setFeatureValue = (item: LevelFeatureItem, value: number | string | null | undefined) => {
+  const next = Math.trunc(Number(value ?? 0))
+
+  featureValues.value = {
+    ...featureValues.value,
+    [item.featureKey]: Number.isFinite(next) ? next : 0
+  }
+}
+
+/** 「不限」勾选：勾上 = -1，取消勾选回到数字输入（0 起） */
+const toggleUnlimitedFeature = (item: LevelFeatureItem, value: boolean) => {
+  setFeatureValue(item, value ? -1 : 0)
+}
+
+/** 只读展示：开关 → 开/关；配额 → 不限 / 「N 单位」 */
+const featureValueText = (item: LevelFeatureItem) => {
+  const value = Number(featureValues.value[item.featureKey] ?? 0)
+
+  if (featureIsSwitch(item)) {
+    return value === 1
+      ? $ts('module.system.memberFeature.switchOn')
+      : $ts('module.system.memberFeature.switchOff')
+  }
+
+  if (value === -1) {
+    return $ts('module.system.memberFeature.unlimited')
+  }
+
+  return item.unit ? `${value} ${item.unit}` : String(value)
+}
+
+/** 「默认：X」里的 X：按默认值的类型给可读文案 */
+const featureDefaultText = (item: LevelFeatureItem) => {
+  const value = Number(item.defaultValue ?? 0)
+
+  if (featureIsSwitch(item)) {
+    return value === 1
+      ? $ts('module.system.memberFeature.switchOn')
+      : $ts('module.system.memberFeature.switchOff')
+  }
+
+  if (value === -1) {
+    return $ts('module.system.memberFeature.unlimited')
+  }
+
+  return item.unit ? `${value} ${item.unit}` : String(value)
+}
+
+/** 保存矩阵：只传 featureKey / value（等级主体的字段由 update 单独负责） */
+const saveFeatureValues = async (levelId: string) => {
+  const values = featureItems.value.map(item => ({
+    featureKey: item.featureKey,
+    value: Number(featureValues.value[item.featureKey] ?? 0)
+  }))
+
+  await $trpc.sysMemberLevel.saveFeatures.mutate({ levelId, values })
+}
+
 // 可空字段的统一适配：避免 null 直接绑到输入组件
 const benefitValue = computed({
   get: () => state.value.benefit ?? '',
@@ -185,6 +354,7 @@ const initFormData = () => {
 watch(visible, (opened) => {
   if (opened) {
     initFormData()
+    void loadFeatureMatrix()
   }
 })
 
@@ -198,12 +368,41 @@ const handleSubmit = async (_event: FormSubmitEvent<SysMemberLevelAddDTO>) => {
     state.value.durationDays = Math.max(1, Math.trunc(Number(state.value.durationDays ?? 0)))
   }
 
-  if (props.operateType === 'add') {
-    await $trpc.sysMemberLevel.create.mutate(state.value as SysMemberLevelAddDTO)
-    useToastSuccess($ts('common.addSuccess'))
-  } else {
-    await $trpc.sysMemberLevel.update.mutate(state.value as SysMemberLevelUpdateDTO)
-    useToastSuccess($ts('common.modifySuccess'))
+  const isAdd = props.operateType === 'add'
+  const levelId = String(state.value.id || props.data?.id || '')
+
+  // 1) 先存等级主体：失败就停在弹窗里，用户改完可以重试
+  try {
+    if (isAdd) {
+      // create 只返回 boolean；新增态没有 levelId，所以能力矩阵留到「编辑」时再配
+      await $trpc.sysMemberLevel.create.mutate(state.value as SysMemberLevelAddDTO)
+      useToastSuccess($ts('common.addSuccess'))
+    } else {
+      await $trpc.sysMemberLevel.update.mutate(state.value as SysMemberLevelUpdateDTO)
+      useToastSuccess($ts('common.modifySuccess'))
+    }
+  } catch {
+    // 服务端错误详情已由 tRPC 客户端 toast，这里只补一句「是哪一步失败」
+    useToastError($ts('module.system.memberLevel.levelSaveFailed'))
+
+    return
+  }
+
+  // 2) 再存能力矩阵：仅编辑态、有 feature 权限、且能力区确实有改动
+  if (!isAdd && levelId && canEditFeatures.value && featuresDirty.value) {
+    try {
+      await saveFeatureValues(levelId)
+    } catch {
+      // 等级已落库但能力没存上：标题说「能力保存失败」，说明里点明等级其实已保存
+      useToastError(
+        $ts('module.system.memberLevel.featureSaveFailed'),
+        undefined,
+        $ts('module.system.memberLevel.featureSavePartial')
+      )
+      props.refresh?.()
+
+      return
+    }
   }
 
   closeDrawer()
@@ -222,7 +421,7 @@ const title = computed(() => {
 
 <template>
   <UModal v-model:open="visible" :title="title" :dismissible="false" :ui="{
-    content: 'w-[calc(100vw-2rem)] max-w-[760px]',
+    content: 'w-[calc(100vw-2rem)] max-w-[820px]',
     footer: 'justify-end gap-2 border-t border-default p-4 sm:px-6'
   }">
     <template #body>
@@ -293,6 +492,87 @@ const title = computed(() => {
         <UFormField name="remark" :label="$ts('module.system.memberLevel.remark')" orientation="horizontal" :ui="formItemUi" class="mt-5">
           <UTextarea v-model="remarkValue" :rows="2" :placeholder="$ts('module.system.memberLevel.form.remark')" class="w-full" />
         </UFormField>
+
+        <!-- 能力配置：编辑态才读写矩阵（新增态没有 levelId） -->
+        <USeparator class="my-5" />
+
+        <div class="space-y-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <UIcon name="i-lucide-toy-brick" class="text-muted" />
+            <span class="text-sm font-medium">{{ $ts('module.system.memberLevel.featureSection') }}</span>
+            <span v-if="!canEditFeatures && isEdit" class="text-xs text-muted">
+              {{ $ts('module.system.memberLevel.featureReadonly') }}
+            </span>
+          </div>
+          <p class="text-xs text-muted">{{ $ts('module.system.memberLevel.featureSectionHelp') }}</p>
+
+          <!-- 新增态：没有 levelId，先提示保存后再回来配置（矩阵区间不渲染） -->
+          <p v-if="!isEdit" class="text-xs text-muted">
+            {{ $ts('module.system.memberLevel.featureNeedSaveFirst') }}
+          </p>
+
+          <div v-else-if="featureLoading" class="py-4 text-center text-xs text-muted">
+            {{ $ts('common.loading') }}
+          </div>
+
+          <p v-else-if="featureItems.length === 0" class="text-xs text-muted">
+            {{ $ts('module.system.memberLevel.featureEmpty') }}
+          </p>
+
+          <div v-else class="space-y-4">
+            <div v-for="group in featureGroups" :key="group.name" class="space-y-2">
+              <div class="text-xs font-medium text-muted">{{ group.name }}</div>
+
+              <div
+                v-for="item in group.items"
+                :key="item.featureKey"
+                class="flex flex-wrap items-center gap-3 rounded-md border border-default px-3 py-2"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="truncate text-sm">{{ item.name || item.featureKey }}</span>
+                    <span v-if="item.unit" class="text-xs text-muted">({{ item.unit }})</span>
+                    <!-- userShow = 0：用户侧不展示，这里给运营一个「仅后端」的提醒 -->
+                    <UTooltip v-if="Number(item.userShow ?? 1) === 0" :text="$ts('module.system.memberFeature.userShowHelp')">
+                      <UBadge :label="$ts('module.system.memberFeature.onlyBackend')" color="warning" variant="subtle" size="sm" />
+                    </UTooltip>
+                    <!-- 功能目录里的默认值：等级没显式配置时就取它，标出来方便运营判断 -->
+                    <span class="text-xs text-muted">
+                      {{ $ts('module.system.memberLevel.featureDefault', { value: featureDefaultText(item) }) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <template v-if="canEditFeatures">
+                    <USwitch
+                      v-if="featureIsSwitch(item)"
+                      :model-value="Number(featureValues[item.featureKey] ?? 0)"
+                      :true-value="1"
+                      :false-value="0"
+                      @update:model-value="value => setFeatureValue(item, Number(value))"
+                    />
+                    <template v-else>
+                      <UInputNumber
+                        :model-value="quotaNumberValue(item)"
+                        :min="0"
+                        :disabled="isUnlimitedFeature(item)"
+                        class="w-28"
+                        @update:model-value="value => setFeatureValue(item, Number(value ?? 0))"
+                      />
+                      <UCheckbox
+                        :model-value="isUnlimitedFeature(item)"
+                        :label="$ts('module.system.memberFeature.unlimited')"
+                        @update:model-value="value => toggleUnlimitedFeature(item, Boolean(value))"
+                      />
+                    </template>
+                  </template>
+                  <span v-else class="text-sm">{{ featureValueText(item) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <USeparator class="my-5" />
         <div class="flex justify-end gap-2">
