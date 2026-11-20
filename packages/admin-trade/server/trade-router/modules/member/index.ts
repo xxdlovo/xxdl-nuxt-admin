@@ -22,6 +22,7 @@ import {
     SysMemberLevelOpenSchema,
     SysMemberLevelOrderNoSchema
 } from '#trade/shared/system/memberLevelOrder'
+import { SysMyEntitlementRespSchema } from '#trade/shared/system/memberFeature'
 import { sysMemberService } from './SysMemberService'
 
 const listProc = proc({ permission: 'system:member:list' })
@@ -123,6 +124,17 @@ export const sysMemberRouter = router({
     myProfile: protectedProcedure
         .query(async ({ ctx }) => {
             return sysMemberService(ctx).myProfile()
+        }),
+
+    /**
+     * 我的能力画像（开关 / 配额 / 隐藏项 / 元数据）。
+     * 与服务端守卫同源（同一份 ctx.entitlements），前端据此决定按钮可用性与额度展示；
+     * 自助接口，只需登录，不需要权限码。
+     */
+    myEntitlements: protectedProcedure
+        .output(SysMyEntitlementRespSchema)
+        .query(async ({ ctx }) => {
+            return sysMemberService(ctx).myEntitlements()
         }),
     myLogs: protectedProcedure.input(SysMemberMyLogQuerySchema)
         .query(async ({ ctx, input }) => {

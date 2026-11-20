@@ -49,6 +49,8 @@ import type {
     SysMemberRechargeCreateDTO,
     SysMemberRechargeOutTradeNoDTO
 } from '#trade/shared/system/memberRecharge'
+import type { SysMyEntitlementRespDTO } from '#trade/shared/system/memberFeature'
+import { resolveEntitlements } from '#trade/server/utils/entitlementSource'
 import { sysMemberRepo, type SysMemberListFilters } from './SysMemberRepo'
 
 /** 自助查询分页（我的充值记录 / 我的下级 / 我的开通记录） */
@@ -387,6 +389,23 @@ export function sysMemberService(ctx: Context) {
                 levelSource: member?.levelSource ?? null,
                 isExpired: isLevelExpired(expireAt, nowForMysql())
             }
+        },
+
+        /**
+         * 我的能力画像（自助，登录即可，无权限码）。
+         *
+         * 直接复用服务端守卫的数据源：`ctx.entitlements` 由 auth 中间件按请求解析一次，
+         * `assertEntitlement` / `getEntitlement` 与这里读的是**同一个对象**，
+         * 所以不会出现「页面显示可用、实际调用被拒」的口径偏差。
+         * `hiddenFeatures` 的键仍然保留在 features 里（前端需要据此禁用按钮），只是不要展示名称/额度。
+         */
+        async myEntitlements(): Promise<SysMyEntitlementRespDTO> {
+            requireLogin(ctx)
+            const profile = await resolveEntitlements(ctx)
+            log.info('member entitlements fetched', {
+                member: { action: 'myEntitlements', levelId: profile.levelId }
+            })
+            return profile
         },
 
         /** 我的余额流水（分页） */

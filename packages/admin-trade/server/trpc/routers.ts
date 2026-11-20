@@ -15,6 +15,7 @@ import { sysOrderRouter } from '#trade/server/trade-router/modules/order'
 import { sysMemberRouter } from '#trade/server/trade-router/modules/member'
 import { sysMemberBalanceLogRouter } from '#trade/server/trade-router/modules/memberBalanceLog'
 import { sysMemberCouponRouter } from '#trade/server/trade-router/modules/memberCoupon'
+import { sysMemberFeatureRouter } from '#trade/server/trade-router/modules/memberFeature'
 import { sysMemberFreezeRouter } from '#trade/server/trade-router/modules/memberFreeze'
 import { sysMemberLevelRouter } from '#trade/server/trade-router/modules/memberLevel'
 import { sysMemberLevelOrderRouter } from '#trade/server/trade-router/modules/memberLevelOrder'
@@ -32,6 +33,7 @@ export const tradeRouter = router({
     sysMember: sysMemberRouter,
     sysMemberBalanceLog: sysMemberBalanceLogRouter,
     sysMemberCoupon: sysMemberCouponRouter,
+    sysMemberFeature: sysMemberFeatureRouter,
     sysMemberFreeze: sysMemberFreezeRouter,
     sysMemberLevel: sysMemberLevelRouter,
     sysMemberLevelOrder: sysMemberLevelOrderRouter,
