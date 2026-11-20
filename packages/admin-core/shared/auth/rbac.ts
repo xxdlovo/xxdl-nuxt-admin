@@ -1,3 +1,5 @@
+import type { EntitlementProfile } from '#admin/shared/entitlement/types'
+
 /**
  * Minimal user fields needed by RBAC consumers.
  */
@@ -55,4 +57,11 @@ export type RbacProfile = {
   roles: RbacRole[]
   permissions: string[]
   menus: RbacMenu[]
+  /**
+   * 能力档案（功能开关 + 配额）。
+   *
+   * 可选是为了向后兼容：不接入能力体系的项目 / 旧版服务端响应可以不带该字段，
+   * 其余 RBAC 消费方无需改动。前端从 `profile.entitlements` 读，缺省按「无能力」处理。
+   */
+  entitlements?: EntitlementProfile
 }

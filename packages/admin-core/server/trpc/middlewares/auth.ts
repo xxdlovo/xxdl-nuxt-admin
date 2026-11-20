@@ -19,11 +19,20 @@ export const authMiddleware = async (opts: any) => {
     throw new AppError('auth.unauthorized')
   }
 
+  // 登录态确认后一次性解析能力档案：
+  // - assertEntitlement 直接读 ctx.entitlements，不再重复查数据源；
+  // - auth.profile 复用同一份解析结果，避免同一请求解析两次。
+  // 这里必须用 Nitro 的 server/utils 自动导入调用 resolveEntitlements：
+  // 显式 `#admin/server/utils/entitlementSource` 会写死基座实现，
+  // 安装 xxdl-admin-trade 后它的同名文件就不会覆盖生效。
+  ctx.entitlements = await resolveEntitlements(ctx)
+
   return next({
     ctx: {
       ...ctx,
       session,
-      user
+      user,
+      entitlements: ctx.entitlements
     }
   })
 }

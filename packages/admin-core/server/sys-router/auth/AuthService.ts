@@ -122,11 +122,18 @@ export function authService(ctx: Context) {
       const flatMenus = uniqById(menus)
       const menuTreeItems = flatMenus.filter(menu => menu.visible === 0 && menu.type !== 2)
 
+      // authMiddleware 已在本请求内解析过就直接复用，保证 ctx.entitlements 与
+      // profile.entitlements 是同一份对象；脱离中间件调用时（如内部脚本）才自己解析。
+      // resolveEntitlements 走 server/utils 自动导入，安装 trade 层时按会员等级解析。
+      const entitlements = ctx.entitlements ?? await resolveEntitlements(ctx)
+      ctx.entitlements = entitlements
+
       const profile = {
         user,
         roles: roleItems,
         permissions: flatMenus.map(menu => menu.code),
-        menus: buildMenuTree(menuTreeItems)
+        menus: buildMenuTree(menuTreeItems),
+        entitlements
       }
       log.info('auth rbac profile fetched', {
         auth: { action: 'getRbacProfile', count: profile.permissions.length }

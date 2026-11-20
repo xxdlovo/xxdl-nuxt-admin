@@ -1,6 +1,7 @@
 import type { H3Event } from 'h3'
 import { useDb } from '#admin/server/drizzle/db'
 import { getSessionState } from '#admin/server/utils/sessionGuard'
+import type { EntitlementProfile } from '#admin/shared/entitlement/types'
 
 export type AuthUser = {
   id: string
@@ -42,6 +43,9 @@ export async function createContext(event: H3Event) {
     session,
     sessionState,
     user,
+    // 能力档案：createContext 阶段还不知道要不要用（公开接口不需要），
+    // 由 authMiddleware 在确认登录后解析并写入，见 middlewares/auth.ts。
+    entitlements: null as EntitlementProfile | null,
     currentPermissionCode: null as string | null,
     permissionCodes: null as string[] | null,
     dataPermission: null as DataPermission | null,

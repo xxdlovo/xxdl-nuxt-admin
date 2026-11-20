@@ -264,6 +264,10 @@ export const APP_ERROR_STATUS_MAP: Record<string, { code: string; httpStatus: nu
   'auth.sessionExpired': { code: 'UNAUTHORIZED', httpStatus: 401 },
   // 已登录但缺少权限码
   'auth.forbidden': { code: 'FORBIDDEN', httpStatus: 403 },
+  // 功能开关关闭 / 配额不足：语义都是「当前操作不可用」，与权限不足一样用 403，
+  // 前端可按 key 区分展示（隐藏功能不暴露具体上限，见 entitlementGuard）。
+  'module.system.entitlement.denied': { code: 'FORBIDDEN', httpStatus: 403 },
+  'module.system.entitlement.quotaExceeded': { code: 'FORBIDDEN', httpStatus: 403 },
   // demo 模式下的写操作保护，语义上是「禁止」，用 403 而不是 500
   'system.demoReadonly': { code: 'FORBIDDEN', httpStatus: 403 },
   // 查询目标不存在：例如 getOne/getById 未命中
