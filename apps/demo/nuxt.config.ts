@@ -40,12 +40,26 @@ export default defineNuxtConfig({
         description: '全栈 Nuxt 4 后台系统：分层架构、RBAC、会员能力与配额、支付与钱包、缓存与任务约定',
         // 显式声明集合，避免自动生成的 section 标题变成 "Content"/"ModuleA"。
         // ⚠️ 一旦显式声明，新增文档集合（content.config.ts 里的新集合）必须在此补一行，
-        //   否则该集合的文档不会出现在 llms.txt / llms-full.txt 中。
+        //   否则该集合的文档不会出现在 /llms.txt 中。
         sections: [
             { title: '系统文档', description: '后端/前端/支付/交易/对外集成等完整文档', contentCollection: 'content' },
             { title: '业务模块文档', description: '按业务独立成集的文档（示例：moduleA）', contentCollection: 'moduleA' }
+        ]
+        // 刻意不配 `full`：`/llms-full.txt` 改由 server/routes/llms-full.txt.get.ts 自己生成。
+        // 原因：content 的 llms 特性会把每篇文档 AST 重新序列化回 markdown，本仓库 91 篇里有 82 篇
+        // 会在 remark-mdc 的 strong 处理里栈溢出，导致预渲染 500、CI 构建失败。
+        // 自建路由直接拼原始 markdown，无渲染风险，且对 LLM 更友好。
+    },
+    nitro: {
+        // 把文档目录作为 server asset 打进产物：/llms-full.txt 在运行时（含预渲染）都能读到
+        // 原始 markdown，不依赖部署环境里是否存在源码目录。
+        serverAssets: [
+            { baseName: 'docs-main', dir: 'doc/main' }
         ],
-        full: { title: '完整文档', description: '上述集合的全文，供 LLM 检索' }
+        prerender: {
+            // CI 构建期就生成静态文件，避免上线后这条路才有机会报错。
+            routes: ['/llms-full.txt']
+        }
     },
     devServer: {
         host: '0.0.0.0',
