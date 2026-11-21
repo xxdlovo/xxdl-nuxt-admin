@@ -152,7 +152,7 @@
         <UButton color="neutral" variant="outline" icon="i-lucide-copy" @click="copyAiPrompt">
           {{ $ts('module.system.gen.ai.copyPrompt') }}
         </UButton>
-        <UButton to="/docs/main/codegen-v2" target="_blank" icon="i-lucide-book-open">
+        <UButton to="/docs/main/new-module/codegen-v2" target="_blank" icon="i-lucide-book-open">
           {{ $ts('module.system.gen.ai.docs') }}
         </UButton>
       </template>
@@ -306,7 +306,7 @@ pnpm gen:ai:download --table=sys_demo --out=.data/codegen
 # CLI 环境变量
 CODEGEN_BASE_URL=http://127.0.0.1:3001
 CODEGEN_TOKEN=<NUXT_CODEGEN_TOKEN>`
-const aiPrompt = `请先读取 /api/system/gen/ai/guide（或 /docs/main/codegen-v2），然后：
+const aiPrompt = `请先读取 /api/system/gen/ai/guide（或 /docs/main/new-module/codegen-v2），然后：
 1. 运行 pnpm gen:ai:plan --table=<tableName> [--module=<module>] [--business=<Business>]；
 2. 按返回的 files 写入文件；
 3. 按 mergePlan 合并 schema/index.ts、routers.ts、app/locales/zh.json、app/locales/en.json；

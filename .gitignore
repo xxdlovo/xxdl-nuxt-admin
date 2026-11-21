@@ -1,7 +1,7 @@
 soybean-admin
 
 # 模拟数据库插入文件
-apps/demo/doc/mock_sql/*.sql
+apps/demo/scripts/mock/*.sql
 
 # i18n 生成的占位文件。
 #

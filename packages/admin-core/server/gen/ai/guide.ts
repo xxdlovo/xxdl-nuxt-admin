@@ -99,7 +99,7 @@ pnpm check:layers
 ## 6. 给 AI 的提示词模板
 
 ~~~text
-请先读取 GET /api/system/gen/ai/guide（或 docs/main/codegen-v2），然后：
+请先读取 GET /api/system/gen/ai/guide（或 docs/main/new-module/codegen-v2），然后：
 1. 运行 pnpm gen:ai:plan --table=<tableName> [--module=<module>] [--business=<Business>]
 2. 按返回的 files 写入文件；
 3. 按 mergePlan 合并 schema/index.ts、routers.ts、app/locales/zh.json、app/locales/en.json；

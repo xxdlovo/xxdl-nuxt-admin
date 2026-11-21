@@ -123,13 +123,13 @@ export function buildCodegenAiPlan(config: GenTableConfig): CodegenAiPlan {
             '4. 执行 mergePlan.menuSql（替换占位 UUID 后再执行）。',
             '5. 合并后运行 pnpm --filter xxdl-nuxt-admin-demo typecheck 和 pnpm check:layers。',
             '6. 不要修改生成文件中的导出名、tRPC 路由名与权限码；如需调整请回到 V2 配置重新生成。',
-            '完整说明见 GET /api/system/gen/ai/guide 或 /docs/main/codegen-v2。',
+            '完整说明见 GET /api/system/gen/ai/guide 或 /docs/main/new-module/codegen-v2。',
         ].join('\n'),
         download: {
             method: 'POST',
             path: '/api/system/gen/ai/download',
         },
-        docsPath: '/docs/main/codegen-v2',
+        docsPath: '/docs/main/new-module/codegen-v2',
         generatedAt: new Date().toISOString(),
     }
 }

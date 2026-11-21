@@ -33,19 +33,11 @@ navigation:
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
-  ### 代码生成 V1
+  ### 新增模块 / 代码生成
 
-  文档流程：一句话提示词生成整套模块代码，含前后端 14 个步骤与文件清单。
+  两个版本：**V1** 按文档 14 步手工生成；**V2** 用系统内置工具 + `plan`/`download` 接口，由外部 AI 读取并合并。
 
-  [开始代码生成 V1 →](/docs/main/new-module)
-  :::
-
-  :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
-  ### 代码生成 V2
-
-  AI 接入口：`plan`/`download` 接口与 CLI，由外部 AI 读取生成结果并自行合并。
-
-  [查看代码生成 V2 →](/docs/main/codegen-v2)
+  [查看新增模块 →](/docs/main/new-module)
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
@@ -53,7 +45,7 @@ navigation:
 
   错误处理、文件与存储、缓存、认证安全、系统监控、工程加固、组织与 Excel。
 
-  [查看功能组件 →](/docs/main/features/error-handling/overview)
+  [查看功能专题 →](/docs/main/features/overview)
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
@@ -86,6 +78,14 @@ navigation:
   商品与服务（含会员等级价、不限库存）、订单资金与履约两个维度、后台管理与会员自助页面。
 
   [查看交易模块 →](/docs/main/trade/overview)
+  :::
+
+  :::div{.rounded-xl.border.border-default.bg-elevated.p-5}
+  ### 会员体系
+
+  等级与价格、期限与自动降级、能力与配额（功能目录 + 等级矩阵）、开通续费三通道、钱包与优惠券。
+
+  [查看会员体系 →](/docs/main/member/overview)
   :::
 
   :::div{.rounded-xl.border.border-default.bg-elevated.p-5}

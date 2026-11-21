@@ -63,7 +63,7 @@ moduleName: ${table.moduleName}
 businessName: ${table.businessName}
 
 ## 步骤
-1. 先读取指南：GET ${baseUrl}/api/system/gen/ai/guide（或阅读 /docs/main/codegen-v2）。
+1. 先读取指南：GET ${baseUrl}/api/system/gen/ai/guide（或阅读 /docs/main/new-module/codegen-v2）。
 2. 在项目根目录执行：
    pnpm gen:ai:plan --table=${table.tableName} --module=${table.moduleName} --business=${table.businessName}
    如果 CLI 不可用，也可以直接 POST ${baseUrl}/api/system/gen/ai/plan，body 为：
