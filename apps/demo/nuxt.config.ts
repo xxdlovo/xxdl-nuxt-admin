@@ -12,6 +12,43 @@
 //   - modules、runtimeConfig 默认值、css、icon、nitro、类型补丁
 // 电商层 packages/admin-trade 在其上提供会员/商品/订单/支付/钱包。
 // ============================================================================
+import { readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+
+/**
+ * 把 doc 目录下的 markdown 映射成 `@nuxt/content` 的 raw 路由。
+ *
+ * 这些路由是 `/llms.txt` 里每条目对应的 markdown 地址（`/raw/<path>.md`）。在构建期
+ * 预渲染成静态文件后，线上就不需要运行时 content 数据库；否则容器内 sqlite 初始化
+ * 失败会让所有 `/raw/**` 直接 500，进而让 llms.txt 的链接全部不可用。
+ *
+ * path 规则与 content 一致：目录/文件名去掉数字前缀（`5.features` → `features`），
+ * `index.md` 归到所在目录本身。
+ */
+function collectRawRoutes(dir: string, prefix = ''): string[] {
+    const routes: string[] = []
+
+    for (const entry of readdirSync(dir)) {
+        const full = join(dir, entry)
+
+        if (statSync(full).isDirectory()) {
+            const segment = entry.replace(/^\d+\./, '')
+            routes.push(...collectRawRoutes(full, `${prefix}/${segment}`))
+            continue
+        }
+
+        if (!entry.endsWith('.md')) {
+            continue
+        }
+
+        const name = entry.replace(/^\d+\./, '').replace(/\.md$/, '')
+        const path = name === 'index' ? prefix : `${prefix}/${name}`
+        routes.push(`/raw${path || '/index'}.md`)
+    }
+
+    return routes
+}
+
 export default defineNuxtConfig({
     // 演示站接入完整能力（基座 + 电商层）。
     // 只需要系统管理的项目写 extends: ['xxdl-admin-core'] 即可，无需安装电商层。
@@ -35,7 +72,12 @@ export default defineNuxtConfig({
         '@nuxt/content'
     ],
     llms: {
+        // 仅作为兜底值：真正的站点地址在运行时由 server/plugins/llms-origin.ts 用请求
+        // origin 改写，避免「构建机没有公网域名 → llms.txt 里写死 localhost」的问题。
         domain: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3001',
+        // 关闭预渲染：llms.txt 必须运行时生成，才能拿到真实访问域名。
+        // 构建期生成的静态文件会把 domain 固化在构建机环境里。
+        prerender: false,
         title: 'xxdl-nuxt-admin 文档',
         description: '全栈 Nuxt 4 后台系统：分层架构、RBAC、会员能力与配额、支付与钱包、缓存与任务约定',
         // 显式声明集合，避免自动生成的 section 标题变成 "Content"/"ModuleA"。
@@ -58,7 +100,12 @@ export default defineNuxtConfig({
         ],
         prerender: {
             // CI 构建期就生成静态文件，避免上线后这条路才有机会报错。
-            routes: ['/llms-full.txt']
+            // `/raw/**` 一并预渲染：线上容器若无法初始化 content 的 sqlite，
+            // 这些 markdown 仍能直接从静态产物返回。
+            routes: [
+                '/llms-full.txt',
+                ...new Set([...collectRawRoutes('doc/main'), ...collectRawRoutes('doc/moduleA')])
+            ]
         }
     },
     devServer: {
