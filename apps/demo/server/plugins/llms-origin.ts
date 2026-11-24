@@ -48,9 +48,15 @@ export default defineNitroPlugin((nitroApp) => {
 
         for (const section of options.sections ?? []) {
             for (const link of section.links ?? []) {
-                if (typeof link.href === 'string') {
-                    link.href = link.href.replace(/^https?:\/\/[^/]+/, origin)
+                if (typeof link.href !== 'string' || !link.href) {
+                    continue
                 }
+
+                // 构建期扫描 doc 目录生成的是相对路径（`/raw/...`），这里补成绝对 URL；
+                // 如果已经是绝对地址（例如未来改回 contentCollection 生成），只替换 host。
+                link.href = /^https?:\/\//.test(link.href)
+                    ? link.href.replace(/^https?:\/\/[^/]+/, origin)
+                    : new URL(link.href, origin).href
             }
         }
     })
