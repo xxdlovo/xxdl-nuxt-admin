@@ -50,3 +50,14 @@ export type SysNoticeQueryDTO = z.infer<typeof SysNoticeQuerySchema>
 export const SysNoticePageQuerySchema =
     SysNoticeQuerySchema.extend(ApiRequestSchema.shape)
 export type SysNoticePageQueryDTO = z.infer<typeof SysNoticePageQuerySchema>
+
+/**
+ * 公开公告分页查询（无需登录）。
+ *
+ * 只返回已发布、且发布时间已到的公告；pageSize 收窄到 50，避免被当作全量导出接口。
+ */
+export const SysNoticePublicPageQuerySchema = z.object({
+    page: z.number().int().min(1).default(1),
+    pageSize: z.number().int().min(1).max(50).default(10),
+})
+export type SysNoticePublicPageQueryDTO = z.infer<typeof SysNoticePublicPageQuerySchema>

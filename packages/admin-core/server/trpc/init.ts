@@ -71,12 +71,17 @@ export type ProcOptions = {
   readonly?: boolean
   /** 是否开启防重复提交（5 秒内相同用户 + 路径 + 入参只允许一次）。 */
   repeatSubmit?: boolean
-  /** 接口限流；不传表示不限流。 */
+  /**
+   * 接口限流。
+   * - 不传：走系统配置里的全局默认（query / mutation 分别限额）；
+   * - 传对象：使用显式阈值（登录、手动执行任务等）；
+   * - 传 false：该接口跳过全局默认限流。
+   */
   rateLimit?: {
     limit: number
     windowMs: number
     scope?: string
-  }
+  } | false
 }
 
 /**

@@ -1,8 +1,8 @@
 //#admin/server/sys-router/notice
-import { router, protectedProcedure, proc } from '#admin/server/trpc/init'
+import { router, protectedProcedure, proc, publicProcedure } from '#admin/server/trpc/init'
 import { sysNoticeService } from './SysNoticeService'
 import z from 'zod'
-import { SysNoticeAddSchema, SysNoticeUpdateSchema, SysNoticeQuerySchema, SysNoticePageQuerySchema, SysNoticePublishStatusSchema } from '#admin/shared/system/notice'
+import { SysNoticeAddSchema, SysNoticeUpdateSchema, SysNoticeQuerySchema, SysNoticePageQuerySchema, SysNoticePublicPageQuerySchema, SysNoticePublishStatusSchema } from '#admin/shared/system/notice'
 
 const listProc = proc({ permission: 'system:notice:list' })
 const addProc = proc({ permission: 'system:notice:add', repeatSubmit: true })
@@ -45,6 +45,19 @@ export const sysNoticeRouter = router({
     page: listProc.input(SysNoticePageQuerySchema)
         .query(async ({ ctx, input }) => {
             return sysNoticeService(ctx).page(input)
+        }),
+    /**
+     * 公开公告分页：无需登录，只返回已发布且发布时间已到的公告，按 publishTime 倒序。
+     * 适合官网/落地页/小程序等未登录场景展示公告列表。
+     */
+    publicPage: publicProcedure.input(SysNoticePublicPageQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysNoticeService(ctx).publicPage(input)
+        }),
+    /** 管理端按 publishTime 倒序分页（含未发布），沿用公告列表权限。 */
+    pageByPublishTime: listProc.input(SysNoticePageQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysNoticeService(ctx).pageByPublishTime(input)
         }),
     latest: protectedProcedure.input(z.object({
         limit: z.number().min(1).max(20).default(10)

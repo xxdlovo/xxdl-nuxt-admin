@@ -1,5 +1,6 @@
 //#trade/server/trade-router/modules/order
-import { router, proc, protectedProcedure } from '#admin/server/trpc/init'
+import { router, proc, protectedProcedure, publicProcedure } from '#admin/server/trpc/init'
+import { rateLimitMiddleware } from '#admin/server/trpc/middlewares/rateLimit'
 import z from 'zod'
 import {
     SysOrderCloseSchema,
@@ -26,6 +27,9 @@ const confirmProc = proc({ permission: 'system:order:confirm' })
 const closeProc = proc({ permission: 'system:order:close' })
 const syncProc = proc({ permission: 'system:order:sync' })
 const fulfillProc = proc({ permission: 'system:order:fulfill' })
+
+// 公开商城查询：匿名可访问，按 IP 限流（60 次/分钟）。
+const publicMallLimit = rateLimitMiddleware({ limit: 60, windowMs: 60_000, scope: 'public-mall' })
 
 export const sysOrderRouter = router({
     getOne: listProc.input(SysOrderQuerySchema)
@@ -145,5 +149,22 @@ export const sysOrderRouter = router({
     mallDetail: protectedProcedure.input(z.object({ goodsId: z.string().min(1, 'form.required') }))
         .query(async ({ ctx, input }) => {
             return sysOrderService(ctx).mallDetail(input)
+        }),
+
+    /**
+     * 公开商城列表（游客，无需登录）。
+     * 只列上架商品，价格用基础价（无会员等级价），列表不返回 detail。
+     * 匿名可访问，按 IP 限流（60 次/分钟）。
+     */
+    publicMallList: publicProcedure.use(publicMallLimit).input(SysMallQuerySchema)
+        .query(async ({ ctx, input }) => {
+            return sysOrderService(ctx).publicMallList(input)
+        }),
+
+    /** 公开商城详情（游客，无需登录）：未上架 / 不存在分别报错。 */
+    publicMallDetail: publicProcedure.use(publicMallLimit)
+        .input(z.object({ goodsId: z.string().min(1, 'form.required') }))
+        .query(async ({ ctx, input }) => {
+            return sysOrderService(ctx).publicMallDetail(input)
         })
 })

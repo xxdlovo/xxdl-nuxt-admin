@@ -350,6 +350,33 @@ export function sysPayChannelService(ctx: Context) {
             return list
         },
 
+        /**
+         * 公开支付方式列表（游客，无需登录）。
+         *
+         * 只返回「已启用 + 已验证通过」的渠道，且字段严格白名单：
+         * 绝不包含 config（AES 密文）、notifyUrl、returnUrl、cancelUrl、ipAllowlist 等内部信息。
+         * 排序：默认渠道优先 → sortOrder 升序。
+         */
+        async publicList() {
+            const rows = await repo.listEnabledByCode() as ChannelRow[]
+
+            return rows
+                .filter(row => Number(row.verifyStatus ?? 0) === 1)
+                .sort((a, b) => {
+                    const defaultDiff = Number(b.isDefault ?? 0) - Number(a.isDefault ?? 0)
+                    return defaultDiff !== 0 ? defaultDiff : Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0)
+                })
+                .map(row => ({
+                    id: row.id,
+                    configName: row.configName ?? '',
+                    channelCode: row.channelCode ?? '',
+                    mode: row.mode ?? null,
+                    currency: row.currency ?? null,
+                    isDefault: Number(row.isDefault ?? 0),
+                    sortOrder: Number(row.sortOrder ?? 0)
+                }))
+        },
+
         /** 供其他模块读取明文密钥（仅服务端使用，绝不返回给前端） */
         async getRuntimeById(id: string) {
             const row = await repo.getById(id) as ChannelRow | null

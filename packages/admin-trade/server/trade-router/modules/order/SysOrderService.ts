@@ -462,6 +462,52 @@ export function sysOrderService(ctx: Context) {
             log.info('order mall fetched', { order: { action: 'mallDetail', id: input.goodsId } })
 
             return toMallCard(row, price, price.priceSource === 'level' ? levelName : null)
+        },
+
+        /**
+         * 公开商城列表（游客，无需登录）。
+         *
+         * 与 mallList 的差异：没有登录用户，因此不解析会员等级价，一律用基础价；
+         * 列表不返回 detail（详情页再取），减少匿名请求的响应体积。
+         */
+        async publicMallList(query: SysMallQueryDTO): Promise<{
+            list: SysMallGoodsRespDTO[]
+            total: number
+            page: number
+            pageSize: number
+        }> {
+            const goodsPage = await goods.pageEnabled({
+                page: query.page,
+                pageSize: query.pageSize,
+                keyword: query.keyword ?? null,
+                type: query.type ?? null
+            })
+
+            const list = goodsPage.list.map(row => ({
+                ...toMallCard(row, { unitPrice: row.price, priceSource: 'base' }, null),
+                detail: null
+            }))
+
+            return {
+                list,
+                total: goodsPage.total,
+                page: query.page,
+                pageSize: query.pageSize
+            }
+        },
+
+        /** 公开商城详情（游客）：不存在 / 未上架分别报错，价格用基础价。 */
+        async publicMallDetail(input: { goodsId: string }): Promise<SysMallGoodsRespDTO> {
+            const row = await goods.getById(input.goodsId)
+
+            if (!row) {
+                throw new AppError('module.system.order.goodsNotFound')
+            }
+            if (Number(row.status ?? 0) !== 1) {
+                throw new AppError('module.system.order.goodsOffline')
+            }
+
+            return toMallCard(row, { unitPrice: row.price, priceSource: 'base' }, null)
         }
     }
 }

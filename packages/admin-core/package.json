@@ -1,6 +1,6 @@
 {
     "name": "xxdl-admin-core",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Nuxt admin base layer: auth, RBAC, CRUD scaffolding, tRPC + Drizzle backend",
     "type": "module",
     "main": "./nuxt.config.ts",

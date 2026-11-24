@@ -19,6 +19,22 @@ export const businessDictCode = {
     menuIconType: 'menu_icon_type',
     sysLogLevel: 'sys_log_level'
 } as const
+
+/**
+ * 允许**匿名读取**的字典类型白名单。
+ *
+ * 公开查询接口 `sysDictData.publicListByTypeCode` 只对白名单里的 typeCode 返回数据，
+ * 其余一律返回空数组。新增字典类型时，判断它是否需要被未登录页面（登录/注册/官网/落地页）
+ * 使用；需要则把对应 code 加到这里，并同步更新
+ * `docs/main/features/hardening/overview` 的白名单表格。
+ */
+export const publicDictTypeCodes: readonly string[] = [
+    businessDictCode.noYes,
+    businessDictCode.userGender,
+    businessDictCode.enableStatus,
+    businessDictCode.noticeType
+]
+
 // 系统配置
 export const systemRegisterEnum = {
     key:'system_register_enable',
@@ -47,6 +63,37 @@ export const systemLoginSecurityEnum = {
     defaultMaxRetry: 5,
     defaultLockMinutes: 10,
 }
+
+/**
+ * 全局接口限流。
+ *
+ * 未配置时使用这里的默认值；阈值可随时在「参数配置」页面修改，进程内缓存 60 秒生效。
+ * 限额为 `0` 表示该类型不限流；`enabled=false` 关闭全部默认限流（登录与手动跑任务的
+ * 显式限流不受影响）。
+ */
+export const systemRateLimitEnum = {
+    enabledKey: 'system_rate_limit_enabled',
+    queryPerMinKey: 'system_rate_limit_query_per_min',
+    mutationPerMinKey: 'system_rate_limit_mutation_per_min',
+    defaultEnabled: 'true',
+    defaultQueryPerMin: 300,
+    defaultMutationPerMin: 60,
+}
+
+/**
+ * 允许**匿名读取**的系统配置白名单。
+ *
+ * 公开查询接口 `sysConfig.getValueByKey` / `sysConfig.publicValues` 只返回白名单内的 key，
+ * 其余返回 null（避免匿名请求枚举整张配置表，泄露支付/OSS/第三方密钥）。
+ *
+ * 新增 `sys_config` 配置时，判断它是否需要被未登录页面读取；需要则把 key 加到这里，
+ * 并同步更新 `docs/main/features/hardening/overview` 的白名单表格。
+ */
+export const publicConfigKeys: readonly string[] = [
+    systemRegisterEnum.key,
+    systemCaptchaEnum.key,
+    systemOtherLoginEnum.key
+]
 
 /**
  * 第三方登录建号时写入的密码占位符。

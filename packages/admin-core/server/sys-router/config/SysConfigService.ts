@@ -4,6 +4,7 @@ import { randomUuid } from '#admin/shared/utils/uuid'
 import type { Context } from '#admin/server/trpc/context'
 import type { OrmPageResp } from '#admin/server/utils/ApiResp'
 import { AppError } from '#admin/server/utils/appError'
+import { getPublicConfigKeys } from '#admin/server/utils/publicAllowlist'
 import { sysConfigRepo } from './SysConfigRepo'
 
 export function sysConfigService(ctx: Context) {
@@ -49,6 +50,35 @@ export function sysConfigService(ctx: Context) {
       const pojo = await repo.getByKey(key)
       log.info('config fetched', { config: { action: 'getValueByKey' } })
       return pojo?.configValue ?? null
+    },
+    /**
+     * 公开读取单个配置：只认 `publicConfigKeys` 白名单。
+     * 白名单外的 key 返回 null（不抛错，避免匿名请求探测配置是否存在）。
+     */
+    async getPublicValueByKey(key: string): Promise<string | null> {
+      if (!getPublicConfigKeys().includes(key)) {
+        return null
+      }
+
+      const pojo = await repo.getByKey(key)
+      return pojo?.configValue ?? null
+    },
+    /**
+     * 公开批量读取配置：非白名单 key 静默忽略。
+     *
+     * 未登录页面通常一次要读多个开关（注册/验证码/其他登录），批量接口避免多次往返。
+     */
+    async getPublicValues(keys: string[]): Promise<Record<string, string | null>> {
+      const allowedKeys = getPublicConfigKeys()
+      const allowed = keys.filter(key => allowedKeys.includes(key))
+      if (allowed.length === 0) {
+        return {}
+      }
+
+      const rows = await repo.getByKeys(allowed)
+      const map = new Map(rows.map(row => [row.configKey, row.configValue ?? null]))
+
+      return Object.fromEntries(allowed.map(key => [key, map.get(key) ?? null]))
     },
     async page(req: SysConfigPageQueryDTO): Promise<OrmPageResp> {
       const { page, pageSize, ...dto } = req

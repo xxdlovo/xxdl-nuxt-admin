@@ -3,7 +3,7 @@ import { sysNoticeRepo } from './SysNoticeRepo'
 import type { Context } from '#admin/server/trpc/context'
 import { AppError } from '#admin/server/utils/appError'
 import type { OrmPageResp } from '#admin/server/utils/ApiResp'
-import type { SysNoticeAddDTO, SysNoticeDto, SysNoticePageQueryDTO, SysNoticePublishStatusDTO, SysNoticeQueryDTO, SysNoticeUpdateDTO } from '#admin/shared/system/notice'
+import type { SysNoticeAddDTO, SysNoticeDto, SysNoticePageQueryDTO, SysNoticePublicPageQueryDTO, SysNoticePublishStatusDTO, SysNoticeQueryDTO, SysNoticeUpdateDTO } from '#admin/shared/system/notice'
 import { randomUuid } from '#admin/shared/utils/uuid'
 import { sanitizeRichText } from '#admin/server/utils/sanitizeHtml'
 
@@ -89,6 +89,29 @@ export function sysNoticeService(ctx: Context) {
             const result = await repo.page(page, pageSize, dto)
             log.info('notice page queried', {
                 notice: { action: 'page', page, pageSize, total: result.total }
+            })
+            return {
+                ...result,
+                list: result.list.map(item => sanitizeNoticeDto(item)),
+            }
+        },
+        /**
+         * 公开公告分页：无需登录，只含已发布公告，按 publishTime 倒序。
+         * 公开接口不写 evlog 宽事件，避免匿名请求把日志打满。
+         */
+        async publicPage(req: SysNoticePublicPageQueryDTO): Promise<OrmPageResp> {
+            const result = await repo.publicPage(req.page, req.pageSize)
+            return {
+                ...result,
+                list: result.list.map(item => sanitizeNoticeDto(item)),
+            }
+        },
+        /** 管理端按 publishTime 倒序分页（含未发布），权限由 router 的 listProc 控制。 */
+        async pageByPublishTime(req: SysNoticePageQueryDTO): Promise<OrmPageResp> {
+            const { page, pageSize, ...dto } = req
+            const result = await repo.pageByPublishTime(page, pageSize, dto)
+            log.info('notice page by publish time queried', {
+                notice: { action: 'pageByPublishTime', page, pageSize, total: result.total }
             })
             return {
                 ...result,

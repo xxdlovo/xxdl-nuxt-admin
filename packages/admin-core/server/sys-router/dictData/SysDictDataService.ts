@@ -7,6 +7,7 @@ import type { SysDictDataAddDTO, SysDictDataDto, SysDictDataPageQueryDTO, SysDic
 import { randomUuid } from "#admin/shared/utils/uuid";
 import { dictCacheService } from '#admin/server/sys-router/storage/cache/DictCacheService'
 import { sysDictTypeRepo } from '#admin/server/sys-router/dictType/SysDictTypeRepo'
+import { getPublicDictTypeCodes } from '#admin/server/utils/publicAllowlist'
 
 export function sysDictDataService(ctx: Context) {
     const repo = sysDictDataRepo(ctx)
@@ -84,5 +85,36 @@ export function sysDictDataService(ctx: Context) {
             log.info('dictData listed', { dictData: { action: 'listByTypeCode', count: list.length } })
             return list
         },
+        /**
+         * 公开字典查询：只认白名单里的 typeCode，且只返回启用项与展示字段。
+         *
+         * 白名单外的 code 一律返回空数组（不抛错，避免匿名请求探测字典是否存在）。
+         * 不写 evlog 宽事件：匿名请求不落业务日志。
+         */
+        async publicListByTypeCode(code: string): Promise<PublicDictItem[]> {
+            if (!getPublicDictTypeCodes().includes(code)) {
+                return []
+            }
+
+            const list = await cache.getByTypeCode(code, () => repo.listByTypeCode(code))
+            return list
+                .filter(item => Number(item.status ?? 1) === 1)
+                .map(item => ({
+                    value: item.value ?? '',
+                    label: item.label ?? '',
+                    i18nKey: item.i18nKey ?? null,
+                    listClass: item.listClass ?? null,
+                    sortOrder: Number(item.sortOrder ?? 0)
+                }))
+        },
     }
+}
+
+/** 公开字典项：只暴露展示需要的字段。 */
+export type PublicDictItem = {
+    value: string
+    label: string
+    i18nKey: string | null
+    listClass: string | null
+    sortOrder: number
 }
