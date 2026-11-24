@@ -77,6 +77,8 @@ jobs:
       - name: Build app
         env:
           NODE_OPTIONS: --max-old-space-size=8192
+          # llms.txt 是预渲染的静态文件，链接域名在构建期固化；不设置会回落成 localhost。
+          NUXT_PUBLIC_SITE_URL: ${{ vars.SITE_URL || 'https://nuxtadmin.devitem.top' }}
         run: pnpm build
 
       - name: Set up Docker Buildx

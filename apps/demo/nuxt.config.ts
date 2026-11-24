@@ -12,46 +12,28 @@
 //   - modules、runtimeConfig 默认值、css、icon、nitro、类型补丁
 // 电商层 packages/admin-trade 在其上提供会员/商品/订单/支付/钱包。
 // ============================================================================
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-type DocEntry = {
-    /** content 路由路径（形如 `/features/cache/api`，根文档为 `/`） */
-    path: string
-    title: string
-    description: string
-}
-
-/** 从 markdown 的 frontmatter 里取 title / description，取不到时回退到文件名。 */
-function readFrontmatter(file: string, fallbackTitle: string) {
-    const raw = readFileSync(file, 'utf-8')
-    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw)?.[1] ?? ''
-    const pick = (key: string) => {
-        const match = new RegExp(`^${key}:\\s*(.+)$`, 'm').exec(frontmatter)
-        return match?.[1]?.trim().replace(/^['"]|['"]$/g, '') ?? ''
-    }
-
-    return {
-        title: pick('title') || fallbackTitle,
-        description: pick('description')
-    }
-}
-
 /**
- * 扫描 doc 目录，得到 content 的路径 + 标题 + 摘要。
+ * 把 doc 目录下的 markdown 映射成 `@nuxt/content` 的 raw 路由。
+ *
+ * 这些路由是 `/llms.txt` 里每条目对应的 markdown 地址（`/raw/<path>.md`）。在构建期
+ * 预渲染成静态文件后，线上就不需要运行时 content 数据库；否则容器内 sqlite 初始化
+ * 失败会让所有 `/raw/**` 直接 500，进而让 llms.txt 的链接全部不可用。
  *
  * path 规则与 content 一致：目录/文件名去掉数字前缀（`5.features` → `features`），
  * `index.md` 归到所在目录本身。
  */
-function collectDocs(dir: string, prefix = ''): DocEntry[] {
-    const docs: DocEntry[] = []
+function collectRawRoutes(dir: string, prefix = ''): string[] {
+    const routes: string[] = []
 
     for (const entry of readdirSync(dir)) {
         const full = join(dir, entry)
 
         if (statSync(full).isDirectory()) {
             const segment = entry.replace(/^\d+\./, '')
-            docs.push(...collectDocs(full, `${prefix}/${segment}`))
+            routes.push(...collectRawRoutes(full, `${prefix}/${segment}`))
             continue
         }
 
@@ -61,30 +43,10 @@ function collectDocs(dir: string, prefix = ''): DocEntry[] {
 
         const name = entry.replace(/^\d+\./, '').replace(/\.md$/, '')
         const path = name === 'index' ? prefix : `${prefix}/${name}`
-        docs.push({ path, ...readFrontmatter(full, name === 'index' ? (prefix.split('/').pop() || 'index') : name) })
+        routes.push(`/raw${path || '/index'}.md`)
     }
 
-    return docs
-}
-
-/** 文档 → `/llms.txt` 里的一条链接。 */
-function toLlmsLinks(docs: DocEntry[]) {
-    return docs.map(doc => ({
-        title: doc.title,
-        description: doc.description,
-        href: `/raw${doc.path || '/index'}.md`
-    }))
-}
-
-/**
- * 把 doc 目录下的 markdown 映射成 `@nuxt/content` 的 raw 路由。
- *
- * 这些路由是 `/llms.txt` 里每条目对应的 markdown 地址（`/raw/<path>.md`）。在构建期
- * 预渲染成静态文件后，线上就不需要运行时 content 数据库；否则容器内 sqlite 初始化
- * 失败会让所有 `/raw/**` 直接 500，进而让 llms.txt 的链接全部不可用。
- */
-function collectRawRoutes(dir: string, prefix = ''): string[] {
-    return collectDocs(dir, prefix).map(doc => `/raw${doc.path || '/index'}.md`)
+    return routes
 }
 
 export default defineNuxtConfig({
@@ -110,29 +72,19 @@ export default defineNuxtConfig({
         '@nuxt/content'
     ],
     llms: {
-        // 仅作为兜底值：真正的站点地址在运行时由 server/plugins/llms-origin.ts 用请求
-        // origin 改写，避免「构建机没有公网域名 → llms.txt 里写死 localhost」的问题。
+        // 构建期必须设置 NUXT_PUBLIC_SITE_URL（CI 里按站点域名传），否则会回落成
+        // localhost，导致 llms.txt 里的链接无法访问。
+        // 预渲染策略：llms.txt 在构建期生成静态文件，链接域名必须构建时就确定。
         domain: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3001',
-        // 关闭预渲染：llms.txt 必须运行时生成，才能拿到真实访问域名。
-        // 构建期生成的静态文件会把 domain 固化在构建机环境里。
-        prerender: false,
         title: 'xxdl-nuxt-admin 文档',
         description: '全栈 Nuxt 4 后台系统：分层架构、RBAC、会员能力与配额、支付与钱包、缓存与任务约定',
-        // 目录在**构建期**扫描成静态 links，不声明 contentCollection：
-        // 声明 contentCollection 会让 @nuxt/content 在每次请求生成 llms.txt 时查一次
-        // content 的 sqlite；线上容器里这个运行时数据库初始化失败就会直接 500。
-        // 静态 links 让 llms.txt 的生成完全不依赖数据库，同时仍能按请求域名改写链接。
+        // 显式声明集合，避免自动生成的 section 标题变成 "Content"/"ModuleA"。
+        // 同时注意：一旦显式声明 contentCollection，@nuxt/content 就不会再自动补全集合
+        // （否则同一批文档会被追加两次，llms.txt 出现重复链接）。
+        // ⚠️ 新增文档集合（content.config.ts 里的新集合）必须在此补一行。
         sections: [
-            {
-                title: '系统文档',
-                description: '后端/前端/支付/交易/对外集成等完整文档',
-                links: toLlmsLinks(collectDocs('doc/main'))
-            },
-            {
-                title: '业务模块文档',
-                description: '按业务独立成集的文档（示例：moduleA）',
-                links: toLlmsLinks(collectDocs('doc/moduleA'))
-            }
+            { title: '系统文档', description: '后端/前端/支付/交易/对外集成等完整文档', contentCollection: 'content' },
+            { title: '业务模块文档', description: '按业务独立成集的文档（示例：moduleA）', contentCollection: 'moduleA' }
         ]
         // 刻意不配 `full`：`/llms-full.txt` 改由 server/routes/llms-full.txt.get.ts 自己生成。
         // 原因：content 的 llms 特性会把每篇文档 AST 重新序列化回 markdown，本仓库 91 篇里有 82 篇
